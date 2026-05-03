@@ -1,0 +1,111 @@
+{
+  "bot_id": "cae_v3",
+  "name": "B2B Client Acquisition Engine",
+  "version": "3.0",
+  "entrypoint": "mine.py",
+  "enabled": true,
+  "safe_defaults": true,
+  "safety_note": "Standard: sichere Modi ohne automatischen Versand. Zwei erweiterte Modi (Vollautomation / Versand + Reply-Entwürfe) führen echten Erstmail-Versand nach interner Freigabe durch — bitte bewusst wählen.",
+  "operator_note": "Nur Suche (outreach=none): Leads in output/latest/leads.json und leads_unused.json. Zum Versand nacheinander: sync → preview → approve → send, oder die Modi full-auto/send-reply-drafts. outreach_limit = max. Kontakte pro Outreach-Schritt (unabhängig von gesammelter Menge).",
+  "options": [
+    {
+      "key": "industry",
+      "label": "Branche / Zielgruppe",
+      "type": "select_or_text",
+      "default": "Marketingagentur",
+      "required": true,
+      "choices": [
+        "Marketingagentur",
+        "Immobilienmakler",
+        "IT Dienstleister",
+        "Steuerberater",
+        "Handwerker",
+        "Pflegeanbieter",
+        "Zahnarzt",
+        "Physiotherapeut",
+        "Rechtsanwalt",
+        "Finanzberater",
+        "Unternehmensberater",
+        "Webdesign Agentur"
+      ],
+      "placeholder": "z.B. Webdesign Agentur"
+    },
+    {
+      "key": "city",
+      "label": "Ort / Region",
+      "type": "select_or_text",
+      "default": "Deutschland",
+      "required": true,
+      "choices": [
+        "Deutschland",
+        "Saarland",
+        "München",
+        "Berlin",
+        "Hamburg",
+        "Frankfurt",
+        "Köln",
+        "Stuttgart",
+        "Düsseldorf",
+        "Leipzig",
+        "Nürnberg",
+        "Saarbrücken"
+      ],
+      "placeholder": "z.B. Saarbrücken oder Bayern"
+    },
+    {
+      "key": "limit",
+      "label": "Anzahl Leads",
+      "type": "number",
+      "default": 25,
+      "min": 1,
+      "max": 200,
+      "quick_choices": [10, 25, 50, 100]
+    },
+    {
+      "key": "outreach_limit",
+      "label": "Outreach / max. Versand pro Schritt",
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 50,
+      "quick_choices": [5, 10, 15, 20]
+    },
+    {
+      "key": "mode",
+      "label": "Modus",
+      "type": "select",
+      "default": "local",
+      "choices": ["demo", "local"],
+      "choice_labels": {
+        "demo": "Demo — Testmodus (kein echter Zugriff)",
+        "local": "Local — Echtbetrieb"
+      }
+    },
+    {
+      "key": "outreach",
+      "label": "Outreach-Aktion",
+      "type": "select",
+      "default": "none",
+      "choices": [
+        "none",
+        "preview",
+        "reply-drafts",
+        "full-auto",
+        "send-reply-drafts"
+      ],
+      "choice_labels": {
+        "none": "Nur Leads suchen — Ergebnis in Dateien, kein Outreach-Lauf",
+        "preview": "Outreach Preview — E-Mails vorbereiten, NICHT senden",
+        "reply-drafts": "Nur Reply-Entwürfe (IMAP) aus Queue — kein Erstmail hier",
+        "full-auto": "WARNUNG: Suche → Sync → Freigaben → Erstmail SENDEN → Auto-Reply per SMTP",
+        "send-reply-drafts": "Suche → Erstmail SENDEN → Antworten analysieren → Reply als Mail-ENTWURF (kein Reply-SMTP)"
+      },
+      "flag": "--outreach",
+      "skip_value": "none",
+      "safety": true,
+      "unsafe_choices": ["full-auto", "send-reply-drafts"],
+      "safety_note": "„full-auto“ und „send-reply-drafts“ versenden die Erstmail-Kette nach approve (bis --outreach-limit). Auto-Reply nur bei full-auto per SMTP; bei send-reply-drafts als Entwürfe."
+    }
+  ],
+  "command_template": "python mine.py -i \"{industry}\" -c \"{city}\" --mode {mode} -n {limit} --outreach-limit {outreach_limit}"
+}
