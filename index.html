@@ -7,26 +7,13 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* ── TOKENS ── */
-:root {
-  --navy:  #0b1120;
-  --navy2: #111827;
-  --navy3: #1a2540;
-  --card:  #16213a;
-  --card2: #1e2d4a;
-  --accent:  #3b82f6;
-  --accent2: #60a5fa;
-  --accent-glow: rgba(59,130,246,.15);
-  --green:  #10b981;
-  --red:    #ef4444;
-  --yellow: #f59e0b;
-  --text:   #f1f5f9;
-  --muted:  #94a3b8;
-  --border: rgba(255,255,255,.07);
-  --r: 14px;
+:root{
+  --navy:#0b1120;--navy2:#111827;--navy3:#1a2540;
+  --card:#16213a;--card2:#1e2d4a;
+  --accent:#3b82f6;--accent2:#60a5fa;--accent-glow:rgba(59,130,246,.15);
+  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;
+  --text:#f1f5f9;--muted:#94a3b8;--border:rgba(255,255,255,.07);--r:14px;
 }
-
-/* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);line-height:1.6;}
@@ -45,29 +32,24 @@ a{text-decoration:none;}
 h2.st{font-size:clamp(26px,4vw,42px);font-weight:800;line-height:1.15;margin-bottom:14px;}
 p.ss{color:var(--muted);font-size:16px;max-width:620px;margin-bottom:50px;}
 .accent{color:var(--accent2);}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;transition:border-color .2s,transform .2s;}
-.card:hover{border-color:rgba(59,130,246,.35);transform:translateY(-2px);}
 
 /* ── NAV ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 44px;display:flex;align-items:center;justify-content:space-between;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 44px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;}
 .nav-links{display:flex;gap:28px;}
 .nav-links a{font-size:13px;font-weight:500;color:var(--muted);transition:color .2s;}
 .nav-links a:hover{color:var(--text);}
-.nav-cta{background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:9px 20px;border-radius:8px;transition:background .2s;}
+.nav-cta{background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:9px 20px;border-radius:8px;transition:background .2s;white-space:nowrap;}
 .nav-cta:hover{background:#2563eb;}
-.print-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:600;padding:7px 16px;border-radius:8px;cursor:pointer;margin-right:10px;transition:border-color .2s,color .2s;font-family:inherit;}
-.print-btn:hover{border-color:var(--accent2);color:var(--accent2);}
 
-/* ════════════════════════════════════════
-   1 · HERO
-════════════════════════════════════════ */
+/* ── HERO ── */
 .hero{min-height:100vh;display:flex;align-items:center;padding:120px 0 80px;background:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(59,130,246,.13) 0%,transparent 70%),var(--navy);}
 .hero-inner{text-align:center;}
 .hero-kicker{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:28px;display:flex;align-items:center;justify-content:center;gap:12px;}
 .hero-kicker::before,.hero-kicker::after{content:'';display:block;width:36px;height:1px;background:var(--accent);opacity:.5;}
-.hero h1{font-size:clamp(44px,7.5vw,86px);font-weight:900;line-height:1.03;letter-spacing:-2px;margin-bottom:26px;}
+.hero h1{font-size:clamp(38px,7.5vw,86px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:26px;}
 .hero h1 span{background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hero-sub{font-size:clamp(16px,2.2vw,20px);color:var(--muted);max-width:680px;margin:0 auto 48px;}
+.hero-sub{font-size:clamp(15px,2.2vw,20px);color:var(--muted);max-width:680px;margin:0 auto 48px;}
 .hero-badge{display:inline-block;background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid rgba(59,130,246,.4);border-radius:12px;padding:16px 32px;font-size:16px;font-weight:600;margin-bottom:64px;color:var(--accent2);}
 .hero-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:left;}
 .hero-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 18px;}
@@ -75,9 +57,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .hero-card h4{font-size:13px;font-weight:700;margin-bottom:6px;}
 .hero-card p{font-size:12px;color:var(--muted);line-height:1.5;}
 
-/* ════════════════════════════════════════
-   2 · PROBLEM
-════════════════════════════════════════ */
+/* ── PROBLEM ── */
 .prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
 .prob-list{display:flex;flex-direction:column;gap:11px;}
 .prob-item{display:flex;align-items:flex-start;gap:13px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
@@ -87,10 +67,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .prob-ql{font-size:56px;line-height:.4;color:var(--accent);opacity:.35;display:block;margin-bottom:14px;}
 .prob-author{display:block;margin-top:22px;font-size:12px;font-weight:500;color:var(--muted);}
 
-/* ════════════════════════════════════════
-   3 · PROZESS
-════════════════════════════════════════ */
-.pflow{display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:32px;}
+/* ── PROZESS ── */
+.pflow-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+.pflow{display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-width:700px;}
 .pf{flex:1;padding:24px 14px;text-align:center;border-right:1px solid var(--border);transition:background .2s;}
 .pf:hover{background:var(--card2);}
 .pf:last-child{border-right:none;background:rgba(59,130,246,.07);}
@@ -102,9 +81,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .proc-desc{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:22px 26px;font-size:15px;color:var(--muted);}
 .proc-desc strong{color:var(--text);}
 
-/* ════════════════════════════════════════
-   4 · STUFEN
-════════════════════════════════════════ */
+/* ── STUFEN ── */
 .stufe{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:34px 28px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
 .stufe:hover{transform:translateY(-4px);border-color:rgba(59,130,246,.35);}
 .sbadge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:6px;padding:4px 10px;margin-bottom:16px;}
@@ -118,9 +95,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .stufe-bg{position:absolute;bottom:-18px;right:-8px;font-size:96px;font-weight:900;color:rgba(255,255,255,.03);line-height:1;pointer-events:none;}
 .ctrl-bar{text-align:center;margin-top:36px;padding:22px;background:var(--card2);border:1px solid rgba(59,130,246,.2);border-radius:12px;font-size:16px;font-weight:700;color:var(--accent2);}
 
-/* ════════════════════════════════════════
-   5 · COCKPIT
-════════════════════════════════════════ */
+/* ── COCKPIT ── */
 .cpit{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
 .cpit-bar{background:var(--navy3);padding:13px 18px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);}
 .dot{width:11px;height:11px;border-radius:50%;}
@@ -150,7 +125,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .cc-next{margin-top:10px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--accent2);}
 .cc-next::before{content:'→';}
 .pip{background:var(--navy3);border:1px solid var(--border);border-radius:12px;padding:16px;}
-.pip h4{font-size:11px;font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
 .pip-r{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .pip-r:last-child{border-bottom:none;}
 .pip-s{color:var(--muted);font-weight:500;}
@@ -158,9 +132,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .pip-bw{width:52px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
 .pip-b{height:100%;border-radius:2px;background:var(--accent);}
 
-/* ════════════════════════════════════════
-   6 · OUTREACH
-════════════════════════════════════════ */
+/* ── OUTREACH ── */
 .out{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;}
 .out-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px;}
 .o1{background:rgba(16,185,129,.12);}
@@ -168,13 +140,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .o3{background:rgba(167,139,250,.12);}
 .out h3{font-size:17px;font-weight:800;margin-bottom:14px;}
 .out-li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;font-size:13px;color:var(--muted);}
-.out-li::before{content:'·';color:var(--accent);font-size:17px;line-height:1.2;flex-shrink:0;}
+.out-li::before{content:'•';color:var(--accent);font-size:17px;line-height:1.2;flex-shrink:0;}
 .out-accent{text-align:center;margin-top:44px;padding:24px 28px;background:var(--navy3);border-radius:12px;font-size:18px;font-weight:700;border-left:4px solid var(--accent);}
 
-/* ════════════════════════════════════════
-   7 · VERGLEICH
-════════════════════════════════════════ */
-.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+/* ── VERGLEICH ── */
+.cmp-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);min-width:560px;}
 .cmp th{padding:16px 22px;font-size:13px;font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:1px;}
 .cmp th:first-child{background:var(--card2);color:var(--muted);}
 .cmp th:last-child{background:rgba(59,130,246,.14);color:var(--accent2);}
@@ -190,9 +161,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .btag{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;transition:border-color .2s;}
 .btag:hover{border-color:rgba(59,130,246,.4);}
 
-/* ════════════════════════════════════════
-   8 · PAKETE + CTA
-════════════════════════════════════════ */
+/* ── PAKETE ── */
 .pak{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 22px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
 .pak:hover{transform:translateY(-4px);border-color:rgba(59,130,246,.4);}
 .pak-feat{border-color:rgba(59,130,246,.5);background:linear-gradient(135deg,var(--card2),var(--card));}
@@ -202,169 +171,165 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.85
 .pak-li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.4;}
 .pak-ck{color:var(--green);flex-shrink:0;margin-top:1px;}
 .pak-sp{flex:1;}
+
+/* ── CTA ── */
 .cta-box{background:linear-gradient(135deg,rgba(59,130,246,.14),rgba(59,130,246,.04));border:1px solid rgba(59,130,246,.35);border-radius:16px;padding:48px 36px;text-align:center;}
 .cta-box h2{font-size:clamp(22px,3.5vw,36px);font-weight:900;margin-bottom:18px;line-height:1.2;}
 .cta-box p{font-size:16px;color:var(--muted);max-width:580px;margin:0 auto 32px;}
 .cta-btn{display:inline-block;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:15px 38px;border-radius:10px;letter-spacing:.2px;transition:background .2s,transform .2s;}
 .cta-btn:hover{background:#2563eb;transform:translateY(-2px);}
-footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 44px;display:flex;justify-content:space-between;align-items:center;}
-.foot-brand{display:flex;align-items:center;gap:12px;}
-.foot-info{font-size:12px;color:var(--muted);}
+
+/* ── FOOTER ── */
+footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 44px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
 .foot-link{color:var(--accent2);}
 .foot-link:hover{text-decoration:underline;}
 
-/* ════════════════════════════════════════
-   PRINT / PDF — A4 Landscape
-════════════════════════════════════════ */
-@media print {
+/* ── PRINT ── */
+@media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-
-  @page{
-    size:A4 landscape;
-    margin:0;
-  }
-
-  /* hide web-only elements */
-  nav,.print-btn{display:none!important;}
-
-  body{
-    background:#0b1120!important;
-    color:#f1f5f9!important;
-    font-size:9pt;
-    -webkit-font-smoothing:antialiased;
-  }
-
-  /* each section = one A4 page */
-  .section{
-    padding:32px 48px!important;
-    page-break-after:always;
-    page-break-inside:avoid;
-    min-height:100vh;
-    max-height:100vh;
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-  }
-  .section:last-of-type{page-break-after:auto;}
-  footer{page-break-after:avoid;}
-
-  /* hero adjustments */
-  .hero{
-    min-height:100vh;
-    max-height:100vh;
-    padding:28px 48px!important;
-    justify-content:center;
-  }
-  .hero h1{font-size:52pt!important;letter-spacing:-1px;}
-  .hero-sub{font-size:12pt!important;}
-  .hero-badge{font-size:11pt!important;padding:12px 24px!important;}
-  .hero-cards{gap:12px!important;}
-  .hero-card{padding:16px 14px!important;}
-  .hero-card p,.hero-card h4{font-size:9pt!important;}
-
-  /* headings */
+  @page{size:A4 landscape;margin:0;}
+  nav{display:none!important;}
+  body{background:#0b1120!important;font-size:9pt;}
+  .section{padding:32px 48px!important;page-break-after:always;min-height:100vh;max-height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;}
+  .hero{min-height:100vh;max-height:100vh;padding:28px 48px!important;}
   h2.st{font-size:22pt!important;}
-  p.ss{font-size:10pt!important;margin-bottom:24px!important;}
-  .label{font-size:8pt!important;}
-
-  /* process flow */
-  .pflow{page-break-inside:avoid;}
-  .pf{padding:16px 10px!important;}
-  .pf h4{font-size:8pt!important;}
-  .pf p{font-size:8pt!important;}
-
-  /* cockpit */
-  .kpi-row{gap:8px!important;margin-bottom:16px!important;}
-  .kv{font-size:18pt!important;}
-  .kl{font-size:7pt!important;}
-  .cpit-main{gap:12px!important;}
-  .cc-name{font-size:13pt!important;}
-  .cc-r,.cc-rl,.cc-rv,.cc-ein,.cc-next,.pip-r,.pip-s,.pip-h4{font-size:8pt!important;}
-
-  /* tables */
-  .cmp th,.cmp td{padding:9px 14px!important;font-size:9pt!important;}
-
-  /* pakete */
-  .grid-4{gap:12px!important;}
-  .pak{padding:20px 16px!important;}
-  .pak h3{font-size:12pt!important;}
-  .pak-li{font-size:9pt!important;}
-  .cta-box{padding:32px 24px!important;}
-  .cta-box h2{font-size:20pt!important;}
-  .cta-box p{font-size:10pt!important;}
-
-  /* stufen */
-  .stufe{padding:24px 20px!important;}
-  .stufe h3{font-size:14pt!important;}
-  .stufe p{font-size:9pt!important;}
-
-  /* outreach */
-  .out{padding:20px!important;}
-  .out h3{font-size:12pt!important;}
-  .out-li{font-size:9pt!important;}
-  .out-accent{font-size:11pt!important;margin-top:20px!important;}
-
-  /* links visible in print */
-  a[href]::after{content:" (" attr(href) ")";font-size:7pt;color:#94a3b8;}
-  .cta-btn::after{display:none;}
-
   footer{padding:16px 44px!important;}
+}
+
+/* ══════════════════════════════════════
+   MOBILE — max-width: 768px
+══════════════════════════════════════ */
+@media(max-width:768px){
+  /* Nav */
+  nav{padding:12px 20px;}
+  .nav-links{display:none;}
+  .nav-cta{font-size:12px;padding:8px 14px;}
+
+  /* Container */
+  .container{padding:0 20px;}
+
+  /* Sections */
+  .section{padding:60px 0;}
+
+  /* Headings */
+  h2.st{font-size:26px;}
+  p.ss{font-size:15px;margin-bottom:36px;}
+
+  /* Hero */
+  .hero{padding:90px 0 60px;min-height:auto;}
+  .hero h1{font-size:36px;letter-spacing:-1px;}
+  .hero-sub{font-size:15px;margin-bottom:32px;}
+  .hero-badge{font-size:13px;padding:12px 18px;margin-bottom:40px;border-radius:10px;}
+  .hero-kicker{font-size:11px;margin-bottom:20px;}
+  .hero-cards{grid-template-columns:1fr 1fr;gap:12px;}
+  .hero-card{padding:16px 14px;}
+  .hero-card h4{font-size:12px;}
+  .hero-card p{font-size:11px;}
+
+  /* Hero logo */
+  .hero-logo-wrap svg{width:160px!important;height:36px!important;}
+
+  /* Problem */
+  .prob-grid{grid-template-columns:1fr;gap:24px;}
+  .prob-quote{position:static;font-size:17px;padding:24px;}
+  .prob-ql{font-size:40px;}
+
+  /* Process */
+  .pflow-wrap{margin:0 -20px;padding:0 20px 8px;}
+  .pf{padding:18px 10px;min-width:100px;}
+  .pf h4{font-size:9px;}
+  .pf p{font-size:9px;}
+  .proc-desc{font-size:14px;padding:18px 20px;}
+
+  /* Stufen */
+  .grid-3{grid-template-columns:1fr;}
+  .stufe{padding:26px 22px;}
+  .stufe h3{font-size:18px;}
+  .stufe-bg{font-size:70px;}
+  .ctrl-bar{font-size:13px;padding:18px 16px;}
+
+  /* Cockpit */
+  .cpit-url{display:none;}
+  .cpit-body{padding:16px;}
+  .kpi-row{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .kv{font-size:20px;}
+  .kl{font-size:9px;}
+  /* hide last 2 kpis on very small, show as row of 3+2 */
+  .cpit-main{grid-template-columns:1fr;}
+  .pip{margin-top:0;}
+  .cc-name{font-size:15px;}
+  .cc-r{font-size:11px;}
+  .cc-ein{font-size:11px;}
+
+  /* Outreach */
+  .out-accent{font-size:15px;padding:18px 20px;margin-top:28px;}
+
+  /* Vergleich */
+  .cmp-wrap{margin:0 -20px;padding:0 20px 8px;}
+  .cmp th{padding:12px 14px;font-size:11px;}
+  .cmp td{padding:10px 14px;font-size:11px;}
+
+  /* Geeignet für */
+  .geo{padding:20px;}
+  .btag{font-size:12px;padding:6px 12px;}
+
+  /* Pakete */
+  .grid-4{grid-template-columns:1fr 1fr;gap:14px;}
+  .pak{padding:22px 18px;}
+  .pak h3{font-size:16px;}
+  .pak-li{font-size:12px;}
+
+  /* CTA */
+  .cta-box{padding:32px 20px;}
+  .cta-box p{font-size:14px;}
+  .cta-btn{font-size:14px;padding:14px 28px;}
+
+  /* Footer */
+  footer{flex-direction:column;align-items:flex-start;padding:24px 20px;gap:12px;}
+  .foot-info{font-size:12px;line-height:1.8;}
+}
+
+@media(max-width:420px){
+  .hero h1{font-size:30px;}
+  .hero-cards{grid-template-columns:1fr;}
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:1fr;}
+  .prob-quote{font-size:15px;padding:20px;}
 }
 </style>
 </head>
 <body>
 
-<!-- ═══════ NAV (web only) ═══════ -->
+<!-- NAV -->
 <nav>
-  <!-- Logo SVG inline -->
-  <svg width="170" height="38" viewBox="0 0 170 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="ng" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#1d4ed8"/>
-        <stop offset="100%" stop-color="#3b82f6"/>
-      </linearGradient>
-    </defs>
-    <!-- Mark background -->
-    <rect width="38" height="38" rx="9" fill="url(#ng)"/>
-    <!-- R: vertical stroke -->
-    <rect x="9" y="7" width="5" height="24" rx="2" fill="white"/>
-    <!-- R: bowl arc -->
-    <path d="M14 7 L20.5 7 Q28 7 28 14.5 Q28 20.5 20.5 22 L14 22" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <!-- R: diagonal leg -->
-    <line x1="19.5" y1="21.5" x2="30" y2="31" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
-    <!-- Accent dot -->
-    <circle cx="32" cy="32.5" r="2.8" fill="#93c5fd"/>
-    <!-- Wordmark -->
-    <text x="48" y="22" font-family="Inter,sans-serif" font-weight="800" font-size="15" fill="#f1f5f9" letter-spacing="-0.2">REBELL</text>
-    <text x="49" y="35" font-family="Inter,sans-serif" font-weight="400" font-size="9.5" fill="#94a3b8" letter-spacing="3">SYSTEM</text>
-  </svg>
+  <div class="nav-logo">
+    <svg width="140" height="30" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="ng" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+      <rect width="30" height="30" rx="7" fill="url(#ng)"/>
+      <rect x="7" y="5.5" width="4" height="19" rx="1.8" fill="white"/>
+      <path d="M11 5.5 L16 5.5 Q22 5.5 22 11.5 Q22 16.5 16 17.5 L11 17.5" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <line x1="15.5" y1="17" x2="23.5" y2="24.5" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="25" cy="25.5" r="2.2" fill="#93c5fd"/>
+      <text x="38" y="17" font-family="Inter,sans-serif" font-weight="800" font-size="12" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text>
+      <text x="38.5" y="27" font-family="Inter,sans-serif" font-weight="400" font-size="8" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text>
+    </svg>
+  </div>
   <div class="nav-links">
     <a href="#problem">Problem</a>
     <a href="#prozess">Prozess</a>
     <a href="#cockpit">Cockpit</a>
     <a href="#pakete">Pakete</a>
   </div>
-  <div style="display:flex;align-items:center;">
-    <a class="nav-cta" href="mailto:emilio@rebellsystem.com?subject=Vorschau anfragen">Vorschau anfragen</a>
-  </div>
+  <a class="nav-cta" href="mailto:emilio@rebellsystem.com?subject=Vorschau anfragen">Vorschau anfragen</a>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════════
-     1 · HERO
-═══════════════════════════════════════════════════════ -->
+<!-- 1 · HERO -->
 <section class="section hero" id="hero">
   <div class="container">
     <div class="hero-inner">
-      <!-- Hero logo (larger, for PDF cover) -->
-      <div style="display:flex;justify-content:center;margin-bottom:28px;">
+      <div class="hero-logo-wrap" style="display:flex;justify-content:center;margin-bottom:28px;">
         <svg width="220" height="50" viewBox="0 0 220 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#1d4ed8"/>
-              <stop offset="100%" stop-color="#3b82f6"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
           <rect width="50" height="50" rx="12" fill="url(#hg)"/>
           <rect x="11" y="9" width="6.5" height="31" rx="2.5" fill="white"/>
           <path d="M17.5 9 L26.5 9 Q37 9 37 19 Q37 27.5 26.5 29.5 L17.5 29.5" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -375,7 +340,7 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
         </svg>
       </div>
       <div class="hero-kicker">B2B Akquise-System</div>
-      <h1>Aus Rohkontakten wird<br><span>ein geführter Prozess.</span></h1>
+      <h1>Von der Zielgruppe<br><span>bis zum gebuchten Termin.</span></h1>
       <p class="hero-sub">Zielkunden finden, Ansprache vorbereiten, Follow-ups steuern, Antworten einordnen und den nächsten Schritt sichtbar machen.</p>
       <div class="hero-badge">Nicht nur Leads — ein strukturierter Prozess von Recherche bis Antwortlogik.</div>
       <div class="hero-cards">
@@ -388,9 +353,7 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     2 · PROBLEM
-═══════════════════════════════════════════════════════ -->
+<!-- 2 · PROBLEM -->
 <section class="section section-alt" id="problem">
   <div class="container">
     <div class="label">Das Problem</div>
@@ -414,82 +377,60 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     3 · PROZESS
-═══════════════════════════════════════════════════════ -->
+<!-- 3 · PROZESS -->
 <section class="section" id="prozess">
   <div class="container">
     <div class="label">Die Lösung</div>
     <h2 class="st">Vom Zielmarkt zum<br>nächsten Gesprächsschritt</h2>
     <p class="ss">Das System macht aus Rohdaten eine nutzbare Akquise-Arbeitsgrundlage – Schritt für Schritt, strukturiert und nachvollziehbar.</p>
-    <div class="pflow">
-      <div class="pf"><div class="pfn">1</div><h4>Zielgruppe</h4><p>Branche, Region, Profil oder bestehende Liste</p></div>
-      <div class="pf"><div class="pfn">2</div><h4>Recherche</h4><p>Neue Firmen finden oder CSV einspielen</p></div>
-      <div class="pf"><div class="pfn">3</div><h4>Bereinigung</h4><p>Dubletten, Datenmüll, Fehlkontakte entfernen</p></div>
-      <div class="pf"><div class="pfn">4</div><h4>Ansprechpartner</h4><p>B2B-Fit, Priorität & Kontaktwege prüfen</p></div>
-      <div class="pf"><div class="pfn">5</div><h4>Ansprache</h4><p>E-Mail, Telefon, LinkedIn-Recherche</p></div>
-      <div class="pf"><div class="pfn">6</div><h4>Follow-up</h4><p>Erstmail, Telefon, Follow-up 1 & 2</p></div>
-      <div class="pf"><div class="pfn">7</div><h4>Antwortlogik</h4><p>Interesse, Absage, Termin einordnen</p></div>
-      <div class="pf"><div class="pfn" style="background:var(--accent);color:#fff;border-color:var(--accent)">→</div><h4>Nächster Schritt</h4><p>Immer klar, was sinnvoll ist</p></div>
+    <div class="pflow-wrap">
+      <div class="pflow">
+        <div class="pf"><div class="pfn">1</div><h4>Zielgruppe</h4><p>Branche, Region, Profil oder bestehende Liste</p></div>
+        <div class="pf"><div class="pfn">2</div><h4>Recherche</h4><p>Neue Firmen finden oder CSV einspielen</p></div>
+        <div class="pf"><div class="pfn">3</div><h4>Bereinigung</h4><p>Dubletten, Datenmüll, Fehlkontakte entfernen</p></div>
+        <div class="pf"><div class="pfn">4</div><h4>Ansprechpartner</h4><p>B2B-Fit, Priorität &amp; Kontaktwege prüfen</p></div>
+        <div class="pf"><div class="pfn">5</div><h4>Ansprache</h4><p>E-Mail, Telefon, LinkedIn-Recherche</p></div>
+        <div class="pf"><div class="pfn">6</div><h4>Follow-up</h4><p>Erstmail, Telefon, Follow-up 1 &amp; 2</p></div>
+        <div class="pf"><div class="pfn">7</div><h4>Antwortlogik</h4><p>Interesse, Absage, Termin einordnen</p></div>
+        <div class="pf"><div class="pfn" style="background:var(--accent);color:#fff;border-color:var(--accent)">→</div><h4>Nächster Schritt</h4><p>Immer klar, was sinnvoll ist</p></div>
+      </div>
     </div>
-    <div class="proc-desc"><strong>Kontakte finden, bewerten, anschreiben, nachfassen und Antworten einordnen.</strong> Nicht nur Kontakte vorbereiten – sondern Akquise strukturieren.</div>
+    <div class="proc-desc" style="margin-top:16px;"><strong>Kontakte finden, bewerten, anschreiben, nachfassen und Antworten einordnen.</strong> Nicht nur Kontakte vorbereiten – sondern Akquise strukturieren.</div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     4 · DREI STUFEN
-═══════════════════════════════════════════════════════ -->
+<!-- 4 · STUFEN -->
 <section class="section section-alt">
   <div class="container">
     <div class="label">Nutzungsstufen</div>
     <h2 class="st">Von sicherer Assistenz<br>bis kontrollierter Automation</h2>
     <p class="ss">Drei Betriebsmodi – der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt.</p>
     <div class="grid-3">
-      <div class="stufe">
-        <div class="sbadge s1">Assistenzmodus</div>
-        <h3>Der Mensch prüft<br>und sendet selbst</h3>
-        <p>Das System recherchiert, bereinigt, bewertet und erstellt Texte. Kein automatischer Versand – der Mensch bleibt in voller Kontrolle.</p>
-        <div class="stufe-meta">Ideal für den Einstieg</div>
-        <div class="stufe-bg">1</div>
-      </div>
-      <div class="stufe">
-        <div class="sbadge s2">Entwurfsmodus</div>
-        <h3>Fertige Entwürfe —<br>Mensch gibt frei</h3>
-        <p>Das System erstellt fertige E-Mail-Entwürfe, Follow-ups und Antwortvorschläge. Versand erst nach expliziter Freigabe.</p>
-        <div class="stufe-meta">Effizienz mit Kontrolle</div>
-        <div class="stufe-bg">2</div>
-      </div>
-      <div class="stufe">
-        <div class="sbadge s3">Automationsmodus</div>
-        <h3>Nach Freigabe:<br>kontrollierte Ausführung</h3>
-        <p>Erstmails senden, Follow-ups ausführen, Antworten vorsortieren – regelbasiert, mit Sicherheitslogik, nach definierter Freigabe.</p>
-        <div class="stufe-meta">Skalierung bei Bedarf</div>
-        <div class="stufe-bg">3</div>
-      </div>
+      <div class="stufe"><div class="sbadge s1">Assistenzmodus</div><h3>Der Mensch prüft und sendet selbst</h3><p>Das System recherchiert, bereinigt, bewertet und erstellt Texte. Kein automatischer Versand – der Mensch bleibt in voller Kontrolle.</p><div class="stufe-meta">Ideal für den Einstieg</div><div class="stufe-bg">1</div></div>
+      <div class="stufe"><div class="sbadge s2">Entwurfsmodus</div><h3>Fertige Entwürfe — Mensch gibt frei</h3><p>Das System erstellt fertige E-Mail-Entwürfe, Follow-ups und Antwortvorschläge. Versand erst nach expliziter Freigabe.</p><div class="stufe-meta">Effizienz mit Kontrolle</div><div class="stufe-bg">2</div></div>
+      <div class="stufe"><div class="sbadge s3">Automationsmodus</div><h3>Nach Freigabe: kontrollierte Ausführung</h3><p>Erstmails senden, Follow-ups ausführen, Antworten vorsortieren – regelbasiert, mit Sicherheitslogik, nach definierter Freigabe.</p><div class="stufe-meta">Skalierung bei Bedarf</div><div class="stufe-bg">3</div></div>
     </div>
-    <div class="ctrl-bar">Der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt. &nbsp;·&nbsp; Versand ist optional, regelbasiert und immer mit Freigabepunkt.</div>
+    <div class="ctrl-bar">Der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt. · Versand ist optional, regelbasiert und immer mit Freigabepunkt.</div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     5 · COCKPIT
-═══════════════════════════════════════════════════════ -->
+<!-- 5 · COCKPIT -->
 <section class="section" id="cockpit">
   <div class="container">
     <div class="label">Cockpit-Vorschau</div>
     <h2 class="st">Was der Kunde<br>konkret bekommt</h2>
-    <p class="ss">Eine klare Arbeitsansicht mit Fortschritt, Status, Follow-ups, Antworten und nächsten operativen Schritten – immer sichtbar.</p>
+    <p class="ss">Eine klare Arbeitsansicht mit Fortschritt, Status, Follow-ups, Antworten und nächsten operativen Schritten.</p>
     <div class="cpit">
       <div class="cpit-bar">
         <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
-        <span class="cpit-url">B2B Akquise-Cockpit &nbsp;·&nbsp; Zielgruppe: IT-Dienstleister DACH</span>
+        <span class="cpit-url">B2B Akquise-Cockpit · Zielgruppe: IT-Dienstleister DACH</span>
       </div>
       <div class="cpit-body">
         <div class="kpi-row">
-          <div class="kpi"><div class="kv">50</div><div class="kl">Gesamtkontakte</div></div>
-          <div class="kpi"><div class="kv">50</div><div class="kl">Firmen geprüft</div></div>
-          <div class="kpi"><div class="kv" style="color:var(--accent2)">8</div><div class="kl">Ansprechpartner</div></div>
-          <div class="kpi"><div class="kv" style="color:var(--yellow)">122</div><div class="kl">Follow-up fällig</div></div>
+          <div class="kpi"><div class="kv">50</div><div class="kl">Zielkontakte</div></div>
+          <div class="kpi"><div class="kv">47</div><div class="kl">Geprüft</div></div>
+          <div class="kpi"><div class="kv" style="color:var(--accent2)">38</div><div class="kl">Ansprechpartner</div></div>
+          <div class="kpi"><div class="kv" style="color:var(--yellow)">12</div><div class="kl">Follow-up fällig</div></div>
           <div class="kpi"><div class="kv" style="color:var(--green)">3</div><div class="kl">Terminchancen</div></div>
         </div>
         <div class="cpit-main">
@@ -501,19 +442,18 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
             <div class="cc-body">
               <div class="cc-r"><span class="cc-rl">Ansprechpartner</span><span class="cc-rv">Max Müller</span></div>
               <div class="cc-r"><span class="cc-rl">Kontaktweg</span><span class="cc-rv"><span class="tag tb">E-Mail</span><span class="tag tg">Telefon</span><span class="tag ty">Person-via-Google</span></span></div>
-              <div class="cc-r"><span class="cc-rl">Warum interessant</span><span class="cc-rv">B2B-Dienstleister mit erklärungsbedürftigem Angebot und Bedarf an planbarer Neukundengewinnung</span></div>
+              <div class="cc-r"><span class="cc-rl">Warum interessant</span><span class="cc-rv">B2B-Dienstleister mit Bedarf an planbarer Neukundengewinnung</span></div>
               <div class="cc-r"><span class="cc-rl">Status</span><span class="cc-rv"><span class="tag tb">Erstansprache offen</span></span></div>
               <div class="cc-ein">„Hallo Herr Müller, ich habe gesehen, dass Sie im IT-Dienstleistungsbereich aktiv sind …"</div>
-              <div class="cc-next">Profil prüfen &nbsp;→&nbsp; Erstansprache &nbsp;→&nbsp; Follow-up</div>
+              <div class="cc-next">Profil prüfen → Erstansprache → Follow-up</div>
             </div>
           </div>
           <div class="pip">
             <h4 style="font-size:11px;font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">Pipeline-Übersicht</h4>
-            <div class="pip-r"><span class="pip-s">Recherche</span><div class="pip-bw"><div class="pip-b" style="width:100%"></div></div><span class="pip-c">50</span></div>
-            <div class="pip-r"><span class="pip-s">Bereinigt</span><div class="pip-bw"><div class="pip-b" style="width:90%"></div></div><span class="pip-c">45</span></div>
-            <div class="pip-r"><span class="pip-s">Angesprochen</span><div class="pip-bw"><div class="pip-b" style="width:60%"></div></div><span class="pip-c">30</span></div>
-            <div class="pip-r"><span class="pip-s">Follow-up</span><div class="pip-bw"><div class="pip-b" style="width:40%;background:var(--yellow)"></div></div><span class="pip-c" style="color:var(--yellow)">20</span></div>
-            <div class="pip-r"><span class="pip-s">Antwort</span><div class="pip-bw"><div class="pip-b" style="width:20%;background:var(--green)"></div></div><span class="pip-c" style="color:var(--green)">10</span></div>
+            <div class="pip-r"><span class="pip-s">Zielkontakte</span><div class="pip-bw"><div class="pip-b" style="width:100%"></div></div><span class="pip-c">50</span></div>
+            <div class="pip-r"><span class="pip-s">Geprüft</span><div class="pip-bw"><div class="pip-b" style="width:94%"></div></div><span class="pip-c">47</span></div>
+            <div class="pip-r"><span class="pip-s">Ansprechpartner</span><div class="pip-bw"><div class="pip-b" style="width:76%"></div></div><span class="pip-c">38</span></div>
+            <div class="pip-r"><span class="pip-s">Follow-up fällig</span><div class="pip-bw"><div class="pip-b" style="width:24%;background:var(--yellow)"></div></div><span class="pip-c" style="color:var(--yellow)">12</span></div>
             <div class="pip-r" style="border:none;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)"><span class="pip-s" style="color:var(--accent2);font-weight:700">Terminchancen</span><div class="pip-bw"><div class="pip-b" style="width:6%"></div></div><span class="pip-c" style="color:var(--accent2)">3</span></div>
           </div>
         </div>
@@ -522,117 +462,61 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     6 · OUTREACH
-═══════════════════════════════════════════════════════ -->
+<!-- 6 · OUTREACH -->
 <section class="section section-alt">
   <div class="container">
     <div class="label">Outreach-Logik</div>
     <h2 class="st">Der Prozess hört nicht<br>nach der ersten Mail auf</h2>
     <p class="ss">Erstansprache, Nachverfolgung und Antwortbearbeitung – alles in einem strukturierten Ablauf.</p>
     <div class="grid-3">
-      <div class="out"><div class="out-ico o1">✉️</div><h3>Erstansprache</h3>
-        <div class="out-li">Mehrere Erstmail-Varianten erstellen</div>
-        <div class="out-li">Neutral oder personalisiert schreiben</div>
-        <div class="out-li">Google- & LinkedIn-Recherchehilfe</div>
-        <div class="out-li">Als Entwurf vorbereiten</div>
-        <div class="out-li">Nach Freigabe optional versenden</div>
-      </div>
-      <div class="out"><div class="out-ico o2">🔁</div><h3>Follow-up</h3>
-        <div class="out-li">Follow-up 1 und 2 regelbasiert vorbereiten</div>
-        <div class="out-li">Wiedervorlage-Zeitpunkte setzen</div>
-        <div class="out-li">Versandhistorie speichern</div>
-        <div class="out-li">Doppelte Kontakte vermeiden</div>
-        <div class="out-li">Entwurfsmodus oder nach Freigabe</div>
-      </div>
-      <div class="out"><div class="out-ico o3">📬</div><h3>Antwortlogik</h3>
-        <div class="out-li">Interesse erkennen und weiterführen</div>
-        <div class="out-li">Absagen und „später" einordnen</div>
-        <div class="out-li">Falsche Ansprechpartner identifizieren</div>
-        <div class="out-li">Materialwunsch & Terminbereitschaft</div>
-        <div class="out-li">Antwortentwurf & nächster Schritt</div>
-      </div>
+      <div class="out"><div class="out-ico o1">✉️</div><h3>Erstansprache</h3><div class="out-li">Mehrere Erstmail-Varianten erstellen</div><div class="out-li">Neutral oder personalisiert schreiben</div><div class="out-li">Google- &amp; LinkedIn-Recherchehilfe</div><div class="out-li">Als Entwurf vorbereiten</div><div class="out-li">Nach Freigabe optional versenden</div></div>
+      <div class="out"><div class="out-ico o2">🔁</div><h3>Follow-up</h3><div class="out-li">Follow-up 1 und 2 regelbasiert vorbereiten</div><div class="out-li">Wiedervorlage-Zeitpunkte setzen</div><div class="out-li">Versandhistorie speichern</div><div class="out-li">Doppelte Kontakte vermeiden</div><div class="out-li">Entwurfsmodus oder nach Freigabe</div></div>
+      <div class="out"><div class="out-ico o3">📬</div><h3>Antwortlogik</h3><div class="out-li">Interesse erkennen und weiterführen</div><div class="out-li">Absagen und „später" einordnen</div><div class="out-li">Falsche Ansprechpartner identifizieren</div><div class="out-li">Materialwunsch &amp; Terminbereitschaft</div><div class="out-li">Antwortentwurf &amp; nächster Schritt</div></div>
     </div>
     <div class="out-accent">Eine Leadliste endet bei Adressen. Dieses System beginnt dort erst richtig.</div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     7 · VERGLEICH
-═══════════════════════════════════════════════════════ -->
+<!-- 7 · VERGLEICH -->
 <section class="section" id="vergleich">
   <div class="container">
     <div class="label">Vergleich</div>
     <h2 class="st">Mehr als eine Leadliste</h2>
     <p class="ss">Der Unterschied liegt nicht in der Anzahl der Kontakte – sondern im Prozess dahinter.</p>
-    <table class="cmp">
-      <thead><tr><th>Normale Leadliste</th><th>B2B Akquise-System</th></tr></thead>
-      <tbody>
-        <tr><td><span class="x">✕</span> Rohe Adressen ohne Qualitätsprüfung</td><td><span class="ck">✓</span> Kontakte finden, bereinigen und prüfen</td></tr>
-        <tr><td><span class="x">✕</span> Viel manuelle Prüfarbeit nötig</td><td><span class="ck">✓</span> Bereinigte Arbeitsbasis mit Dublettenprüfung</td></tr>
-        <tr><td><span class="x">✕</span> Keine Priorisierung</td><td><span class="ck">✓</span> Ansprechpartner prüfen und Priorität setzen</td></tr>
-        <tr><td><span class="x">✕</span> Keine vorbereiteten Texte</td><td><span class="ck">✓</span> Erstansprache, Vorlagen, Entwürfe</td></tr>
-        <tr><td><span class="x">✕</span> Keine Follow-up-Struktur</td><td><span class="ck">✓</span> Follow-ups steuern, Wiedervorlage setzen</td></tr>
-        <tr><td><span class="x">✕</span> Keine Antwortlogik</td><td><span class="ck">✓</span> Antworten einordnen, Entwürfe vorbereiten</td></tr>
-        <tr><td><span class="x">✕</span> Kein klarer nächster Schritt</td><td><span class="ck">✓</span> Status, Pipeline und nächste Schritte sichtbar</td></tr>
-      </tbody>
-    </table>
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead><tr><th>Normale Leadliste</th><th>B2B Akquise-System</th></tr></thead>
+        <tbody>
+          <tr><td><span class="x">✕</span> Rohe Adressen ohne Qualitätsprüfung</td><td><span class="ck">✓</span> Kontakte finden, bereinigen und prüfen</td></tr>
+          <tr><td><span class="x">✕</span> Viel manuelle Prüfarbeit nötig</td><td><span class="ck">✓</span> Bereinigte Arbeitsbasis mit Dublettenprüfung</td></tr>
+          <tr><td><span class="x">✕</span> Keine Priorisierung</td><td><span class="ck">✓</span> Ansprechpartner prüfen und Priorität setzen</td></tr>
+          <tr><td><span class="x">✕</span> Keine vorbereiteten Texte</td><td><span class="ck">✓</span> Erstansprache, Vorlagen, Entwürfe</td></tr>
+          <tr><td><span class="x">✕</span> Keine Follow-up-Struktur</td><td><span class="ck">✓</span> Follow-ups steuern, Wiedervorlage setzen</td></tr>
+          <tr><td><span class="x">✕</span> Keine Antwortlogik</td><td><span class="ck">✓</span> Antworten einordnen, Entwürfe vorbereiten</td></tr>
+          <tr><td><span class="x">✕</span> Kein klarer nächster Schritt</td><td><span class="ck">✓</span> Status, Pipeline und nächste Schritte sichtbar</td></tr>
+        </tbody>
+      </table>
+    </div>
     <div class="geo"><h3>Geeignet für</h3>
-      <div class="btags">
-        <span class="btag">Geschäftsführer</span><span class="btag">B2B-Dienstleister</span><span class="btag">Agenturen</span><span class="btag">IT-Dienstleister</span><span class="btag">Cybersecurity</span><span class="btag">Medizintechnik & Healthcare</span><span class="btag">Bauzulieferer</span><span class="btag">Energie & PV</span><span class="btag">Logistik</span><span class="btag">Vertriebsdienstleister</span><span class="btag">Kaltakquise-Firmen</span><span class="btag">Firmen mit eigenem Vertrieb</span>
-      </div>
+      <div class="btags"><span class="btag">Geschäftsführer</span><span class="btag">B2B-Dienstleister</span><span class="btag">Agenturen</span><span class="btag">IT-Dienstleister</span><span class="btag">Cybersecurity</span><span class="btag">Medizintechnik &amp; Healthcare</span><span class="btag">Bauzulieferer</span><span class="btag">Energie &amp; PV</span><span class="btag">Logistik</span><span class="btag">Vertriebsdienstleister</span><span class="btag">Kaltakquise-Firmen</span><span class="btag">Firmen mit eigenem Vertrieb</span></div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     8 · PAKETE + CTA
-═══════════════════════════════════════════════════════ -->
+<!-- 8 · PAKETE + CTA -->
 <section class="section section-alt" id="pakete">
   <div class="container">
     <div class="label">Angebote</div>
     <h2 class="st">Klein starten,<br>sauber ausbauen</h2>
     <p class="ss">Wählen Sie den Einstieg, der zu Ihrem Vertriebsprozess passt.</p>
     <div class="grid-4" style="margin-bottom:48px;">
-      <div class="pak">
-        <div class="pak-num">Paket 1</div>
-        <h3>Vorschau</h3>
-        <div class="pak-li"><span class="pak-ck">✓</span>20–50 vorbereitete Kontakte</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Zielgruppe testen</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Nutzen sichtbar machen</div>
-        <div class="pak-sp"></div>
-      </div>
-      <div class="pak pak-feat">
-        <div class="pak-badge">Beliebt</div>
-        <div class="pak-num">Paket 2</div>
-        <h3>Akquise-Cockpit</h3>
-        <div class="pak-li"><span class="pak-ck">✓</span>100 vorbereitete Kontakte</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner & Kontaktwege</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Texte, Status & Export</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>HTML-Cockpit & CSV</div>
-        <div class="pak-sp"></div>
-      </div>
-      <div class="pak">
-        <div class="pak-num">Paket 3</div>
-        <h3>Outreach-System</h3>
-        <div class="pak-li"><span class="pak-ck">✓</span>Kontakte + Erstansprache</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Follow-up 1 & 2</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Entwurfsmodus oder Versand</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Freigabe vor jedem Versand</div>
-        <div class="pak-sp"></div>
-      </div>
-      <div class="pak">
-        <div class="pak-num">Paket 4</div>
-        <h3>Monats-System</h3>
-        <div class="pak-li"><span class="pak-ck">✓</span>Laufend neue Kontakte</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Listenveredelung</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Follow-up-Struktur</div>
-        <div class="pak-li"><span class="pak-ck">✓</span>Antwortlogik & Pipeline</div>
-        <div class="pak-sp"></div>
-      </div>
+      <div class="pak"><div class="pak-num">Paket 1</div><h3>Vorschau</h3><div class="pak-li"><span class="pak-ck">✓</span>20–50 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Zielgruppe testen</div><div class="pak-li"><span class="pak-ck">✓</span>Nutzen sichtbar machen</div><div class="pak-sp"></div></div>
+      <div class="pak pak-feat"><div class="pak-badge">Beliebt</div><div class="pak-num">Paket 2</div><h3>Akquise-Cockpit</h3><div class="pak-li"><span class="pak-ck">✓</span>100 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner &amp; Kontaktwege</div><div class="pak-li"><span class="pak-ck">✓</span>Texte, Status &amp; Export</div><div class="pak-li"><span class="pak-ck">✓</span>HTML-Cockpit &amp; CSV</div><div class="pak-sp"></div></div>
+      <div class="pak"><div class="pak-num">Paket 3</div><h3>Outreach-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Kontakte + Erstansprache</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up 1 &amp; 2</div><div class="pak-li"><span class="pak-ck">✓</span>Entwurfsmodus oder Versand</div><div class="pak-li"><span class="pak-ck">✓</span>Freigabe vor jedem Versand</div><div class="pak-sp"></div></div>
+      <div class="pak"><div class="pak-num">Paket 4</div><h3>Monats-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Laufend neue Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Listenveredelung</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up-Struktur</div><div class="pak-li"><span class="pak-ck">✓</span>Antwortlogik &amp; Pipeline</div><div class="pak-sp"></div></div>
     </div>
     <div class="cta-box">
-      <h2>Starten Sie mit einer <span class="accent">kleinen Vorschau</span><br>für Ihre Zielgruppe</h2>
+      <h2>Starten Sie mit einer <span class="accent">kleinen Vorschau</span> für Ihre Zielgruppe</h2>
       <p>20–50 vorbereitete Kontakte inklusive Kontaktwegen, Texten, Follow-up-Struktur und nächstem Schritt. Erst assistieren – dann auf Wunsch automatisieren.</p>
       <a class="cta-btn" href="mailto:emilio@rebellsystem.com?subject=Vorschau anfragen">Jetzt Vorschau anfragen →</a>
     </div>
@@ -640,20 +524,21 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
 </section>
 
 <footer>
-  <div class="foot-brand">
-    <svg width="110" height="26" viewBox="0 0 110 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
-      <rect width="26" height="26" rx="6" fill="url(#fg)"/>
-      <rect x="6" y="4.5" width="3.5" height="17" rx="1.5" fill="white"/>
-      <path d="M9.5 4.5 L13.5 4.5 Q19 4.5 19 9.5 Q19 13.5 13.5 14.5 L9.5 14.5" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <line x1="13" y1="14" x2="20.5" y2="21.5" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="22" cy="22.5" r="2" fill="#93c5fd"/>
-      <text x="32" y="14" font-family="Inter,sans-serif" font-weight="800" font-size="10" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text>
-      <text x="32.5" y="23" font-family="Inter,sans-serif" font-weight="400" font-size="7" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text>
-    </svg>
-  </div>
-  <div class="foot-info">
-    Emilio Allegro &nbsp;·&nbsp; <a class="foot-link" href="https://rebellsystem.com" target="_blank">rebellsystem.com</a>
+  <svg width="110" height="26" viewBox="0 0 110 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+    <rect width="26" height="26" rx="6" fill="url(#fg)"/>
+    <rect x="6" y="4.5" width="3.5" height="17" rx="1.5" fill="white"/>
+    <path d="M9.5 4.5 L13.5 4.5 Q19 4.5 19 9.5 Q19 13.5 13.5 14.5 L9.5 14.5" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <line x1="13" y1="14" x2="20.5" y2="21.5" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="22" cy="22.5" r="2" fill="#93c5fd"/>
+    <text x="32" y="14" font-family="Inter,sans-serif" font-weight="800" font-size="10" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text>
+    <text x="32.5" y="23" font-family="Inter,sans-serif" font-weight="400" font-size="7" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text>
+  </svg>
+  <div class="foot-info" style="font-size:12px;color:#94a3b8;">
+    Emilio Allegro &nbsp;·&nbsp;
+    <a class="foot-link" href="https://rebellsystem.com" target="_blank">rebellsystem.com</a> &nbsp;·&nbsp;
+    <a class="foot-link" href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a> &nbsp;·&nbsp;
+    <a class="foot-link" href="impressum.html">Impressum &amp; Datenschutz</a>
   </div>
 </footer>
 
