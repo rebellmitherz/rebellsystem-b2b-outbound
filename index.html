@@ -3,1349 +3,246 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rebell Systems – B2B Outbound Infrastructure System</title>
-<meta name="description" content="Rebell Systems verwandelt Rohkontakte und CRM-Exporte in eine geprüfte, priorisierte Outbound-Pipeline mit E-Mail-Sequenzen, Reply-Sortierung und Sales-Übergabe.">
+<title>B2B Akquise-System – Rebell System</title>
 <style>
-/* ── Reset ──────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-/* ── Tokens ─────────────────────────────────────────────────── */
-:root {
-  --bg:        #080b12;
-  --bg2:       #0d1120;
-  --bg3:       #111828;
-  --bg4:       #161f32;
-  --border:    #1c2840;
-  --border2:   #243050;
-  --accent:    #3b82f6;
-  --accent-h:  #2563eb;
-  --green:     #10b981;
-  --orange:    #f59e0b;
-  --red:       #ef4444;
-  --teal:      #14b8a6;
-  --indigo:    #6366f1;
-  --text:      #eaeef6;
-  --text2:     #c8d3e6;
-  --muted:     #7a8ea8;
-  --muted2:    #4d6175;
-  --card:      #0f1624;
-  --card2:     #131c2e;
-  --r:         14px;
-  --rs:        9px;
-  --shadow:    0 4px 28px rgba(0,0,0,0.55);
-  --shadow-lg: 0 12px 56px rgba(0,0,0,0.65);
-  --transition: 0.2s ease;
-}
-
-/* ── Base ───────────────────────────────────────────────────── */
-html { scroll-behavior: smooth; font-size: 16px; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  background: var(--bg); color: var(--text);
-  line-height: 1.65; -webkit-font-smoothing: antialiased;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-h1,h2,h3,h4 { font-weight: 800; line-height: 1.2; letter-spacing: -0.015em; color: var(--text); }
-h1 { font-size: clamp(1.9rem, 4.5vw, 3rem); }
-h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); }
-h3 { font-size: 1.1rem; font-weight: 700; }
-h4 { font-size: 0.95rem; font-weight: 700; }
-p { color: var(--text2); line-height: 1.72; }
-code {
-  font-family: 'Cascadia Code','Fira Code','Consolas',monospace;
-  font-size: 0.84em; font-variant-ligatures: none;
-  color: #7dd3fc; background: rgba(59,130,246,0.1);
-  padding: 2px 7px; border-radius: 5px;
-}
-strong { color: var(--text); }
-
-/* ── Layout ─────────────────────────────────────────────────── */
-.wrap  { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
-.wrap-sm { max-width: 760px; margin: 0 auto; padding: 0 28px; }
-.section    { padding: 88px 0; }
-.section-sm { padding: 60px 0; }
-.divider { border: none; border-top: 1px solid var(--border); }
-
-/* ── Nav ─────────────────────────────────────────────────────── */
-nav {
-  position: sticky; top: 0; z-index: 200;
-  background: rgba(8,11,18,0.94);
-  backdrop-filter: blur(18px) saturate(1.4);
-  border-bottom: 1px solid var(--border);
-}
-.nav-inner {
-  display: flex; align-items: center;
-  max-width: 1080px; margin: 0 auto; padding: 0 28px;
-}
-.nav-brand {
-  font-weight: 900; font-size: 1.0rem; color: var(--text);
-  letter-spacing: -0.01em; padding: 15px 0; flex-shrink: 0;
-  display: flex; align-items: center; gap: 9px;
-}
-.nav-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 9px var(--accent);
-  animation: blink 2.8s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 60%{opacity:0.35} }
-.nav-sep { width: 1px; height: 20px; background: var(--border); margin: 0 20px; flex-shrink: 0; }
-.nav-links {
-  display: flex; gap: 0; overflow-x: auto;
-  scrollbar-width: none; flex: 1;
-}
-.nav-links::-webkit-scrollbar { display: none; }
-.nav-links a {
-  color: var(--muted); font-size: 0.82rem; font-weight: 500;
-  padding: 15px 13px; white-space: nowrap;
-  border-bottom: 2px solid transparent; transition: color var(--transition);
-}
-.nav-links a:hover, .nav-links a.active {
-  color: var(--text); text-decoration: none;
-  border-bottom-color: var(--accent);
-}
-.nav-cta { flex-shrink: 0; margin-left: 20px; }
-
-/* ── Buttons ─────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 26px; border-radius: 100px;
-  font-size: 0.92rem; font-weight: 700; cursor: pointer;
-  transition: all var(--transition); border: none;
-  text-decoration: none !important; white-space: nowrap;
-  letter-spacing: -0.005em;
-}
-.btn-lg { padding: 16px 34px; font-size: 1rem; }
-.btn-sm { padding: 9px 20px; font-size: 0.82rem; }
-.btn-primary {
-  background: var(--accent); color: #fff;
-  box-shadow: 0 0 24px rgba(59,130,246,0.38), 0 2px 6px rgba(0,0,0,0.4);
-}
-.btn-primary:hover {
-  background: var(--accent-h);
-  box-shadow: 0 0 36px rgba(59,130,246,0.55), 0 4px 10px rgba(0,0,0,0.5);
-  transform: translateY(-2px); color: #fff;
-}
-.btn-outline {
-  background: transparent; color: var(--text2);
-  border: 1.5px solid var(--border2);
-}
-.btn-outline:hover {
-  border-color: var(--accent); color: var(--accent);
-  transform: translateY(-2px);
-}
-.btn-green {
-  background: var(--green); color: #fff;
-  box-shadow: 0 0 22px rgba(16,185,129,0.32);
-}
-.btn-green:hover {
-  background: #059669;
-  box-shadow: 0 0 32px rgba(16,185,129,0.5);
-  transform: translateY(-2px); color: #fff;
-}
-
-/* ── Badges ──────────────────────────────────────────────────── */
-.badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 13px; border-radius: 100px;
-  font-size: 0.76rem; font-weight: 700; border: 1px solid;
-  letter-spacing: 0.01em;
-}
-.bg  { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#6ee7b7; }
-.bb  { background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.3); color:#93c5fd; }
-.bp  { background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3); color:#c7d2fe; }
-.bo  { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.3); color:#fcd34d; }
-.bm  { background:rgba(122,142,168,0.1); border-color:rgba(122,142,168,0.2); color:var(--muted); }
-
-/* ── Section labels ──────────────────────────────────────────── */
-.sec-label {
-  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
-  display: block;
-}
-.sec-lead {
-  color: var(--muted); font-size: 1.05rem;
-  max-width: 640px; margin-bottom: 52px; line-height: 1.7;
-}
-
-/* ── HERO ────────────────────────────────────────────────────── */
-.hero {
-  position: relative; overflow: hidden;
-  padding: 110px 0 90px;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(59,130,246,0.11) 0%, transparent 65%),
-    linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
-  border-bottom: 1px solid var(--border);
-}
-.hero-label {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.28);
-  color: var(--accent); font-size: 0.72rem; font-weight: 700;
-  letter-spacing: 0.13em; text-transform: uppercase;
-  padding: 5px 14px 5px 10px; border-radius: 100px; margin-bottom: 26px;
-}
-.hero-label-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent); animation: blink 2s infinite;
-}
-.hero-content { max-width: 720px; }
-.hero h1 { margin-bottom: 22px; }
-.hero h1 em { font-style: normal; color: var(--accent); }
-.hero h1 .g { color: var(--green); }
-.hero-sub {
-  font-size: 1.12rem; color: var(--muted); margin-bottom: 36px;
-  max-width: 640px; line-height: 1.75;
-}
-.hero-btns { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
-.hero-trust {
-  font-size: 0.82rem; color: var(--muted2);
-  display: flex; align-items: center; gap: 8px;
-}
-.hero-trust::before {
-  content: '✓'; color: var(--green); font-weight: 800;
-}
-
-/* ── Benefits box (under hero) ───────────────────────────────── */
-.benefits-strip {
-  background: var(--bg3); border-bottom: 1px solid var(--border);
-  padding: 52px 0;
-}
-.benefits-title {
-  text-align: center; font-size: 0.78rem; font-weight: 800;
-  letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 32px;
-}
-.benefits-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
-}
-@media (max-width: 860px) { .benefits-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .benefits-grid { grid-template-columns: 1fr; } }
-.benefit-card {
-  background: var(--card); padding: 28px 26px;
-  border: 1px solid var(--border);
-  transition: border-color var(--transition);
-  position: relative;
-}
-.benefit-card::after {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--bc, var(--accent));
-  opacity: 0; transition: opacity var(--transition);
-}
-.benefit-card:hover { border-color: var(--border2); }
-.benefit-card:hover::after { opacity: 1; }
-.benefit-card:first-child { border-radius: var(--rs) 0 0 var(--rs); }
-.benefit-card:last-child  { border-radius: 0 var(--rs) var(--rs) 0; }
-.bc-g { --bc: var(--green); }
-.bc-b { --bc: var(--accent); }
-.bc-p { --bc: var(--indigo); }
-.bc-o { --bc: var(--orange); }
-.benefit-icon { font-size: 1.6rem; margin-bottom: 12px; }
-.benefit-card h3 { font-size: 1rem; margin-bottom: 8px; }
-.benefit-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.6; }
-
-/* ── Problem ─────────────────────────────────────────────────── */
-.problem-section {
-  background: linear-gradient(135deg, var(--bg2), var(--bg));
-}
-.problem-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px;
-  margin-bottom: 32px;
-}
-.prob-item {
-  display: flex; gap: 14px; align-items: flex-start;
-  background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15);
-  border-radius: var(--rs); padding: 18px 20px;
-}
-.prob-x { color: var(--red); font-size: 1rem; flex-shrink: 0; margin-top: 3px; font-weight: 800; }
-.prob-item h4 { color: var(--text); margin-bottom: 4px; }
-.prob-item p  { font-size: 0.83rem; color: var(--muted); }
-.problem-callout {
-  background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.18);
-  border-radius: var(--r); padding: 22px 28px;
-  font-size: 0.93rem; color: var(--text2);
-}
-
-/* ── Solution ────────────────────────────────────────────────── */
-.sol-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
-}
-.sol-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 26px 24px;
-  transition: border-color var(--transition), transform var(--transition);
-  position: relative; overflow: hidden;
-}
-.sol-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--cc, var(--accent));
-}
-.sol-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-.cc-b { --cc: var(--accent); }
-.cc-g { --cc: var(--green); }
-.cc-p { --cc: var(--indigo); }
-.cc-o { --cc: var(--orange); }
-.cc-t { --cc: var(--teal); }
-.sol-icon {
-  width: 42px; height: 42px; border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.15rem; margin-bottom: 16px;
-  background: var(--si-bg, rgba(59,130,246,0.12));
-}
-.si-b { --si-bg: rgba(59,130,246,0.12); }
-.si-g { --si-bg: rgba(16,185,129,0.12); }
-.si-p { --si-bg: rgba(99,102,241,0.12); }
-.si-o { --si-bg: rgba(245,158,11,0.12); }
-.si-t { --si-bg: rgba(20,184,166,0.12); }
-.sol-card h3 { margin-bottom: 10px; }
-.sol-card p  { font-size: 0.87rem; color: var(--muted); line-height: 1.63; }
-.sol-tag {
-  display: inline-block; margin-top: 14px;
-  font-size: 0.7rem; font-weight: 700; padding: 3px 10px;
-  border-radius: 100px; letter-spacing: 0.04em;
-  background: rgba(59,130,246,0.1); color: #93c5fd;
-  border: 1px solid rgba(59,130,246,0.2);
-}
-.st-g { background:rgba(16,185,129,0.1); color:#6ee7b7; border-color:rgba(16,185,129,0.2); }
-.st-o { background:rgba(245,158,11,0.1); color:#fcd34d; border-color:rgba(245,158,11,0.2); }
-.st-p { background:rgba(99,102,241,0.1); color:#c7d2fe; border-color:rgba(99,102,241,0.2); }
-.st-t { background:rgba(20,184,166,0.1); color:#5eead4; border-color:rgba(20,184,166,0.2); }
-.st-m { background:rgba(122,142,168,0.1); color:var(--muted); border-color:rgba(122,142,168,0.2); }
-
-/* ── Process flow ────────────────────────────────────────────── */
-.flow-section {
-  background: linear-gradient(135deg, var(--bg3), var(--bg2));
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-}
-.flow-wrap {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 40px 32px;
-  overflow-x: auto;
-}
-.flow-steps {
-  display: flex; align-items: center; flex-wrap: nowrap;
-  gap: 0; min-width: 640px; justify-content: center;
-}
-.flow-node { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.flow-box {
-  padding: 10px 16px; border-radius: var(--rs);
-  font-size: 0.79rem; font-weight: 700; text-align: center;
-  white-space: nowrap; border: 1.5px solid;
-  transition: transform var(--transition);
-}
-.flow-box:hover { transform: translateY(-2px); }
-.fb-blue   { background:rgba(59,130,246,0.12); border-color:rgba(59,130,246,0.38); color:#93c5fd; }
-.fb-purple { background:rgba(99,102,241,0.12); border-color:rgba(99,102,241,0.38); color:#c7d2fe; }
-.fb-teal   { background:rgba(20,184,166,0.12); border-color:rgba(20,184,166,0.38); color:#5eead4; }
-.fb-orange { background:rgba(245,158,11,0.12); border-color:rgba(245,158,11,0.38); color:#fcd34d; }
-.fb-green  { background:rgba(16,185,129,0.18); border-color:rgba(16,185,129,0.5); color:#86efac; font-weight:900; }
-.flow-sub  { font-size: 0.67rem; color: var(--muted2); text-align: center; max-width: 90px; }
-.flow-arr  { color: var(--muted2); font-size: 1.1rem; padding: 0 5px; flex-shrink: 0; }
-
-/* ── Key callout ─────────────────────────────────────────────── */
-.key-callout {
-  background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(16,185,129,0.06));
-  border: 1px solid rgba(16,185,129,0.22);
-  border-left: 4px solid var(--green);
-  border-radius: var(--r); padding: 40px 48px;
-}
-.key-callout p {
-  font-size: clamp(1.05rem, 2.2vw, 1.32rem);
-  color: var(--text); line-height: 1.7; font-style: italic;
-}
-.key-callout strong { color: var(--green); font-style: normal; }
-@media (max-width: 600px) { .key-callout { padding: 28px 24px; } }
-
-/* ── Comparison ──────────────────────────────────────────────── */
-.cmp-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-}
-@media (max-width: 620px) { .cmp-grid { grid-template-columns: 1fr; } }
-.cmp-box {
-  border-radius: var(--r); padding: 28px 30px;
-}
-.cmp-no  { background:rgba(239,68,68,0.04); border:1px solid rgba(239,68,68,0.18); }
-.cmp-yes { background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.22); }
-.cmp-box h4 { font-size: 0.9rem; margin-bottom: 16px; }
-.cmp-box ul { list-style: none; }
-.cmp-box ul li {
-  font-size: 0.87rem; color: var(--muted);
-  margin-bottom: 9px; display: flex; gap: 10px; align-items: flex-start;
-  padding-left: 0;
-}
-.cmp-li-x { color: var(--red);   font-weight: 800; flex-shrink: 0; margin-top: 1px; }
-.cmp-li-c { color: var(--green); font-weight: 800; flex-shrink: 0; margin-top: 1px; }
-
-/* ── Outputs ─────────────────────────────────────────────────── */
-.output-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 12px;
-}
-.output-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--rs); padding: 20px 22px;
-  display: flex; flex-direction: column; gap: 7px;
-  transition: border-color var(--transition);
-}
-.output-card:hover { border-color: var(--border2); }
-.out-file {
-  font-family: 'Cascadia Code','Fira Code','Consolas',monospace;
-  font-size: 0.75rem; color: #64a9d4; font-variant-ligatures: none;
-}
-.out-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
-.out-desc  { font-size: 0.82rem; color: var(--muted); flex: 1; line-height: 1.58; }
-.out-for   {
-  font-size: 0.68rem; font-weight: 700; color: var(--muted2);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px;
-}
-
-/* ── Who ─────────────────────────────────────────────────────── */
-.who-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px;
-}
-.who-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 26px 22px; text-align: center;
-  transition: border-color var(--transition), transform var(--transition);
-}
-.who-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.who-icon { font-size: 1.9rem; margin-bottom: 12px; }
-.who-card h4 { font-size: 0.9rem; margin-bottom: 7px; }
-.who-card p  { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
-
-/* ── Pilot ───────────────────────────────────────────────────── */
-.pilot-section {
-  background: linear-gradient(135deg, var(--bg2), var(--bg3));
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-}
-.pilot-grid {
-  display: grid; grid-template-columns: 1.5fr 1fr; gap: 52px; align-items: start;
-}
-@media (max-width: 800px) { .pilot-grid { grid-template-columns: 1fr; } }
-.pilot-text h2 { margin-bottom: 16px; }
-.pilot-text > p { color: var(--muted); font-size: 0.94rem; margin-bottom: 24px; }
-.pilot-steps { list-style: none; }
-.pilot-steps li {
-  display: flex; gap: 14px; align-items: flex-start;
-  padding: 14px 0; border-bottom: 1px solid var(--border);
-  font-size: 0.89rem; color: var(--muted);
-}
-.pilot-steps li:last-child { border-bottom: none; }
-.ps-num {
-  min-width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(59,130,246,0.14); border: 1.5px solid rgba(59,130,246,0.35);
-  color: var(--accent); font-weight: 800; font-size: 0.77rem;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
-}
-.ps-num-g {
-  background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.35);
-  color: var(--green);
-}
-.price-note {
-  font-size: 0.73rem; color: var(--muted2); margin-bottom: 14px;
-  font-style: italic; text-align: center;
-}
-.price-cards { display: flex; flex-direction: column; gap: 10px; }
-.price-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 18px 22px;
-  display: flex; align-items: center; gap: 16px;
-  transition: border-color var(--transition);
-}
-.price-card:hover { border-color: var(--border2); }
-.price-card-featured { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.05); }
-.price-icon { font-size: 1.3rem; flex-shrink: 0; }
-.price-lbl { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
-.price-val { font-size: 1.05rem; font-weight: 800; color: var(--text); }
-.price-sub { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
-.price-footer { font-size: 0.75rem; color: var(--muted2); margin-top: 10px; font-style: italic; text-align: center; }
-
-/* ── Trust/Grenzen ───────────────────────────────────────────── */
-.trust-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-}
-@media (max-width: 680px) { .trust-grid { grid-template-columns: 1fr; } }
-.trust-box {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 26px 28px;
-}
-.trust-box h3 { margin-bottom: 18px; }
-.trust-list { list-style: none; }
-.trust-list li {
-  display: flex; gap: 10px; align-items: flex-start;
-  font-size: 0.87rem; color: var(--muted);
-  margin-bottom: 10px; line-height: 1.55;
-}
-.tl-r  { color: var(--red);    flex-shrink: 0; margin-top: 1px; }
-.tl-g  { color: var(--green);  flex-shrink: 0; margin-top: 1px; }
-.tl-w  { color: var(--orange); flex-shrink: 0; margin-top: 1px; }
-.trust-note {
-  margin-top: 18px; background: rgba(245,158,11,0.06);
-  border: 1px solid rgba(245,158,11,0.2);
-  border-radius: var(--rs); padding: 18px 22px;
-  font-size: 0.87rem; color: var(--muted);
-}
-
-/* ── CTA final ───────────────────────────────────────────────── */
-.cta-section {
-  background:
-    radial-gradient(ellipse 65% 55% at 50% 50%, rgba(59,130,246,0.09) 0%, transparent 70%),
-    var(--bg2);
-  border-top: 1px solid var(--border);
-}
-.cta-inner { text-align: center; max-width: 680px; margin: 0 auto; }
-.cta-inner h2 { margin-bottom: 18px; }
-.cta-inner > p { color: var(--muted); font-size: 1.04rem; margin-bottom: 32px; line-height: 1.72; }
-.cta-btns { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 32px; }
-.cta-box {
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 28px 32px; text-align: left;
-  margin-top: 12px;
-}
-.cta-box p { font-size: 0.87rem; color: var(--muted); margin-bottom: 16px; }
-.cta-formats { display: flex; flex-wrap: wrap; gap: 7px; }
-
-/* ── Legal ───────────────────────────────────────────────────── */
-.legal-bar {
-  background: var(--bg); border-top: 1px solid var(--border);
-  padding: 18px 0; text-align: center;
-  font-size: 0.79rem; color: var(--muted2); line-height: 1.65;
-}
-
-/* ── Footer ──────────────────────────────────────────────────── */
-footer {
-  background: var(--bg2); border-top: 1px solid var(--border);
-  padding: 44px 0 32px;
-}
-.footer-inner {
-  display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 40px;
-  max-width: 1080px; margin: 0 auto; padding: 0 28px;
-}
-@media (max-width: 700px) { .footer-inner { grid-template-columns: 1fr; gap: 28px; } }
-.footer-brand-col {}
-.footer-brand {
-  font-weight: 900; font-size: 1.05rem; color: var(--text);
-  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
-}
-.footer-brand-sub { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
-.footer-col h5 {
-  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--muted2); margin-bottom: 14px;
-}
-.footer-col a {
-  display: block; font-size: 0.84rem; color: var(--muted);
-  margin-bottom: 9px; transition: color var(--transition);
-}
-.footer-col a:hover { color: var(--text); text-decoration: none; }
-.footer-bottom {
-  max-width: 1080px; margin: 28px auto 0; padding: 18px 28px 0;
-  border-top: 1px solid var(--border);
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between; gap: 10px;
-  font-size: 0.77rem; color: var(--muted2);
-}
-
-/* ── Print ───────────────────────────────────────────────────── */
-@media print {
-  nav, .nav-cta { display: none; }
-  body { background: #fff; color: #111; font-size: 11pt; }
-  .hero, .flow-section, .pilot-section, .cta-section,
-  .problem-section, .benefits-strip { background: #fff !important; }
-  .hero { border: none; padding: 16pt 0; }
-  h1,h2,h3,h4 { color: #111 !important; }
-  .accent { color: #1d4ed8 !important; } .g { color: #059669 !important; }
-  .sol-card, .benefit-card, .who-card, .price-card, .trust-box,
-  .output-card, .prob-item, .cmp-box, .cta-box, .flow-wrap {
-    background: #fff !important; border: 1px solid #ccc !important;
-    box-shadow: none !important; break-inside: avoid;
-  }
-  .flow-box { background: #f5f5f5 !important; border: 1px solid #ccc !important; color: #111 !important; }
-  .key-callout { background: #f0f8ff !important; border: 1px solid #bee3f8 !important; }
-  .key-callout p { color: #111; }
-  .section, .section-sm { padding: 14pt 0; }
-  .btn-primary { background: #1d4ed8; color: #fff; print-color-adjust: exact; }
-  code { background: #f0f0f0; color: #1a56db; }
-  .flow-steps { min-width: auto; flex-wrap: wrap; justify-content: flex-start; }
-  footer { background: #f5f5f5 !important; border-top: 1px solid #ddd; }
-  .footer-inner { gap: 16pt; }
-  .legal-bar { background: #f9f9f9; }
-  #impressum, #datenschutz {
-    background: #fff !important; border-top: 1px solid #ddd; padding: 20pt 0;
-  }
-  #impressum > div > div, #datenschutz > div > div {
-    background: #f9f9f9 !important; border: 1px solid #ddd !important;
-  }
-}
-
-/* ── Mailto links auf dunklem Hintergrund ────────────────────── */
-footer a[href^="mailto"],
-#impressum a[href^="mailto"],
-#datenschutz a[href^="mailto"] {
-  color: #93c5fd;
-}
-footer a[href^="mailto"]:hover,
-#impressum a[href^="mailto"]:hover,
-#datenschutz a[href^="mailto"]:hover {
-  color: #bfdbfe;
-  text-decoration: underline;
-}
-
-/* ── Utils ───────────────────────────────────────────────────── */
-.mt2 { margin-top: 8px; }  .mt3 { margin-top: 12px; }
-.mt4 { margin-top: 16px; } .mt6 { margin-top: 24px; }
-.mt8 { margin-top: 32px; } .mt10 { margin-top: 40px; }
-.mb4 { margin-bottom: 16px; }
-.text-center { text-align: center; }
-.text-muted { color: var(--muted); }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+:root{--navy:#0b1120;--navy2:#111827;--navy3:#1a2540;--card:#16213a;--card2:#1e2d4a;--accent:#3b82f6;--accent2:#60a5fa;--accent-glow:rgba(59,130,246,.15);--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--text:#f1f5f9;--muted:#94a3b8;--border:rgba(255,255,255,.07);--r:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);line-height:1.6;}a{text-decoration:none;}
+.section{padding:90px 0;position:relative;}.section-alt{background:var(--navy2);}
+.container{max-width:1100px;margin:0 auto;padding:0 44px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+.label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);background:var(--accent-glow);border:1px solid rgba(59,130,246,.25);border-radius:20px;padding:5px 14px;margin-bottom:18px;}
+h2.st{font-size:clamp(26px,4vw,42px);font-weight:800;line-height:1.15;margin-bottom:14px;}p.ss{color:var(--muted);font-size:16px;max-width:620px;margin-bottom:50px;}
+.accent{color:var(--accent2);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 44px;display:flex;align-items:center;justify-content:space-between;}
+.nav-links{display:flex;gap:28px;}.nav-links a{font-size:13px;font-weight:500;color:var(--muted);transition:color .2s;}.nav-links a:hover{color:var(--text);}
+.nav-cta{background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:9px 20px;border-radius:8px;transition:background .2s;}.nav-cta:hover{background:#2563eb;}
+.print-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:600;padding:7px 16px;border-radius:8px;cursor:pointer;margin-right:10px;transition:border-color .2s,color .2s;font-family:inherit;}.print-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.hero{min-height:100vh;display:flex;align-items:center;padding:120px 0 80px;background:radial-gradient(ellipse 80% 55% at 50% 0%,rgba(59,130,246,.13) 0%,transparent 70%),var(--navy);}
+.hero-inner{text-align:center;}.hero-kicker{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:28px;display:flex;align-items:center;justify-content:center;gap:12px;}
+.hero-kicker::before,.hero-kicker::after{content:'';display:block;width:36px;height:1px;background:var(--accent);opacity:.5;}
+.hero h1{font-size:clamp(44px,7.5vw,86px);font-weight:900;line-height:1.03;letter-spacing:-2px;margin-bottom:26px;}
+.hero h1 span{background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:clamp(16px,2.2vw,20px);color:var(--muted);max-width:680px;margin:0 auto 48px;}
+.hero-badge{display:inline-block;background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid rgba(59,130,246,.4);border-radius:12px;padding:16px 32px;font-size:16px;font-weight:600;margin-bottom:64px;color:var(--accent2);}
+.hero-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:left;}
+.hero-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 18px;}
+.h-icon{width:38px;height:38px;border-radius:9px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:17px;}
+.hero-card h4{font-size:13px;font-weight:700;margin-bottom:6px;}.hero-card p{font-size:12px;color:var(--muted);line-height:1.5;}
+.prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
+.prob-list{display:flex;flex-direction:column;gap:11px;}
+.prob-item{display:flex;align-items:flex-start;gap:13px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.prob-x{color:var(--red);font-size:14px;flex-shrink:0;margin-top:2px;}.prob-item span{font-size:14px;}
+.prob-quote{background:linear-gradient(135deg,var(--card2),var(--navy3));border:1px solid rgba(59,130,246,.25);border-left:4px solid var(--accent);border-radius:12px;padding:36px;font-size:21px;font-weight:700;line-height:1.45;position:sticky;top:100px;}
+.prob-ql{font-size:56px;line-height:.4;color:var(--accent);opacity:.35;display:block;margin-bottom:14px;}
+.prob-author{display:block;margin-top:22px;font-size:12px;font-weight:500;color:var(--muted);}
+.pflow{display:flex;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:32px;}
+.pf{flex:1;padding:24px 14px;text-align:center;border-right:1px solid var(--border);transition:background .2s;}.pf:hover{background:var(--card2);}.pf:last-child{border-right:none;background:rgba(59,130,246,.07);}
+.pfn{width:30px;height:30px;border-radius:50%;background:var(--accent-glow);border:1px solid rgba(59,130,246,.3);color:var(--accent2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
+.pf:last-child .pfn{background:var(--accent);color:#fff;border-color:var(--accent);}
+.pf h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}.pf:last-child h4{color:var(--accent2);}.pf p{font-size:11px;color:var(--muted);line-height:1.4;}
+.proc-desc{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:22px 26px;font-size:15px;color:var(--muted);}.proc-desc strong{color:var(--text);}
+.stufe{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:34px 28px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.stufe:hover{transform:translateY(-4px);border-color:rgba(59,130,246,.35);}
+.sbadge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:6px;padding:4px 10px;margin-bottom:16px;}
+.s1{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.3);}.s2{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}.s3{background:rgba(167,139,250,.12);color:#c4b5fd;border:1px solid rgba(167,139,250,.3);}
+.stufe h3{font-size:21px;font-weight:800;margin-bottom:12px;}.stufe p{font-size:14px;color:var(--muted);line-height:1.65;}
+.stufe-meta{margin-top:20px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px;}.stufe-meta::before{content:'rarr;';color:var(--accent);}
+.stufe-bg{position:absolute;bottom:-18px;right:-8px;font-size:96px;font-weight:900;color:rgba(255,255,255,.03);line-height:1;pointer-events:none;}
+.ctrl-bar{text-align:center;margin-top:36px;padding:22px;background:var(--card2);border:1px solid rgba(59,130,246,.2);border-radius:12px;font-size:16px;font-weight:700;color:var(--accent2);}
+.cpit{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.cpit-bar{background:var(--navy3);padding:13px 18px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);}
+.dot{width:11px;height:11px;border-radius:50%;}.dr{background:#ef4444;}.dy{background:#f59e0b;}.dg{background:#10b981;}
+.cpit-url{margin-left:auto;font-size:11px;color:var(--muted);}
+.cpit-body{padding:24px;}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+.kpi{background:var(--navy3);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}.kv{font-size:26px;font-weight:900;}.kl{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.cpit-main{display:grid;grid-template-columns:2fr 1.2fr;gap:18px;}
+.cc{background:var(--navy3);border:1px solid rgba(59,130,246,.25);border-radius:12px;overflow:hidden;}
+.cc-h{background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(59,130,246,.04));padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.cc-prio{background:rgba(59,130,246,.2);color:var(--accent2);font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;border:1px solid rgba(59,130,246,.4);text-transform:uppercase;letter-spacing:1px;}
+.cc-name{font-size:17px;font-weight:800;}.cc-sub{font-size:12px;color:var(--muted);margin-top:2px;}.cc-body{padding:18px;}
+.cc-r{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;}.cc-r:last-of-type{border-bottom:none;}
+.cc-rl{color:var(--muted);font-weight:500;flex-shrink:0;margin-right:10px;}.cc-rv{font-weight:600;text-align:right;}
+.tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;margin:2px 1px;}
+.tb{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25);}.tg{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25);}.ty{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.25);}
+.cc-ein{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:10px 13px;font-size:12px;font-style:italic;color:var(--muted);margin-top:10px;}
+.cc-next{margin-top:10px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--accent2);}.cc-next::before{content:'rarr;';}
+.pip{background:var(--navy3);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.pip-r{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;}.pip-r:last-child{border-bottom:none;}
+.pip-s{color:var(--muted);font-weight:500;}.pip-c{font-weight:800;font-size:15px;}
+.pip-bw{width:52px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}.pip-b{height:100%;border-radius:2px;background:var(--accent);}
+.out{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;}
+.out-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px;}
+.o1{background:rgba(16,185,129,.12);}.o2{background:rgba(59,130,246,.12);}.o3{background:rgba(167,139,250,.12);}
+.out h3{font-size:17px;font-weight:800;margin-bottom:14px;}
+.out-li{display:flex;align-items:flex-start;gap:9px;margin-bottom:9px;font-size:13px;color:var(--muted);}.out-li::before{content:'middot;';color:var(--accent);font-size:17px;line-height:1.2;flex-shrink:0;}
+.out-accent{text-align:center;margin-top:44px;padding:24px 28px;background:var(--navy3);border-radius:12px;font-size:18px;font-weight:700;border-left:4px solid var(--accent);}
+.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+.cmp th{padding:16px 22px;font-size:13px;font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:1px;}
+.cmp th:first-child{background:var(--card2);color:var(--muted);}.cmp th:last-child{background:rgba(59,130,246,.14);color:var(--accent2);}
+.cmp td{padding:13px 22px;font-size:13px;border-top:1px solid var(--border);}.cmp td:first-child{color:var(--muted);}.cmp td:last-child{font-weight:600;}
+.x{color:var(--red);}.ck{color:var(--green);}
+.geo{margin-top:36px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;}
+.geo h3{font-size:12px;font-weight:700;margin-bottom:16px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.btags{display:flex;flex-wrap:wrap;gap:9px;}.btag{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;}
+.pak{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 22px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.pak:hover{transform:translateY(-4px);border-color:rgba(59,130,246,.4);}
+.pak-feat{border-color:rgba(59,130,246,.5);background:linear-gradient(135deg,var(--card2),var(--card));}
+.pak-badge{position:absolute;top:13px;right:13px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:1px;}
+.pak-num{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:9px;}
+.pak h3{font-size:18px;font-weight:800;margin-bottom:14px;}
+.pak-li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.4;}.pak-ck{color:var(--green);flex-shrink:0;margin-top:1px;}.pak-sp{flex:1;}
+.cta-box{background:linear-gradient(135deg,rgba(59,130,246,.14),rgba(59,130,246,.04));border:1px solid rgba(59,130,246,.35);border-radius:16px;padding:48px 36px;text-align:center;}
+.cta-box h2{font-size:clamp(22px,3.5vw,36px);font-weight:900;margin-bottom:18px;line-height:1.2;}
+.cta-box p{font-size:16px;color:var(--muted);max-width:580px;margin:0 auto 32px;}
+.cta-btn{display:inline-block;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:15px 38px;border-radius:10px;letter-spacing:.2px;transition:background .2s,transform .2s;text-decoration:none;}
+.cta-btn:hover{background:#2563eb;transform:translateY(-2px);}
+footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 44px;display:flex;justify-content:space-between;align-items:center;}
+.foot-link{color:var(--accent2);text-decoration:none;}.foot-link:hover{text-decoration:underline;}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@page{size:A4 landscape;margin:0;}nav,.print-btn{display:none!important;}body{background:#0b1120!important;font-size:9pt;}.section{padding:32px 48px!important;page-break-after:always;min-height:100vh;max-height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;}.hero{min-height:100vh;max-height:100vh;padding:28px 48px!important;}h2.st{font-size:22pt!important;}footer{padding:16px 44px!important;}}
 </style>
 </head>
 <body>
-
-<!-- ── NAV ───────────────────────────────────────────────────── -->
 <nav>
-  <div class="nav-inner">
-    <div class="nav-brand">
-      <div class="nav-dot"></div>
-      Rebell Systems
-    </div>
-    <div class="nav-sep"></div>
-    <div class="nav-links">
-      <a href="#problem">Problem</a>
-      <a href="#loesung">Lösung</a>
-      <a href="#prozess">Prozess</a>
-      <a href="#outputs">Outputs</a>
-      <a href="#pilot">Pilot</a>
-      <a href="#grenzen">Grenzen</a>
-      <a href="#kontakt">Kontakt</a>
-      <a href="#impressum">Impressum</a>
-      <a href="#datenschutz">Datenschutz</a>
-    </div>
-    <div class="nav-cta" style="margin-left:20px;">
-      <a href="#kontakt" class="btn btn-primary btn-sm">Testlauf anfragen</a>
-    </div>
-  </div>
+  <svg width="140" height="30" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ng" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs><rect width="30" height="30" rx="7" fill="url(#ng)"/><rect x="7" y="5.5" width="4" height="19" rx="1.8" fill="white"/><path d="M11 5.5 L16 5.5 Q22 5.5 22 11.5 Q22 16.5 16 17.5 L11 17.5" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="15.5" y1="17" x2="23.5" y2="24.5" stroke="white" stroke-width="3.5" stroke-linecap="round"/><circle cx="25" cy="25.5" r="2.2" fill="#93c5fd"/><text x="38" y="17" font-family="Inter,sans-serif" font-weight="800" font-size="12" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text><text x="38.5" y="27" font-family="Inter,sans-serif" font-weight="400" font-size="8" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text></svg>
+  <div class="nav-links"><a href="#problem">Problem</a><a href="#prozess">Prozess</a><a href="#cockpit">Cockpit</a><a href="#pakete">Pakete</a></div>
+  <div style="display:flex;align-items:center;gap:8px;"><button class="print-btn" onclick="window.print()">Als PDF speichern</button><a class="nav-cta" href="https://rebellsystem.com" target="_blank">Vorschau anfragen</a></div>
 </nav>
-
-<!-- ── HERO ──────────────────────────────────────────────────── -->
-<section class="hero" id="top">
-  <div class="wrap">
-    <div class="hero-content">
-      <div class="hero-label">
-        <div class="hero-label-dot"></div>
-        B2B Outbound Infrastructure · Rebell Systems
-      </div>
-      <h1>Aus B2B-Recherche und Rohlisten wird eine<br><em>fertige Akquise-Pipeline.</em></h1>
-      <p class="hero-sub">
-        Rebell Systems findet neue Firmenkontakte oder verarbeitet vorhandene CRM-/CSV-Listen. Das System prüft Datenqualität, priorisiert Leads, erstellt E-Mail-Sequenzen, bereitet kontrollierten Versand vor und sortiert Antworten bis zur Sales-Übergabe.
-      </p>
-      <div class="hero-btns">
-        <a href="#kontakt" class="btn btn-primary btn-lg">Testliste prüfen lassen</a>
-        <a href="#outputs" class="btn btn-outline btn-lg">Demo-Ergebnisse ansehen</a>
-      </div>
-      <div class="hero-trust">
-        Für Live-Recherche, CSV-/CRM-Importe und kontrollierte Outbound-Prozesse. Kein Spam-Bot. Keine blinde Vollautomatik. Menschliche Freigabe bleibt möglich.
-      </div>
-      <p style="margin-top:14px; font-size:0.88rem; color:var(--muted); line-height:1.65; max-width:580px;">
-        Ob du bei null startest oder schon eine Liste hast: Das System bringt Struktur, Priorität und Kampagnenfähigkeit in deinen Outbound-Prozess.
-      </p>
-    </div>
+<section class="section hero" id="hero"><div class="container"><div class="hero-inner">
+  <div style="display:flex;justify-content:center;margin-bottom:28px;"><svg width="220" height="50" viewBox="0 0 220 50" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs><rect width="50" height="50" rx="12" fill="url(#hg)"/><rect x="11" y="9" width="6.5" height="31" rx="2.5" fill="white"/><path d="M17.5 9 L26.5 9 Q37 9 37 19 Q37 27.5 26.5 29.5 L17.5 29.5" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="25" y1="29" x2="39" y2="41" stroke="white" stroke-width="6" stroke-linecap="round"/><circle cx="42" cy="43.5" r="3.5" fill="#93c5fd"/><text x="64" y="29" font-family="Inter,sans-serif" font-weight="800" font-size="22" fill="#f1f5f9" letter-spacing="-0.3">REBELL</text><text x="65" y="45" font-family="Inter,sans-serif" font-weight="400" font-size="13" fill="#94a3b8" letter-spacing="4">SYSTEM</text></svg></div>
+  <div class="hero-kicker">B2B Akquise-System</div>
+  <h1>Aus Rohkontakten wird<br><span>ein geführter Prozess.</span></h1>
+  <p class="hero-sub">Zielkunden finden, Ansprache vorbereiten, Follow-ups steuern, Antworten einordnen und den nächsten Schritt sichtbar machen.</p>
+  <div class="hero-badge">Nicht nur Leads — ein strukturierter Prozess von Recherche bis Antwortlogik.</div>
+  <div class="hero-cards">
+    <div class="hero-card"><div class="h-icon">🎯</div><h4>Zielkunden finden</h4><p>Neue Firmen recherchieren, Märkte eingrenzen, Listen einspielen, Datenmüll aussortieren.</p></div>
+    <div class="hero-card"><div class="h-icon">✉️</div><h4>Ansprache vorbereiten</h4><p>Firmen bewerten, Ansprechpartner prüfen, Kontaktwege und Erstansprachen vorbereiten.</p></div>
+    <div class="hero-card"><div class="h-icon">🔄</div><h4>Follow-ups steuern</h4><p>Nachfassaktionen strukturieren, Zeitpunkte festhalten, Folgeentwürfe regelbasiert vorbereiten.</p></div>
+    <div class="hero-card"><div class="h-icon">📥</div><h4>Antworten einordnen</h4><p>Rückmeldungen erkennen, klassifizieren und den nächsten sinnvollen Schritt sichtbar machen.</p></div>
   </div>
-</section>
-
-<!-- ── BENEFITS STRIP ────────────────────────────────────────── -->
-<div class="benefits-strip" id="benefits">
-  <div class="wrap">
-    <div class="benefits-title">Was konkret rauskommt</div>
-    <div class="benefits-grid">
-      <div class="benefit-card bc-g">
-        <div class="benefit-icon">⭐</div>
-        <h3>Hotlist</h3>
-        <p>Die besten Kontakte zuerst – sortiert nach Score, Datengüte und Entscheider-Signal.</p>
-      </div>
-      <div class="benefit-card bc-b">
-        <div class="benefit-icon">✅</div>
-        <h3>Ready-to-send</h3>
-        <p>Versandfähige Kontakte mit Erstmail und Follow-ups – sofort nutzbar, kein leeres Blatt.</p>
-      </div>
-      <div class="benefit-card bc-p">
-        <div class="benefit-icon">✏️</div>
-        <h3>Outreach-Texte</h3>
-        <p>Fertig formulierte Erstmails, Follow-ups 1–3, Betreffzeilen, WhatsApp-Kurztext.</p>
-      </div>
-      <div class="benefit-card bc-o">
-        <div class="benefit-icon">🎯</div>
-        <h3>Sales-Übergabe</h3>
-        <p>Terminreife Kontakte werden sichtbar markiert. Sales arbeitet nur noch mit relevanten Leads.</p>
-      </div>
+</div></div></section>
+<section class="section section-alt" id="problem"><div class="container">
+  <div class="label">Das Problem</div><h2 class="st">Warum Akquise oft hängen bleibt</h2>
+  <div class="prob-grid">
+    <div class="prob-list">
+      <div class="prob-item"><span class="prob-x">✕</span><span>Schlechte oder veraltete Listen ohne klare Qualität</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Falsche Firmen und unpassende Ansprechpartner</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Keine Priorisierung – alle Kontakte gleich behandelt</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Texte müssen jedes Mal neu geschrieben werden</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Follow-ups werden vergessen oder zu spät gesetzt</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Antworten gehen im Alltag unter – kein Überblick</span></div>
+      <div class="prob-item"><span class="prob-x">✕</span><span>Kein klarer nächster Schritt nach dem Kontakt</span></div>
     </div>
+    <div class="prob-quote"><span class="prob-ql">"</span>Das Problem ist selten nur die Anzahl der Kontakte. Das Problem ist der fehlende Prozess dahinter.<span class="prob-author">— Rebell System · Emilio Allegro</span></div>
   </div>
-</div>
-<hr class="divider">
-
-<!-- ── PROBLEM ───────────────────────────────────────────────── -->
-<section class="section problem-section" id="problem">
-  <div class="wrap">
-    <span class="sec-label">Das Problem</span>
-    <h2 style="margin-bottom:12px;">Warum normale Leadlisten nicht reichen</h2>
-    <p class="sec-lead">Der Fehler liegt selten am Produkt. Er liegt an dem, was vor Sales kommt.</p>
-
-    <div class="problem-grid">
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Müllkontakte unerkannt drin</h4><p>noreply-Adressen, Testdomains, ungültige E-Mail-Formate – ungeprüft in der Pipeline.</p></div>
-      </div>
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Kein Ansprechpartner</h4><p>Nur Firmenname, keine Person, kein Titel – Mails gehen ins Nirvana oder an admin@.</p></div>
-      </div>
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Keine Priorisierung</h4><p>Gute und schlechte Kontakte werden gleich behandelt – Energie wird falsch verteilt.</p></div>
-      </div>
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Kein Kampagnenmaterial</h4><p>Die Liste liegt da, niemand hat Zeit, 200 individuelle Erstmails zu schreiben.</p></div>
-      </div>
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Follow-ups gehen verloren</h4><p>Wer hat geantwortet? Wer wartet? Wer ist terminbereit? Niemand weiß es wirklich.</p></div>
-      </div>
-      <div class="prob-item">
-        <span class="prob-x">✕</span>
-        <div><h4>Sales bekommt Chaos</h4><p>Kein strukturiertes Übergabeformat. Sales verliert Zeit mit Sortieren statt Verkaufen.</p></div>
-      </div>
-    </div>
-
-    <div class="problem-callout">
-      <strong style="color:var(--accent);">Das Kernproblem:</strong> Rohlisten haben keinen Struktur-Layer zwischen Kontaktquelle und Sales-Gespräch. Genau das baut dieses System.
-    </div>
+</div></section>
+<section class="section" id="prozess"><div class="container">
+  <div class="label">Die Lösung</div><h2 class="st">Vom Zielmarkt zum nächsten Gesprächsschritt</h2>
+  <p class="ss">Das System macht aus Rohdaten eine nutzbare Akquise-Arbeitsgrundlage – Schritt für Schritt, strukturiert und nachvollziehbar.</p>
+  <div class="pflow">
+    <div class="pf"><div class="pfn">1</div><h4>Zielgruppe</h4><p>Branche, Region, Profil oder bestehende Liste</p></div>
+    <div class="pf"><div class="pfn">2</div><h4>Recherche</h4><p>Neue Firmen finden oder CSV einspielen</p></div>
+    <div class="pf"><div class="pfn">3</div><h4>Bereinigung</h4><p>Dubletten, Datenmüll, Fehlkontakte entfernen</p></div>
+    <div class="pf"><div class="pfn">4</div><h4>Ansprechpartner</h4><p>B2B-Fit, Priorität &amp; Kontaktwege prüfen</p></div>
+    <div class="pf"><div class="pfn">5</div><h4>Ansprache</h4><p>E-Mail, Telefon, LinkedIn-Recherche</p></div>
+    <div class="pf"><div class="pfn">6</div><h4>Follow-up</h4><p>Erstmail, Telefon, Follow-up 1 &amp; 2</p></div>
+    <div class="pf"><div class="pfn">7</div><h4>Antwortlogik</h4><p>Interesse, Absage, Termin einordnen</p></div>
+    <div class="pf"><div class="pfn" style="background:var(--accent);color:#fff;border-color:var(--accent)">→</div><h4>Nächster Schritt</h4><p>Immer klar, was sinnvoll ist</p></div>
   </div>
-</section>
-<hr class="divider">
-
-<!-- ── LÖSUNG ────────────────────────────────────────────────── -->
-<section class="section" id="loesung">
-  <div class="wrap">
-    <span class="sec-label">Die Lösung</span>
-    <h2 style="margin-bottom:12px;">Was das System daraus macht</h2>
-    <p class="sec-lead">Neun reale Module – kein Feature erfunden, alles im Code vorhanden.</p>
-
-    <div class="sol-grid">
-      <div class="sol-card cc-b">
-        <div class="sol-icon si-b">🔍</div>
-        <h3>Lead-Suche oder CSV-Import</h3>
-        <p>Firmen per Branche + Stadt finden oder bestehende Listen aus Apollo, Hunter.io, HubSpot importieren und normalisieren. Vor-/Nachname werden automatisch zusammengeführt.</p>
-        <span class="sol-tag">Einstiegspunkt</span>
-      </div>
-      <div class="sol-card cc-o">
-        <div class="sol-icon si-o">✅</div>
-        <h3>Datenhygiene &amp; Klassifikation</h3>
-        <p>Ungültige E-Mails, Testdomains, noreply/admin-Adressen und Disposable-Mail-Dienste werden erkannt und markiert – nicht blind gelöscht, sondern sauber dokumentiert.</p>
-        <span class="sol-tag st-o">Qualitätskontrolle</span>
-      </div>
-      <div class="sol-card cc-p">
-        <div class="sol-icon si-p">⭐</div>
-        <h3>Scoring &amp; Priorisierung</h3>
-        <p>Regelbasiertes Bewertungssystem (0–100 Punkte). Faktoren: E-Mail-Güte, Ansprechpartner, Entscheider-Signale, Webseite. Ergebnis: Hot / Medium / Cold / Do-not-contact.</p>
-        <span class="sol-tag st-p">Priorisierung</span>
-      </div>
-      <div class="sol-card cc-p">
-        <div class="sol-icon si-p">✏️</div>
-        <h3>Kampagnenvorbereitung</h3>
-        <p>Pro Lead: fertige Erstkontakt-Mail, Follow-ups 1/2/3, Betreffvarianten, WhatsApp-Kurztext, Einwand-Antworten. Auf Branche und Kontaktprofil abgestimmt.</p>
-        <span class="sol-tag st-p">Kampagnenmaterial</span>
-      </div>
-      <div class="sol-card cc-t">
-        <div class="sol-icon si-t">📨</div>
-        <h3>Mails vorbereiten &amp; kontrolliert versenden</h3>
-        <p>Freigegebene Mails werden mit Tageslimit, Mindestpause und Stage-Tracking versendet. Jeder Send wird protokolliert. Kein blinder Massenversand – Freigabe bleibt beim Menschen.</p>
-        <span class="sol-tag st-t">Kontrollierter Versand</span>
-      </div>
-      <div class="sol-card cc-g">
-        <div class="sol-icon si-g">💬</div>
-        <h3>Antworten sortieren</h3>
-        <p>Eingehende Antworten werden automatisch klassifiziert: interessiert / später / kein Interesse / unklar / heikel. Heikle Fälle (Datenschutz, Beschwerden) gehen immer an menschliche Prüfung.</p>
-        <span class="sol-tag st-t">Reply-Verarbeitung</span>
-      </div>
-      <div class="sol-card cc-g">
-        <div class="sol-icon si-g">🎯</div>
-        <h3>Sales übergeben</h3>
-        <p>Kontakte mit klarem Terminwunsch werden als <em>appointment_ready</em> markiert. Sales sieht sofort: Diese Person ist bereit. Kein autonomer Terminabschluss – das Gespräch führt der Mensch.</p>
-        <span class="sol-tag st-g">Sales-Signal</span>
-      </div>
-      <div class="sol-card cc-o">
-        <div class="sol-icon si-o">📦</div>
-        <h3>Kundenpaket &amp; Reporting</h3>
-        <p>Nach jedem Run: HTML-Report, Hotlist, Action Plan, Sequenzen, Ready-to-send CSV, Do-not-contact-Liste, Campaign Summary. Sofort präsentierbar, ohne manuelle Aufbereitung.</p>
-        <span class="sol-tag st-o">Delivery-Paket</span>
-      </div>
-      <div class="sol-card cc-b">
-        <div class="sol-icon si-b">🔎</div>
-        <h3>LinkedIn-Research-Cockpit</h3>
-        <p>HTML-Cockpit mit klickbaren Google- und LinkedIn-Suchlinks pro Lead. Für manuelle Ansprechpartner-Prüfung. Kein Login, kein Scraping, keine Automation.</p>
-        <span class="sol-tag st-m">Manuelle Prüfhilfe</span>
-      </div>
-    </div>
+  <div class="proc-desc"><strong>Kontakte finden, bewerten, anschreiben, nachfassen und Antworten einordnen.</strong> Nicht nur Kontakte vorbereiten – sondern Akquise strukturieren.</div>
+</div></section>
+<section class="section section-alt"><div class="container">
+  <div class="label">Nutzungsstufen</div><h2 class="st">Von sicherer Assistenz bis kontrollierter Automation</h2>
+  <p class="ss">Drei Betriebsmodi – der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt.</p>
+  <div class="grid-3">
+    <div class="stufe"><div class="sbadge s1">Assistenzmodus</div><h3>Der Mensch prüft und sendet selbst</h3><p>Das System recherchiert, bereinigt, bewertet und erstellt Texte. Kein automatischer Versand.</p><div class="stufe-meta">Ideal für den Einstieg</div><div class="stufe-bg">1</div></div>
+    <div class="stufe"><div class="sbadge s2">Entwurfsmodus</div><h3>Fertige Entwürfe — Mensch gibt frei</h3><p>Fertige E-Mail-Entwürfe, Follow-ups und Antwortvorschläge. Versand erst nach Freigabe.</p><div class="stufe-meta">Effizienz mit Kontrolle</div><div class="stufe-bg">2</div></div>
+    <div class="stufe"><div class="sbadge s3">Automationsmodus</div><h3>Nach Freigabe: kontrollierte Ausführung</h3><p>Erstmails, Follow-ups, Antwortsortierung – regelbasiert, mit Sicherheitslogik und Freigabe.</p><div class="stufe-meta">Skalierung bei Bedarf</div><div class="stufe-bg">3</div></div>
   </div>
-</section>
-<hr class="divider">
-
-<!-- ── PROZESS ────────────────────────────────────────────────── -->
-<section class="section-sm flow-section" id="prozess">
-  <div class="wrap">
-    <span class="sec-label">Der Ablauf</span>
-    <h2 style="margin-bottom:12px;">Von der Kontaktquelle bis zur Sales-Übergabe</h2>
-    <p class="sec-lead" style="margin-bottom:28px;">Jeder Schritt hat eine Funktion. Kein Schritt wird übersprungen.</p>
-
-    <div class="flow-wrap">
-      <div class="flow-steps">
-        <div class="flow-node">
-          <div class="flow-box fb-blue">🔗 Kontaktquelle</div>
-          <div class="flow-sub">CSV · Apollo<br>Live-Suche</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-blue">✅ Prüfung</div>
-          <div class="flow-sub">Hygiene<br>Duplikate</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-purple">⭐ Priorisierung</div>
-          <div class="flow-sub">Score 0–100<br>Hot / Cold</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-purple">✏️ Kampagne</div>
-          <div class="flow-sub">Mails · Follow-ups<br>Sequenzen</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-orange">📨 Versand / Review</div>
-          <div class="flow-sub">Tageslimit<br>Freigabe</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-teal">💬 Antworten</div>
-          <div class="flow-sub">Klassifikation<br>Routing</div>
-        </div>
-        <div class="flow-arr">→</div>
-        <div class="flow-node">
-          <div class="flow-box fb-green">🎯 Sales-Übergabe</div>
-          <div class="flow-sub">appointment_ready<br>Kundenpaket</div>
-        </div>
+  <div class="ctrl-bar">Der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt. · Versand ist optional, regelbasiert und immer mit Freigabepunkt.</div>
+</div></section>
+<section class="section" id="cockpit"><div class="container">
+  <div class="label">Cockpit-Vorschau</div><h2 class="st">Was der Kunde konkret bekommt</h2>
+  <p class="ss">Eine klare Arbeitsansicht mit Fortschritt, Status, Follow-ups, Antworten und nächsten operativen Schritten.</p>
+  <div class="cpit">
+    <div class="cpit-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="cpit-url">B2B Akquise-Cockpit · Zielgruppe: IT-Dienstleister DACH</span></div>
+    <div class="cpit-body">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kv">50</div><div class="kl">Gesamtkontakte</div></div>
+        <div class="kpi"><div class="kv">50</div><div class="kl">Firmen geprüft</div></div>
+        <div class="kpi"><div class="kv" style="color:var(--accent2)">8</div><div class="kl">Ansprechpartner</div></div>
+        <div class="kpi"><div class="kv" style="color:var(--yellow)">122</div><div class="kl">Follow-up fällig</div></div>
+        <div class="kpi"><div class="kv" style="color:var(--green)">3</div><div class="kl">Terminchancen</div></div>
       </div>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── KERNAUSSAGE ────────────────────────────────────────────── -->
-<section class="section-sm" id="mehrwert">
-  <div class="wrap">
-    <div class="key-callout">
-      <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--green);margin-bottom:18px;">Der eigentliche Mehrwert</div>
-      <p>
-        „<strong>Listenbereinigung ist nur die Eingangskontrolle.</strong>
-        Der eigentliche Wert liegt in der Pipeline danach:
-        Kampagnen vorbereiten, kontrolliert versenden, Antworten auswerten,
-        Follow-ups steuern und Sales nur noch mit relevanten Kontakten arbeiten lassen."
-      </p>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── VERGLEICH ─────────────────────────────────────────────── -->
-<section class="section" id="vergleich">
-  <div class="wrap">
-    <span class="sec-label">Unterschied</span>
-    <h2 style="margin-bottom:12px;">Mehr als ein Listenbereiniger</h2>
-    <p class="sec-lead" style="margin-bottom:32px;">Eine bereinigte CSV ist das Minimum. Der Unterschied liegt im Rest.</p>
-    <div class="cmp-grid">
-      <div class="cmp-box cmp-no">
-        <h4 style="color:var(--red);">✕ Nur ein Listenbereiniger würde…</h4>
-        <ul>
-          <li><span class="cmp-li-x">✕</span>ungültige E-Mails markieren</li>
-          <li><span class="cmp-li-x">✕</span>Duplikate entfernen</li>
-          <li><span class="cmp-li-x">✕</span>eine bereinigte CSV ausgeben</li>
-          <li><span class="cmp-li-x">✕</span>— und nichts weiter.</li>
-        </ul>
-      </div>
-      <div class="cmp-box cmp-yes">
-        <h4 style="color:var(--green);">✓ Diese Infrastruktur macht…</h4>
-        <ul>
-          <li><span class="cmp-li-c">✓</span>Datenhygiene &amp; Klassifikation</li>
-          <li><span class="cmp-li-c">✓</span>Scoring &amp; Priorisierung (Hot/Cold)</li>
-          <li><span class="cmp-li-c">✓</span>Fertige Kampagnentexte pro Lead</li>
-          <li><span class="cmp-li-c">✓</span>Ready-to-send mit Freigabe-Logik</li>
-          <li><span class="cmp-li-c">✓</span>Kontrollierten Versand mit Sendelog</li>
-          <li><span class="cmp-li-c">✓</span>Reply-Klassifikation &amp; Routing</li>
-          <li><span class="cmp-li-c">✓</span>appointment_ready für terminreife Kontakte</li>
-          <li><span class="cmp-li-c">✓</span>Vollständiges Kundenpaket zur Übergabe</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── DEMO OUTPUTS ───────────────────────────────────────────── -->
-<section class="section" id="outputs" style="background:linear-gradient(135deg,var(--bg2),var(--bg));">
-  <div class="wrap">
-    <span class="sec-label">Demo-Ergebnisse</span>
-    <h2 style="margin-bottom:12px;">Was nach einem Run entsteht</h2>
-    <p class="sec-lead">Alle Dateien im Delivery-Paket – direkt übergabefertig.</p>
-
-    <div class="output-grid">
-      <div class="output-card">
-        <div class="out-file">client_report.html</div>
-        <div class="out-title">📊 Client Report</div>
-        <div class="out-desc">Alle Leads, Scores und Kampagnenmaterial in einem visuellen Browser-Bericht.</div>
-        <div class="out-for">Intern + Kunde</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">13_Campaign_Summary.md</div>
-        <div class="out-title">📋 Campaign Summary</div>
-        <div class="out-desc">Kompakte Zusammenfassung: Gesamtanzahl, Hygiene-Zahlen, Hotlist-Größe, Empfehlungen.</div>
-        <div class="out-for">Intern</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">03_Hotlist.md</div>
-        <div class="out-title">⭐ Hotlist</div>
-        <div class="out-desc">Die besten Leads nach Score sortiert – Name, E-Mail, Firma, Priorität. Sofort bearbeitbar.</div>
-        <div class="out-for">Sales / Kunde</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">08b_Ready_To_Send.csv</div>
-        <div class="out-title">✅ Ready-to-Send</div>
-        <div class="out-desc">Alle Kontakte, die ohne Nachprüfung direkt angeschrieben werden können.</div>
-        <div class="out-for">Intern / Versand</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">08c_Review_Before_Send.csv</div>
-        <div class="out-title">🔍 Review Before Send</div>
-        <div class="out-desc">Leads, die vor dem Versand kurz manuell geprüft werden sollten – mit Hinweis.</div>
-        <div class="out-for">Intern</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">08d_Do_Not_Contact.csv</div>
-        <div class="out-title">🚫 Do-Not-Contact</div>
-        <div class="out-desc">Ungültige oder ausgeschlossene Kontakte – dokumentiert, nicht gelöscht. Compliance-freundlich.</div>
-        <div class="out-for">Intern / Compliance</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">05_Outreach_Sequences.md</div>
-        <div class="out-title">✏️ Outreach Sequences</div>
-        <div class="out-desc">Fertige Erstmails, Follow-ups 1–3, WhatsApp-Texte, Betreffzeilen. Pro Lead individuell.</div>
-        <div class="out-for">Texter / Sales</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">04_Action_Plan.md</div>
-        <div class="out-title">📌 Action Plan</div>
-        <div class="out-desc">Schritt-für-Schritt-Plan: was wann mit wem – strukturiert für interne Übergaben.</div>
-        <div class="out-for">Intern / Kunde</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">12_Outreach_Status.md</div>
-        <div class="out-title">📡 Outreach Status</div>
-        <div class="out-desc">Aktueller Versandstand: was gesendet, was ausstehend, was beantwortet.</div>
-        <div class="out-for">Intern / Kunde</div>
-      </div>
-      <div class="output-card">
-        <div class="out-file">linkedin_outreach.html</div>
-        <div class="out-title">🔎 LinkedIn Research Cockpit</div>
-        <div class="out-desc">HTML-Cockpit mit klickbaren Suchlinks pro Ansprechpartner. Manuelle Prüfung in Minuten.</div>
-        <div class="out-for">Intern · Manuell</div>
-      </div>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── FÜR WEN ────────────────────────────────────────────────── -->
-<section class="section" id="fuer-wen">
-  <div class="wrap">
-    <span class="sec-label">Zielgruppe</span>
-    <h2 style="margin-bottom:12px;">Für wen ist es gemacht?</h2>
-    <p class="sec-lead">Für alle, die mit B2B-Kontaktlisten arbeiten und daraus strukturierte Akquise-Pipelines machen wollen.</p>
-    <div class="who-grid">
-      <div class="who-card">
-        <div class="who-icon">📞</div>
-        <h4>Kaltakquise-Firmen</h4>
-        <p>Skalierbare, dokumentierte Outbound-Prozesse für externe Auftraggeber.</p>
-      </div>
-      <div class="who-card">
-        <div class="who-icon">📅</div>
-        <h4>Terminierungsagenturen</h4>
-        <p>Saubere, priorisierte Lead-Listen als Input für Terminierungsprozesse.</p>
-      </div>
-      <div class="who-card">
-        <div class="who-icon">🎯</div>
-        <h4>Vertriebsagenturen</h4>
-        <p>Kampagnen aufbauen, vollständig dokumentiert an Kunden übergeben.</p>
-      </div>
-      <div class="who-card">
-        <div class="who-icon">📈</div>
-        <h4>Leadgenerierungsfirmen</h4>
-        <p>Qualifizierte B2B-Leads als Produkt liefern – sauber priorisiert.</p>
-      </div>
-      <div class="who-card">
-        <div class="who-icon">📂</div>
-        <h4>B2B-Dienstleister mit Listenchaos</h4>
-        <p>Apollo-Exporte, Excel, CRM-Chaos – alles normalisiert und strukturiert.</p>
-      </div>
-      <div class="who-card">
-        <div class="who-icon">📋</div>
-        <h4>Agenturen mit Kundenkampagnen</h4>
-        <p>Outreach-Kampagnen mit vollständigem Delivery-Paket an Kunden übergeben.</p>
-      </div>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── PILOT ─────────────────────────────────────────────────── -->
-<section class="section pilot-section" id="pilot">
-  <div class="wrap">
-    <div class="pilot-grid">
-      <div class="pilot-text">
-        <span class="sec-label">Einstieg</span>
-        <h2>Pilot: Eine Rohkontaktliste rein, Kundenpaket raus.</h2>
-        <p>
-          Zum Einstieg kann eine kleine Testliste oder eine Branche + Stadt verarbeitet werden.
-          Das Ergebnis zeigt konkret: welche Kontakte nutzbar sind, welche geprüft werden müssen
-          und welches Kampagnenmaterial entsteht. Kein Aufsatz vorher, kein 10-Seiten-Angebot.
-        </p>
-        <ol class="pilot-steps">
-          <li>
-            <div class="ps-num">1</div>
-            <div>
-              <strong>Testliste oder Branche nennen</strong><br>
-              CSV-Export mitschicken oder Branche + Stadt für Live-Suche angeben.
-            </div>
-          </li>
-          <li>
-            <div class="ps-num">2</div>
-            <div>
-              <strong>System verarbeitet die Liste</strong><br>
-              Hygiene, Scoring, E-Mail-Sequenzen, Delivery-Paket – alles automatisch.
-            </div>
-          </li>
-          <li>
-            <div class="ps-num ps-num-g">3</div>
-            <div>
-              <strong>Kundenpaket liegt bereit</strong><br>
-              Hotlist, Ready-to-send, Outreach-Sequenzen, HTML-Report, Campaign Summary.
-            </div>
-          </li>
-        </ol>
-        <div class="mt8">
-          <a href="mailto:emilio@rebellsystem.com?subject=Testlauf%20B2B%20Outbound%20System&body=Hallo%20Emilio,%0D%0Aich%20m%C3%B6chte%20einen%20Testlauf%20f%C3%BCr%20das%20B2B%20Outbound%20System%20anfragen.%0D%0A"
-             class="btn btn-primary">Testlauf per E-Mail anfragen</a>
-        </div>
-      </div>
-
-      <div>
-        <div class="price-note">Pilot-Angebot – Richtwerte, keine Festpreisliste</div>
-        <div class="price-cards">
-          <div class="price-card price-card-featured">
-            <div class="price-icon">🧪</div>
-            <div>
-              <div class="price-lbl">Testlauf</div>
-              <div class="price-val">ab 249 €</div>
-              <div class="price-sub">Eine Liste oder Branche/Stadt · vollständiges Delivery-Paket</div>
-            </div>
-          </div>
-          <div class="price-card">
-            <div class="price-icon">⚙️</div>
-            <div>
-              <div class="price-lbl">Setup &amp; Konfiguration</div>
-              <div class="price-val">ab 1.500 €</div>
-              <div class="price-sub">Versandanbindung · Sequenzen · Einrichtung</div>
-            </div>
-          </div>
-          <div class="price-card">
-            <div class="price-icon">🔄</div>
-            <div>
-              <div class="price-lbl">Laufende Betreuung</div>
-              <div class="price-val">ab 750 €/Monat</div>
-              <div class="price-sub">Regelmäßige Runs · Reporting · Pipeline-Pflege</div>
-            </div>
+      <div class="cpit-main">
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-name">Beispiel GmbH</div><div class="cc-sub">IT-Dienstleistungen · München</div></div><div class="cc-prio">Priorität A</div></div>
+          <div class="cc-body">
+            <div class="cc-r"><span class="cc-rl">Ansprechpartner</span><span class="cc-rv">Max Müller</span></div>
+            <div class="cc-r"><span class="cc-rl">Kontaktweg</span><span class="cc-rv"><span class="tag tb">E-Mail</span><span class="tag tg">Telefon</span><span class="tag ty">Person-via-Google</span></span></div>
+            <div class="cc-r"><span class="cc-rl">Warum interessant</span><span class="cc-rv">B2B-Dienstleister mit erklärungsbedürftigem Angebot und Bedarf an planbarer Neukundengewinnung</span></div>
+            <div class="cc-r"><span class="cc-rl">Status</span><span class="cc-rv"><span class="tag tb">Erstansprache offen</span></span></div>
+            <div class="cc-ein">„Hallo Herr Müller, ich habe gesehen, dass Sie im IT-Dienstleistungsbereich aktiv sind …"</div>
+            <div class="cc-next">Profil prüfen → Erstansprache → Follow-up</div>
           </div>
         </div>
-        <div class="price-footer">Preise sind Richtwerte. Exakter Umfang nach Erstgespräch.</div>
-      </div>
-    </div>
-  </div>
-</section>
-<hr class="divider">
-
-<!-- ── GRENZEN ───────────────────────────────────────────────── -->
-<section class="section" id="grenzen">
-  <div class="wrap">
-    <span class="sec-label">Ehrlichkeit &amp; Voraussetzungen</span>
-    <h2 style="margin-bottom:12px;">Was es nicht kann – und was es braucht</h2>
-    <p class="sec-lead">Klare Grenzen schaffen Vertrauen. Keine Features erfunden, keine Versprechen gemacht.</p>
-
-    <div class="trust-grid">
-      <div class="trust-box">
-        <h3 style="color:var(--red);">✕ Was es nicht ist</h3>
-        <ul class="trust-list">
-          <li><span class="tl-r">✕</span>Kein autonomer Sales-Closer</li>
-          <li><span class="tl-r">✕</span>Kein Spam-Bot oder Massenversand-Tool</li>
-          <li><span class="tl-r">✕</span>Kein LinkedIn-Bot (kein Login, kein Scraping)</li>
-          <li><span class="tl-r">✕</span>Kein Garant für Termine oder Antwortquoten</li>
-          <li><span class="tl-r">✕</span>Kein Tool, das schlechte Daten magisch gut macht</li>
-          <li><span class="tl-r">✕</span>Kein vollautomatischer Terminabschluss</li>
-        </ul>
-      </div>
-      <div class="trust-box">
-        <h3 style="color:var(--green);">✓ Was es ist &amp; braucht</h3>
-        <ul class="trust-list">
-          <li><span class="tl-g">✓</span>Kontrollierter Versand – Freigabe bleibt beim Menschen</li>
-          <li><span class="tl-g">✓</span>Heikle Antworten (Datenschutz, Beschwerden) immer an menschliche Prüfung</li>
-          <li><span class="tl-g">✓</span>appointment_ready-Signal – Sales entscheidet, wann Kontakt aufgenommen wird</li>
-          <li><span class="tl-g">✓</span>Ohne Versandanbindung voll nutzbar für Kampagnenvorbereitung &amp; Kundenpaket</li>
-          <li><span class="tl-w">!</span>Echter E-Mail-Versand erfordert konfiguriertes SMTP</li>
-          <li><span class="tl-w">!</span>Reply-Verarbeitung erfordert konfiguriertes IMAP</li>
-        </ul>
-        <div class="trust-note">
-          <strong style="color:var(--orange);">⚠ Hinweis zu Terminlinks / Calendly:</strong>
-          Automatische Calendly-Buchung ist kein eingebautes Feature dieser Basisversion.
-          Sie kann optional später ergänzt werden – aber nicht als automatischer Prozess ohne menschliche Kontrolle.
+        <div class="pip">
+          <h4 style="font-size:11px;font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">Pipeline-Übersicht</h4>
+          <div class="pip-r"><span class="pip-s">Recherche</span><div class="pip-bw"><div class="pip-b" style="width:100%"></div></div><span class="pip-c">50</span></div>
+          <div class="pip-r"><span class="pip-s">Bereinigt</span><div class="pip-bw"><div class="pip-b" style="width:90%"></div></div><span class="pip-c">45</span></div>
+          <div class="pip-r"><span class="pip-s">Angesprochen</span><div class="pip-bw"><div class="pip-b" style="width:60%"></div></div><span class="pip-c">30</span></div>
+          <div class="pip-r"><span class="pip-s">Follow-up</span><div class="pip-bw"><div class="pip-b" style="width:40%;background:var(--yellow)"></div></div><span class="pip-c" style="color:var(--yellow)">20</span></div>
+          <div class="pip-r"><span class="pip-s">Antwort</span><div class="pip-bw"><div class="pip-b" style="width:20%;background:var(--green)"></div></div><span class="pip-c" style="color:var(--green)">10</span></div>
+          <div class="pip-r" style="border:none;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)"><span class="pip-s" style="color:var(--accent2);font-weight:700">Terminchancen</span><div class="pip-bw"><div class="pip-b" style="width:6%"></div></div><span class="pip-c" style="color:var(--accent2)">3</span></div>
         </div>
       </div>
     </div>
   </div>
-</section>
-<hr class="divider">
-
-<!-- ── FINALER CTA ─────────────────────────────────────────────── -->
-<section class="section cta-section" id="kontakt">
-  <div class="wrap">
-    <div class="cta-inner">
-      <span class="sec-label" style="display:block; text-align:center; margin-bottom:12px;">Nächster Schritt</span>
-      <h2>Schick eine Testliste. Ich zeige dir, welche Kontakte wirklich brauchbar sind.</h2>
-      <p>
-        Du bekommst ein Beispielpaket mit Hotlist, Ready-to-send-Liste, Kampagnenmaterial und Summary.
-        Kein langer Vorlauf, kein Aufsatz.
-      </p>
-      <div class="cta-btns">
-        <a href="mailto:emilio@rebellsystem.com?subject=Testlauf%20B2B%20Outbound%20System&body=Hallo%20Emilio,%0D%0Aich%20m%C3%B6chte%20einen%20Testlauf%20f%C3%BCr%20das%20B2B%20Outbound%20System%20anfragen.%0D%0A"
-           class="btn btn-primary btn-lg">✉ Testlauf per E-Mail anfragen</a>
-        <a href="#loesung" class="btn btn-outline btn-lg">Module nochmal ansehen</a>
-      </div>
-      <div class="cta-box">
-        <h4 style="color:var(--muted); font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:10px;">Was du mitschickst:</h4>
-        <p>Eine CSV-Exportliste (Apollo, Hunter, HubSpot oder eigene) – oder einfach Branche + Stadt für eine Live-Suche.</p>
-        <div class="cta-formats">
-          <span class="badge bg">Apollo-Export</span>
-          <span class="badge bb">Hunter.io</span>
-          <span class="badge bp">HubSpot</span>
-          <span class="badge bo">eigene CSV</span>
-          <span class="badge bm">Branche + Stadt</span>
-        </div>
-      </div>
-    </div>
+</div></section>
+<section class="section section-alt"><div class="container">
+  <div class="label">Outreach-Logik</div><h2 class="st">Der Prozess hört nicht nach der ersten Mail auf</h2>
+  <p class="ss">Erstansprache, Nachverfolgung und Antwortbearbeitung – alles in einem strukturierten Ablauf.</p>
+  <div class="grid-3">
+    <div class="out"><div class="out-ico o1">✉️</div><h3>Erstansprache</h3><div class="out-li">Mehrere Erstmail-Varianten erstellen</div><div class="out-li">Neutral oder personalisiert schreiben</div><div class="out-li">Google- &amp; LinkedIn-Recherchehilfe</div><div class="out-li">Als Entwurf vorbereiten</div><div class="out-li">Nach Freigabe optional versenden</div></div>
+    <div class="out"><div class="out-ico o2">🔁</div><h3>Follow-up</h3><div class="out-li">Follow-up 1 und 2 regelbasiert vorbereiten</div><div class="out-li">Wiedervorlage-Zeitpunkte setzen</div><div class="out-li">Versandhistorie speichern</div><div class="out-li">Doppelte Kontakte vermeiden</div><div class="out-li">Entwurfsmodus oder nach Freigabe</div></div>
+    <div class="out"><div class="out-ico o3">📬</div><h3>Antwortlogik</h3><div class="out-li">Interesse erkennen und weiterführen</div><div class="out-li">Absagen und „später" einordnen</div><div class="out-li">Falsche Ansprechpartner identifizieren</div><div class="out-li">Materialwunsch &amp; Terminbereitschaft</div><div class="out-li">Antwortentwurf &amp; nächster Schritt</div></div>
   </div>
-</section>
-
-<!-- ── IMPRESSUM ──────────────────────────────────────────────── -->
-<section id="impressum" style="background:var(--bg2); border-top:1px solid var(--border); padding:64px 0;">
-  <div class="wrap-sm">
-    <span class="sec-label">Rechtliches</span>
-    <h2 style="margin-bottom:28px; font-size:1.6rem;">Impressum</h2>
-
-    <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:32px 36px; font-size:0.9rem; color:var(--text2); line-height:1.8;">
-
-      <p style="font-size:0.78rem; color:var(--muted2); margin-bottom:20px;">Angaben gemäß § 5 DDG</p>
-
-      <p style="margin-bottom:20px;">
-        <strong>Rebell Systems</strong><br>
-        Inhaber: Emilio Allegro<br>
-        Calle el Farrobillo 8<br>
-        38390 Santa Úrsula<br>
-        Spanien
-      </p>
-
-      <p style="margin-bottom:20px;">
-        <strong>Kontakt</strong><br>
-        E-Mail: <a href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a>
-      </p>
-
-      <!-- Optional prüfen: NIF/NIE öffentlich anzeigen? -->
-      <p style="margin-bottom:20px;">
-        <strong>Steuerliche Identifikation</strong><br>
-        NIF/NIE: X5887094Z
-      </p>
-
-      <p style="margin-bottom:0;">
-        <strong>Verantwortlich für den Inhalt</strong><br>
-        Emilio Allegro<br>
-        Calle el Farrobillo 8<br>
-        38390 Santa Úrsula<br>
-        Spanien
-      </p>
-
-    </div>
+  <div class="out-accent">Eine Leadliste endet bei Adressen. Dieses System beginnt dort erst richtig.</div>
+</div></section>
+<section class="section" id="vergleich"><div class="container">
+  <div class="label">Vergleich</div><h2 class="st">Mehr als eine Leadliste</h2>
+  <p class="ss">Der Unterschied liegt nicht in der Anzahl der Kontakte – sondern im Prozess dahinter.</p>
+  <table class="cmp"><thead><tr><th>Normale Leadliste</th><th>B2B Akquise-System</th></tr></thead><tbody>
+    <tr><td><span class="x">✕</span> Rohe Adressen ohne Qualitätsprüfung</td><td><span class="ck">✓</span> Kontakte finden, bereinigen und prüfen</td></tr>
+    <tr><td><span class="x">✕</span> Viel manuelle Prüfarbeit nötig</td><td><span class="ck">✓</span> Bereinigte Arbeitsbasis mit Dublettenprüfung</td></tr>
+    <tr><td><span class="x">✕</span> Keine Priorisierung</td><td><span class="ck">✓</span> Ansprechpartner prüfen und Priorität setzen</td></tr>
+    <tr><td><span class="x">✕</span> Keine vorbereiteten Texte</td><td><span class="ck">✓</span> Erstansprache, Vorlagen, Entwürfe</td></tr>
+    <tr><td><span class="x">✕</span> Keine Follow-up-Struktur</td><td><span class="ck">✓</span> Follow-ups steuern, Wiedervorlage setzen</td></tr>
+    <tr><td><span class="x">✕</span> Keine Antwortlogik</td><td><span class="ck">✓</span> Antworten einordnen, Entwürfe vorbereiten</td></tr>
+    <tr><td><span class="x">✕</span> Kein klarer nächster Schritt</td><td><span class="ck">✓</span> Status, Pipeline und nächste Schritte sichtbar</td></tr>
+  </tbody></table>
+  <div class="geo"><h3>Geeignet für</h3><div class="btags"><span class="btag">Geschäftsführer</span><span class="btag">B2B-Dienstleister</span><span class="btag">Agenturen</span><span class="btag">IT-Dienstleister</span><span class="btag">Cybersecurity</span><span class="btag">Medizintechnik &amp; Healthcare</span><span class="btag">Bauzulieferer</span><span class="btag">Energie &amp; PV</span><span class="btag">Logistik</span><span class="btag">Vertriebsdienstleister</span><span class="btag">Kaltakquise-Firmen</span><span class="btag">Firmen mit eigenem Vertrieb</span></div></div>
+</div></section>
+<section class="section section-alt" id="pakete"><div class="container">
+  <div class="label">Angebote</div><h2 class="st">Klein starten, sauber ausbauen</h2>
+  <p class="ss">Wählen Sie den Einstieg, der zu Ihrem Vertriebsprozess passt.</p>
+  <div class="grid-4" style="margin-bottom:48px;">
+    <div class="pak"><div class="pak-num">Paket 1</div><h3>Vorschau</h3><div class="pak-li"><span class="pak-ck">✓</span>20–50 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Zielgruppe testen</div><div class="pak-li"><span class="pak-ck">✓</span>Nutzen sichtbar machen</div><div class="pak-sp"></div></div>
+    <div class="pak pak-feat"><div class="pak-badge">Beliebt</div><div class="pak-num">Paket 2</div><h3>Akquise-Cockpit</h3><div class="pak-li"><span class="pak-ck">✓</span>100 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner &amp; Kontaktwege</div><div class="pak-li"><span class="pak-ck">✓</span>Texte, Status &amp; Export</div><div class="pak-li"><span class="pak-ck">✓</span>HTML-Cockpit &amp; CSV</div><div class="pak-sp"></div></div>
+    <div class="pak"><div class="pak-num">Paket 3</div><h3>Outreach-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Kontakte + Erstansprache</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up 1 &amp; 2</div><div class="pak-li"><span class="pak-ck">✓</span>Entwurfsmodus oder Versand</div><div class="pak-li"><span class="pak-ck">✓</span>Freigabe vor jedem Versand</div><div class="pak-sp"></div></div>
+    <div class="pak"><div class="pak-num">Paket 4</div><h3>Monats-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Laufend neue Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Listenveredelung</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up-Struktur</div><div class="pak-li"><span class="pak-ck">✓</span>Antwortlogik &amp; Pipeline</div><div class="pak-sp"></div></div>
   </div>
-</section>
-<hr class="divider">
-
-<!-- ── DATENSCHUTZ ────────────────────────────────────────────── -->
-<section id="datenschutz" style="background:var(--bg); border-top:1px solid var(--border); padding:64px 0;">
-  <div class="wrap-sm">
-    <span class="sec-label">Rechtliches</span>
-    <h2 style="margin-bottom:28px; font-size:1.6rem;">Datenschutzhinweise</h2>
-
-    <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:32px 36px; font-size:0.88rem; color:var(--text2); line-height:1.82;">
-
-      <p style="margin-bottom:22px;">
-        Diese Seite nutzt aktuell kein Kontaktformular, kein Tracking und keine externen Analyse-Tools.
-        Wenn Besucher per E-Mail Kontakt aufnehmen, werden die dabei übermittelten Daten ausschließlich zur Bearbeitung der Anfrage verarbeitet.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Verantwortlicher</strong></p>
-      <p style="margin-bottom:22px;">
-        Emilio Allegro<br>
-        Calle el Farrobillo 8<br>
-        38390 Santa Úrsula, Spanien<br>
-        E-Mail: <a href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a>
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Verarbeitete Daten bei Kontaktaufnahme</strong></p>
-      <ul style="list-style:none; margin-bottom:22px;">
-        <li style="margin-bottom:6px; display:flex; gap:10px;"><span style="color:var(--accent);">·</span>Name, falls angegeben</li>
-        <li style="margin-bottom:6px; display:flex; gap:10px;"><span style="color:var(--accent);">·</span>E-Mail-Adresse</li>
-        <li style="margin-bottom:6px; display:flex; gap:10px;"><span style="color:var(--accent);">·</span>Inhalt der Nachricht</li>
-        <li style="margin-bottom:6px; display:flex; gap:10px;"><span style="color:var(--accent);">·</span>Freiwillig mitgesendete Angaben oder Dateien</li>
-      </ul>
-
-      <p style="margin-bottom:8px;"><strong>Zweck</strong></p>
-      <p style="margin-bottom:22px;">
-        Bearbeitung der Anfrage, Durchführung eines Testlaufs oder Vorbereitung eines Angebots.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Rechtsgrundlage</strong></p>
-      <p style="margin-bottom:22px;">
-        Art. 6 Abs. 1 lit. b DSGVO, wenn die Anfrage auf eine Leistung oder ein Angebot gerichtet ist.<br>
-        Art. 6 Abs. 1 lit. f DSGVO für allgemeine Kommunikation und berechtigtes Interesse an der Bearbeitung von Anfragen.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Speicherdauer</strong></p>
-      <p style="margin-bottom:22px;">
-        Daten werden nur so lange gespeichert, wie es für die Bearbeitung der Anfrage oder gesetzliche Aufbewahrungspflichten erforderlich ist.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Hosting / Server-Logs</strong></p>
-      <p style="margin-bottom:22px;">
-        Beim Aufruf der Website können durch den Hosting-Anbieter technisch notwendige Zugriffsdaten verarbeitet werden, z.&nbsp;B. IP-Adresse, Datum/Uhrzeit, abgerufene Seite, Browserinformationen. Diese Daten dienen der technischen Bereitstellung und Sicherheit der Website.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Keine Newsletter / kein Tracking</strong></p>
-      <p style="margin-bottom:22px;">
-        Diese Seite verwendet nach aktuellem Stand kein Newsletter-System, keine Analyse-Cookies und keine Werbe-Tracker.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Betroffenenrechte</strong></p>
-      <p style="margin-bottom:22px;">
-        Besucher haben nach DSGVO grundsätzlich Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Widerspruch und Datenübertragbarkeit.
-      </p>
-
-      <p style="margin-bottom:8px;"><strong>Beschwerderecht</strong></p>
-      <p style="margin-bottom:22px;">
-        Besucher können sich bei einer zuständigen Datenschutzaufsichtsbehörde beschweren.
-      </p>
-
-      <div style="margin-top:24px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:var(--rs); padding:16px 20px; font-size:0.82rem; color:var(--muted);">
-        <strong style="color:var(--orange);">Hinweis:</strong>
-        Dieser Datenschutzabschnitt ist eine einfache Basisversion für eine statische Landingpage ohne Tracking und ohne Kontaktformular.
-        Falls später Formulare, Analytics, Pixel, Newsletter, Calendly, Zahlungsanbieter oder externe Einbindungen genutzt werden, muss die Datenschutzerklärung entsprechend erweitert werden.
-      </div>
-
-    </div>
+  <div class="cta-box">
+    <h2>Starten Sie mit einer <span class="accent">kleinen Vorschau</span> für Ihre Zielgruppe</h2>
+    <p>20–50 vorbereitete Kontakte inklusive Kontaktwegen, Texten, Follow-up-Struktur und nächstem Schritt. Erst assistieren – dann auf Wunsch automatisieren.</p>
+    <a class="cta-btn" href="https://rebellsystem.com" target="_blank">Jetzt Vorschau anfragen →</a>
   </div>
-</section>
-<hr class="divider">
-
-<!-- ── LEGAL BAR ──────────────────────────────────────────────── -->
-<div class="legal-bar">
-  <div class="wrap-sm">
-    Echter Versand setzt eine korrekt konfigurierte Versandumgebung und rechtlich zulässige Kontaktbasis voraus.
-    Keine Garantie auf Termine, Antwortquoten oder Umsatz.
-  </div>
-</div>
-
-<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+</div></section>
 <footer>
-  <div class="footer-inner">
-    <div class="footer-brand-col">
-      <div class="footer-brand">
-        <div class="nav-dot" style="animation:none;"></div>
-        Rebell Systems
-      </div>
-      <div class="footer-brand-sub">
-        B2B Outbound Infrastructure System<br>
-        Kontrollierte Akquise-Infrastruktur.<br>
-        Kein Spam. Kein Autopilot. Kontrolliert.
-      </div>
-      <div style="margin-top:14px;">
-        <a href="mailto:emilio@rebellsystem.com" style="font-size:0.83rem; color:#93c5fd;">
-          ✉ emilio@rebellsystem.com
-        </a>
-      </div>
-    </div>
-
-    <div class="footer-col">
-      <h5>Navigation</h5>
-      <a href="#problem">Das Problem</a>
-      <a href="#loesung">Die Lösung</a>
-      <a href="#prozess">Prozessablauf</a>
-      <a href="#outputs">Demo-Outputs</a>
-      <a href="#pilot">Pilot &amp; Preise</a>
-      <a href="#grenzen">Grenzen</a>
-    </div>
-
-    <div class="footer-col">
-      <h5>Rechtliches</h5>
-      <a href="#impressum">Impressum</a>
-      <a href="#datenschutz">Datenschutz</a>
-      <a href="mailto:emilio@rebellsystem.com">Kontakt</a>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <div>© 2026 Rebell Systems · Emilio Allegro · Santa Úrsula, Spanien</div>
-    <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-      <a href="#impressum" style="color:var(--muted2); font-size:0.77rem;">Impressum</a>
-      <a href="#datenschutz" style="color:var(--muted2); font-size:0.77rem;">Datenschutz</a>
-      <a href="mailto:emilio@rebellsystem.com" style="color:#93c5fd; font-size:0.77rem;">Kontakt</a>
-      <span>Diese Seite ist eine Produktinformation, kein Garant für Termine oder Umsätze.</span>
-    </div>
-  </div>
+  <svg width="110" height="26" viewBox="0 0 110 26" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs><rect width="26" height="26" rx="6" fill="url(#fg)"/><rect x="6" y="4.5" width="3.5" height="17" rx="1.5" fill="white"/><path d="M9.5 4.5 L13.5 4.5 Q19 4.5 19 9.5 Q19 13.5 13.5 14.5 L9.5 14.5" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="13" y1="14" x2="20.5" y2="21.5" stroke="white" stroke-width="3" stroke-linecap="round"/><circle cx="22" cy="22.5" r="2" fill="#93c5fd"/><text x="32" y="14" font-family="Inter,sans-serif" font-weight="800" font-size="10" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text><text x="32.5" y="23" font-family="Inter,sans-serif" font-weight="400" font-size="7" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text></svg>
+  <div style="font-size:12px;color:#94a3b8;">Emilio Allegro &nbsp;·&nbsp; <a class="foot-link" href="https://rebellsystem.com" target="_blank">rebellsystem.com</a> &nbsp;·&nbsp; <a class="foot-link" href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a> &nbsp;·&nbsp; <a class="foot-link" href="impressum.html">Impressum &amp; Datenschutz</a></div>
 </footer>
-
-<script>
-// Active nav on scroll
-const sections = document.querySelectorAll('section[id], div[id]');
-const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
-const io = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (!e.isIntersecting) return;
-    navLinks.forEach(l => { l.classList.remove('active'); l.style.color=''; l.style.borderBottomColor=''; });
-    const a = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
-    if (a) { a.classList.add('active'); }
-  });
-}, { threshold: 0.25, rootMargin: '-60px 0px -30% 0px' });
-sections.forEach(s => io.observe(s));
-
-// Smooth scroll
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', e => {
-    const t = document.querySelector(link.getAttribute('href'));
-    if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  });
-});
-</script>
-
 </body>
 </html>
