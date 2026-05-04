@@ -410,7 +410,7 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
       <div class="stufe"><div class="sbadge s2">Entwurfsmodus</div><h3>Fertige Entwürfe — Mensch gibt frei</h3><p>Das System erstellt fertige E-Mail-Entwürfe, Follow-ups und Antwortvorschläge. Versand erst nach expliziter Freigabe.</p><div class="stufe-meta">Effizienz mit Kontrolle</div><div class="stufe-bg">2</div></div>
       <div class="stufe"><div class="sbadge s3">Automationsmodus</div><h3>Nach Freigabe: kontrollierte Ausführung</h3><p>Erstmails senden, Follow-ups ausführen, Antworten vorsortieren – regelbasiert, mit Sicherheitslogik, nach definierter Freigabe.</p><div class="stufe-meta">Skalierung bei Bedarf</div><div class="stufe-bg">3</div></div>
     </div>
-    <div class="ctrl-bar">Der Kunde entscheidet, wie viel Kontrolle beim Menschen bleibt. · Versand ist optional, regelbasiert und immer mit Freigabepunkt.</div>
+    <div class="ctrl-bar">Automation entsteht nicht durch Kontaktmaterial allein — sie braucht Betriebsmodus, Regeln und Freigaben. Der Kunde entscheidet, wie weit das System arbeitet.</div>
   </div>
 </section>
 
@@ -508,16 +508,62 @@ footer{background:var(--navy3);border-top:1px solid var(--border);padding:28px 4
   <div class="container">
     <div class="label">Angebote</div>
     <h2 class="st">Klein starten,<br>sauber ausbauen</h2>
-    <p class="ss">Wählen Sie den Einstieg, der zu Ihrem Vertriebsprozess passt.</p>
+    <p class="ss">Wählen Sie den Einstieg, der zu Ihrem Vertriebsprozess passt — vorbereitete Akquise-Arbeit oder ein aktivierter, laufender Prozess.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px;">
+      <div style="flex:1;min-width:260px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:18px 22px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);margin-bottom:8px;">Paket 1 &amp; 2</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;">Vorbereitete Vertriebsarbeit</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.65;">Kontakte, Texte, Cockpit und Arbeitsansicht. Eine strukturierte Grundlage — der Mensch arbeitet damit selbst, in seinem eigenen Tempo.</div>
+      </div>
+      <div style="flex:1;min-width:260px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:18px 22px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#34d399;margin-bottom:8px;">Paket 3 &amp; 4</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;">Aktivierter laufender Prozess</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.65;">Das System wird betrieben — mit Regeln, Freigaben und Betriebsmodus. Versand, Follow-ups und Antwortlogik laufen kontrolliert. Kein eigener Bot-Zugang nötig.</div>
+      </div>
+    </div>
     <div class="grid-4" style="margin-bottom:48px;">
-      <div class="pak"><div class="pak-num">Paket 1</div><h3>Vorschau</h3><div class="pak-li"><span class="pak-ck">✓</span>20–50 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Zielgruppe testen</div><div class="pak-li"><span class="pak-ck">✓</span>Nutzen sichtbar machen</div><div class="pak-sp"></div></div>
-      <div class="pak pak-feat"><div class="pak-badge">Beliebt</div><div class="pak-num">Paket 2</div><h3>Akquise-Cockpit</h3><div class="pak-li"><span class="pak-ck">✓</span>100 vorbereitete Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner &amp; Kontaktwege</div><div class="pak-li"><span class="pak-ck">✓</span>Texte, Status &amp; Export</div><div class="pak-li"><span class="pak-ck">✓</span>HTML-Cockpit &amp; CSV</div><div class="pak-sp"></div></div>
-      <div class="pak"><div class="pak-num">Paket 3</div><h3>Outreach-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Kontakte + Erstansprache</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up 1 &amp; 2</div><div class="pak-li"><span class="pak-ck">✓</span>Entwurfsmodus oder Versand</div><div class="pak-li"><span class="pak-ck">✓</span>Freigabe vor jedem Versand</div><div class="pak-sp"></div></div>
-      <div class="pak"><div class="pak-num">Paket 4</div><h3>Monats-System</h3><div class="pak-li"><span class="pak-ck">✓</span>Laufend neue Kontakte</div><div class="pak-li"><span class="pak-ck">✓</span>Listenveredelung</div><div class="pak-li"><span class="pak-ck">✓</span>Follow-up-Struktur</div><div class="pak-li"><span class="pak-ck">✓</span>Antwortlogik &amp; Pipeline</div><div class="pak-sp"></div></div>
+      <div class="pak">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent2);margin-bottom:6px;">Vorbereitete Vertriebsarbeit</div>
+        <div class="pak-num">Paket 1</div><h3>Vorschau</h3>
+        <div class="pak-li"><span class="pak-ck">✓</span>20–50 vorbereitete Kontakte</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner, Kontaktwege, Texte</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Zielgruppe & Nutzen testen</div>
+        <div class="pak-sp"></div>
+      </div>
+      <div class="pak pak-feat">
+        <div class="pak-badge">Beliebt</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent2);margin-bottom:6px;">Vorbereitete Vertriebsarbeit</div>
+        <div class="pak-num">Paket 2</div><h3>Akquise-Cockpit</h3>
+        <div class="pak-li"><span class="pak-ck">✓</span>100 vorbereitete Kontakte</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Ansprechpartner &amp; Kontaktwege</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Texte, Status &amp; Export</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>HTML-Cockpit &amp; CSV</div>
+        <div class="pak-sp"></div>
+      </div>
+      <div class="pak">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#34d399;margin-bottom:6px;">Aktivierter Outreach-Prozess</div>
+        <div class="pak-num">Paket 3</div><h3>Outreach-System</h3>
+        <div class="pak-li"><span class="pak-ck">✓</span>Kontakte + Erstansprache + Follow-ups</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Betrieb im Entwurfs- oder Freigabemodus</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Regelbasierter Versand nach Freigabe</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Antwortlogik vorbereitet</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Kein Bot-Zugang nötig</div>
+        <div class="pak-sp"></div>
+      </div>
+      <div class="pak">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#34d399;margin-bottom:6px;">Laufender betreuter Prozess</div>
+        <div class="pak-num">Paket 4</div><h3>Monats-System</h3>
+        <div class="pak-li"><span class="pak-ck">✓</span>Laufend neue Kontakte &amp; Bereinigung</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Follow-up-Struktur &amp; Antwortlogik</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Operative Steuerung &amp; Pipeline-Übergabe</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Wiederkehrender Betrieb mit Regeln &amp; Freigaben</div>
+        <div class="pak-li"><span class="pak-ck">✓</span>Betrieb als betreuter Service möglich</div>
+        <div class="pak-sp"></div>
+      </div>
     </div>
     <div class="cta-box">
       <h2>Starten Sie mit einer <span class="accent">kleinen Vorschau</span> für Ihre Zielgruppe</h2>
-      <p>20–50 vorbereitete Kontakte inklusive Kontaktwegen, Texten, Follow-up-Struktur und nächstem Schritt. Erst assistieren – dann auf Wunsch automatisieren.</p>
+      <p>20–50 vorbereitete Kontakte inklusive Kontaktwegen, Texten und nächstem Schritt — als Einstieg für Ihre Zielgruppe. Wer danach mehr will, kann den Prozess aktivieren lassen.</p>
       <a class="cta-btn" href="mailto:emilio@rebellsystem.com?subject=Vorschau anfragen">Jetzt Vorschau anfragen →</a>
     </div>
   </div>
