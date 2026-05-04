@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impressum & Datenschutz – Rebell System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --navy:  #0b1120;
+  --navy2: #111827;
+  --navy3: #1a2540;
+  --card:  #16213a;
+  --card2: #1e2d4a;
+  --accent:  #3b82f6;
+  --accent2: #60a5fa;
+  --accent-glow: rgba(59,130,246,.15);
+  --text:   #f1f5f9;
+  --muted:  #94a3b8;
+  --muted2: #64748b;
+  --border: rgba(255,255,255,.07);
+  --r: 12px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);line-height:1.7;min-height:100vh;}
+a{color:var(--accent2);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,17,32,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 44px;display:flex;align-items:center;justify-content:space-between;}
+.nav-back{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--muted);transition:color .2s;}
+.nav-back:hover{color:var(--text);text-decoration:none;}
+.nav-back svg{opacity:.6;}
+.nav-cta{background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:9px 20px;border-radius:8px;}
+.nav-cta:hover{background:#2563eb;text-decoration:none;}
+
+/* ── PAGE LAYOUT ── */
+.page-wrap{max-width:860px;margin:0 auto;padding:120px 44px 80px;}
+
+/* ── HEADER ── */
+.page-header{margin-bottom:60px;padding-bottom:40px;border-bottom:1px solid var(--border);}
+.page-header .label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);background:var(--accent-glow);border:1px solid rgba(59,130,246,.25);border-radius:20px;padding:5px 14px;margin-bottom:16px;}
+.page-header h1{font-size:clamp(28px,5vw,46px);font-weight:900;line-height:1.1;letter-spacing:-1px;margin-bottom:14px;}
+.page-header p{font-size:15px;color:var(--muted);max-width:520px;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;margin-bottom:48px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:5px;}
+.tab{flex:1;text-align:center;padding:11px 20px;font-size:14px;font-weight:600;border-radius:7px;cursor:pointer;color:var(--muted);transition:background .2s,color .2s;border:none;background:transparent;font-family:inherit;}
+.tab.active{background:var(--navy3);color:var(--text);border:1px solid var(--border);}
+.tab:hover:not(.active){color:var(--text);}
+
+/* ── CONTENT PANELS ── */
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ── SECTION BLOCKS ── */
+.block{margin-bottom:36px;}
+.block-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.block-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.block-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px 26px;}
+.block-card + .block-card{margin-top:12px;}
+
+/* ── TYPOGRAPHY ── */
+.field{display:grid;grid-template-columns:180px 1fr;gap:8px 16px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;align-items:start;}
+.field:last-child{border-bottom:none;}
+.field-lbl{color:var(--muted);font-weight:500;font-size:13px;}
+.field-val{color:var(--text);font-weight:500;}
+.prose{font-size:14px;color:var(--muted);line-height:1.75;}
+.prose strong{color:var(--text);font-weight:600;}
+.prose p{margin-bottom:12px;}
+.prose p:last-child{margin-bottom:0;}
+.dlist{list-style:none;margin-top:10px;}
+.dlist li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border);}
+.dlist li:last-child{border-bottom:none;}
+.dlist li::before{content:'·';color:var(--accent);font-size:18px;line-height:1.2;flex-shrink:0;}
+.tag-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.rtag{background:var(--navy3);border:1px solid var(--border);border-radius:7px;padding:6px 13px;font-size:13px;font-weight:500;color:var(--muted);}
+.basis-note{margin-top:36px;background:var(--navy3);border:1px solid rgba(59,130,246,.18);border-left:3px solid var(--accent);border-radius:10px;padding:18px 20px;font-size:13px;color:var(--muted);line-height:1.65;}
+.basis-note strong{color:var(--text);}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);margin-top:80px;padding:28px 44px;display:flex;justify-content:space-between;align-items:center;background:var(--navy3);}
+.foot-brand{display:flex;align-items:center;gap:10px;}
+.foot-info{font-size:12px;color:var(--muted2);}
+.foot-link{color:var(--accent2);}
+
+/* ── PRINT ── */
+@media print {
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  @page{size:A4 portrait;margin:14mm 16mm;}
+  nav,.tabs,.nav-back,.nav-cta{display:none!important;}
+  body{background:#0b1120!important;font-size:9pt;}
+  .page-wrap{padding:0;max-width:100%;}
+  .page-header{margin-bottom:28px;padding-bottom:20px;}
+  .page-header h1{font-size:22pt!important;}
+  .panel{display:block!important;}
+  .panel + .panel{margin-top:40px;padding-top:40px;border-top:1px solid var(--border);}
+  .block{margin-bottom:20px;page-break-inside:avoid;}
+  .block-card{padding:16px 18px!important;}
+  .field{grid-template-columns:150px 1fr;font-size:8.5pt!important;}
+  .prose,.dlist li,.basis-note{font-size:8.5pt!important;}
+  footer{padding:16px 0!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-back" href="index.html">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Zurück zur Hauptseite
+  </a>
+  <!-- Logo -->
+  <svg width="140" height="30" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="ng2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+    <rect width="30" height="30" rx="7" fill="url(#ng2)"/>
+    <rect x="7" y="5.5" width="4" height="19" rx="1.8" fill="white"/>
+    <path d="M11 5.5 L16 5.5 Q22 5.5 22 11.5 Q22 16.5 16 17.5 L11 17.5" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <line x1="15.5" y1="17" x2="23.5" y2="24.5" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="25" cy="25.5" r="2.2" fill="#93c5fd"/>
+    <text x="38" y="17" font-family="Inter,sans-serif" font-weight="800" font-size="12" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text>
+    <text x="38.5" y="27" font-family="Inter,sans-serif" font-weight="400" font-size="8" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text>
+  </svg>
+  <a class="nav-cta" href="https://rebellsystem.com" target="_blank">Vorschau anfragen</a>
+</nav>
+
+<!-- PAGE -->
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div class="label">Rechtliches</div>
+    <h1>Impressum &<br>Datenschutz</h1>
+    <p>Pflichtangaben gemäß § 5 DDG sowie Datenschutzhinweise nach DSGVO für rebellsystem.com.</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="show('impressum',this)">Impressum</button>
+    <button class="tab" onclick="show('datenschutz',this)">Datenschutz</button>
+  </div>
+
+  <!-- ═══ IMPRESSUM ═══ -->
+  <div class="panel active" id="panel-impressum">
+
+    <div class="block">
+      <div class="block-title">Angaben gemäß § 5 DDG</div>
+      <div class="block-card">
+        <div class="field"><span class="field-lbl">Unternehmensname</span><span class="field-val">Rebell System</span></div>
+        <div class="field"><span class="field-lbl">Inhaber</span><span class="field-val">Emilio Allegro</span></div>
+        <div class="field"><span class="field-lbl">Adresse</span><span class="field-val">Calle el Farrobillo 8<br>38390 Santa Úrsula<br>Spanien</span></div>
+        <div class="field"><span class="field-lbl">E-Mail</span><span class="field-val"><a href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a></span></div>
+        <div class="field"><span class="field-lbl">NIF / NIE</span><span class="field-val">X5887094Z</span></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Verantwortlich für den Inhalt</div>
+      <div class="block-card">
+        <div class="field"><span class="field-lbl">Name</span><span class="field-val">Emilio Allegro</span></div>
+        <div class="field"><span class="field-lbl">Adresse</span><span class="field-val">Calle el Farrobillo 8, 38390 Santa Úrsula, Spanien</span></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Rechtliches</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Alle Inhalte dieser Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte wird keine Gewähr übernommen.</p>
+          <p>Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Eine Verpflichtung zur Überwachung übermittelter oder gespeicherter fremder Informationen besteht nicht.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ DATENSCHUTZ ═══ -->
+  <div class="panel" id="panel-datenschutz">
+
+    <div class="block">
+      <div class="block-title">Allgemeines</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Diese Seite nutzt aktuell <strong>kein Kontaktformular, kein Tracking und keine externen Analyse-Tools.</strong> Wenn Besucher per E-Mail Kontakt aufnehmen, werden die dabei übermittelten Daten ausschließlich zur Bearbeitung der Anfrage verarbeitet.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Verantwortlicher</div>
+      <div class="block-card">
+        <div class="field"><span class="field-lbl">Name</span><span class="field-val">Emilio Allegro</span></div>
+        <div class="field"><span class="field-lbl">Adresse</span><span class="field-val">Calle el Farrobillo 8, 38390 Santa Úrsula, Spanien</span></div>
+        <div class="field"><span class="field-lbl">E-Mail</span><span class="field-val"><a href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a></span></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Verarbeitete Daten bei Kontaktaufnahme</div>
+      <div class="block-card">
+        <ul class="dlist">
+          <li>Name, falls angegeben</li>
+          <li>E-Mail-Adresse</li>
+          <li>Inhalt der Nachricht</li>
+          <li>Freiwillig mitgesendete Angaben oder Dateien</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Zweck der Verarbeitung</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Bearbeitung der Anfrage, Durchführung eines Testlaufs oder Vorbereitung eines Angebots.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Rechtsgrundlage</div>
+      <div class="block-card">
+        <div class="field"><span class="field-lbl">Art. 6 Abs. 1 lit. b DSGVO</span><span class="field-val">Wenn die Anfrage auf eine Leistung oder ein Angebot gerichtet ist.</span></div>
+        <div class="field"><span class="field-lbl">Art. 6 Abs. 1 lit. f DSGVO</span><span class="field-val">Für allgemeine Kommunikation und berechtigtes Interesse an der Bearbeitung von Anfragen.</span></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Speicherdauer</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Daten werden nur so lange gespeichert, wie es für die Bearbeitung der Anfrage oder gesetzliche Aufbewahrungspflichten erforderlich ist.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Hosting & Server-Logs</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Beim Aufruf der Website können durch den Hosting-Anbieter technisch notwendige Zugriffsdaten verarbeitet werden, z. B. IP-Adresse, Datum/Uhrzeit, abgerufene Seite, Browserinformationen. Diese Daten dienen der technischen Bereitstellung und Sicherheit der Website.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Keine Newsletter / Kein Tracking</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Diese Seite verwendet nach aktuellem Stand <strong>kein Newsletter-System, keine Analyse-Cookies und keine Werbe-Tracker.</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Betroffenenrechte</div>
+      <div class="block-card">
+        <div class="prose" style="margin-bottom:14px;">Besucher haben nach DSGVO grundsätzlich folgende Rechte:</div>
+        <div class="tag-row">
+          <span class="rtag">Auskunft</span>
+          <span class="rtag">Berichtigung</span>
+          <span class="rtag">Löschung</span>
+          <span class="rtag">Einschränkung der Verarbeitung</span>
+          <span class="rtag">Widerspruch</span>
+          <span class="rtag">Datenübertragbarkeit</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-title">Beschwerderecht</div>
+      <div class="block-card">
+        <div class="prose">
+          <p>Besucher können sich bei einer zuständigen Datenschutzaufsichtsbehörde beschweren.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="basis-note">
+      <strong>Hinweis:</strong> Dieser Datenschutzabschnitt ist eine einfache Basisversion für eine statische Landingpage ohne Tracking und ohne Kontaktformular. Falls später Formulare, Analytics, Pixel, Newsletter, Calendly, Zahlungsanbieter oder externe Einbindungen genutzt werden, muss die Datenschutzerklärung entsprechend erweitert werden.
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-brand">
+    <svg width="110" height="26" viewBox="0 0 110 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="fg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs>
+      <rect width="26" height="26" rx="6" fill="url(#fg2)"/>
+      <rect x="6" y="4.5" width="3.5" height="17" rx="1.5" fill="white"/>
+      <path d="M9.5 4.5 L13.5 4.5 Q19 4.5 19 9.5 Q19 13.5 13.5 14.5 L9.5 14.5" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <line x1="13" y1="14" x2="20.5" y2="21.5" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="22" cy="22.5" r="2" fill="#93c5fd"/>
+      <text x="32" y="14" font-family="Inter,sans-serif" font-weight="800" font-size="10" fill="#f1f5f9" letter-spacing="-0.1">REBELL</text>
+      <text x="32.5" y="23" font-family="Inter,sans-serif" font-weight="400" font-size="7" fill="#94a3b8" letter-spacing="2.5">SYSTEM</text>
+    </svg>
+  </div>
+  <div class="foot-info">
+    Emilio Allegro &nbsp;·&nbsp;
+    <a class="foot-link" href="https://rebellsystem.com" target="_blank">rebellsystem.com</a>
+    &nbsp;·&nbsp; <a class="foot-link" href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a>
+  </div>
+</footer>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
