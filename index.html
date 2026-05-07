@@ -128,68 +128,96 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   display:flex;align-items:center;gap:8px;padding:12px 16px;
   background:#0a0d14;border-bottom:1px solid var(--border);
 }
-.cockpit-bar .dot{width:11px;height:11px;border-radius:50%;background:#3a3f50}
+.cockpit-bar .dot{width:11px;height:11px;border-radius:50%}
 .cockpit-bar .dot.r{background:#ef4444}.cockpit-bar .dot.y{background:#f59e0b}.cockpit-bar .dot.g{background:#10b981}
 .cockpit-bar .url{flex:1;text-align:center;font-size:11px;color:var(--dim);font-family:monospace}
-.cockpit-body{display:grid;grid-template-columns:200px 1fr;min-height:520px}
-.cockpit-side{background:#0e1220;border-right:1px solid var(--border);padding:18px 12px}
-.cockpit-brand{display:flex;align-items:center;gap:8px;padding:6px 8px 18px;border-bottom:1px solid var(--border);margin-bottom:14px}
-.cockpit-brand .m{width:24px;height:24px;border-radius:6px;background:var(--grad-1);display:grid;place-items:center;font-size:11px;font-weight:900;color:#fff}
-.cockpit-brand strong{font-size:13px}
-.cockpit-nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12px;color:var(--muted);border-radius:6px;margin-bottom:2px}
+/* topbar KPIs */
+.cockpit-topbar{
+  display:flex;align-items:center;gap:0;padding:0 20px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.ck-kpi-pill{display:flex;flex-direction:column;padding:8px 14px;border-right:1px solid var(--border)}
+.ck-kpi-pill:last-child{border-right:none}
+.ck-kpi-pill .l{font-size:9px;text-transform:uppercase;color:var(--dim);letter-spacing:.5px}
+.ck-kpi-pill .v{font-size:15px;font-weight:800;margin-top:1px}
+.ck-kpi-pill .v.ok{color:var(--ok)}.ck-kpi-pill .v.hot{color:var(--hot)}.ck-kpi-pill .v.warn{color:var(--warn)}.ck-kpi-pill .v.acc{color:var(--accent)}
+.ck-live{margin-left:auto;font-size:9px;color:var(--ok);font-weight:700;letter-spacing:.6px;display:flex;align-items:center;gap:5px;white-space:nowrap;padding:0 4px}
+.ck-live-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:ck-pulse 1.5s infinite}
+/* main body */
+.cockpit-body{display:grid;grid-template-columns:190px 1fr;min-height:460px}
+/* sidebar */
+.cockpit-side{background:#0e1220;border-right:1px solid var(--border);padding:12px 8px}
+.cockpit-brand{display:flex;align-items:center;gap:8px;padding:4px 6px 12px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.cockpit-brand .m{width:22px;height:22px;border-radius:5px;background:var(--grad-1);display:grid;place-items:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0}
+.cockpit-brand strong{font-size:11px;line-height:1.3}
+.ck-nav-section{margin-bottom:12px}
+.ck-nav-section h5{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);padding:0 7px 5px;font-weight:700}
+.cockpit-nav-item{display:flex;align-items:center;gap:6px;padding:5px 7px;font-size:11px;color:var(--muted);border-radius:5px;margin-bottom:1px;line-height:1.3}
 .cockpit-nav-item.active{background:rgba(124,142,255,.12);color:var(--accent)}
-.cockpit-nav-item .b{margin-left:auto;font-size:10px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:8px;font-weight:700}
+.cockpit-nav-item .b{margin-left:auto;font-size:9px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:7px;font-weight:700;flex-shrink:0}
 .cockpit-nav-item.active .b{background:var(--accent);color:#fff}
 .cockpit-nav-item .b.hot{background:var(--hot);color:#fff}
-.cockpit-main{padding:18px 22px}
-.cockpit-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px}
-.cs{padding:0 8px;border-right:1px solid var(--border)}
-.cs:last-child{border-right:none}
-.cs .l{font-size:9px;text-transform:uppercase;color:var(--dim);letter-spacing:.5px}
-.cs .v{font-size:18px;font-weight:800;margin-top:2px}
-.cs .v.ok{color:var(--ok)}.cs .v.hot{color:var(--hot)}.cs .v.warn{color:var(--warn)}.cs .v.acc{color:var(--accent)}
-.cockpit-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
-.ck{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;position:relative;overflow:hidden}
-.ck::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad-1)}
-.ck.ok::after{background:var(--grad-3)}
-.ck.hot::after{background:var(--grad-2)}
-.ck .l{font-size:9px;text-transform:uppercase;color:var(--dim);letter-spacing:.4px;margin-bottom:4px}
-.ck .v{font-size:22px;font-weight:800}
-.ck .s{font-size:10px;color:var(--muted);margin-top:2px}
-.cockpit-table{background:var(--surface2);border-radius:10px;padding:14px;border:1px solid var(--border)}
-.ct-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.ct-head h4{font-size:12px;font-weight:700}
-.ct-head .pill{font-size:9px;padding:1px 7px;background:rgba(251,146,60,.15);color:var(--hot);border-radius:8px;font-weight:700;letter-spacing:.3px;margin-left:auto}
-.ct-row{display:grid;grid-template-columns:1fr 80px 90px;gap:10px;padding:6px 0;font-size:11px;border-bottom:1px solid var(--border)}
+/* main */
+.cockpit-main{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+/* toolbar */
+.cockpit-toolbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.cockpit-toolbar .ck-label{font-size:9px;color:var(--accent);font-weight:700;letter-spacing:.5px;margin-right:3px}
+.ck-btn{padding:4px 8px;font-size:10px;border-radius:5px;border:1px solid var(--border2);background:rgba(255,255,255,.04);color:var(--muted);white-space:nowrap}
+.ck-btn.gold{background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(249,115,22,.08));border-color:rgba(251,191,36,.3);color:var(--gold);margin-left:auto}
+/* KPI cards 3-col */
+.cockpit-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.ck-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;position:relative;overflow:hidden}
+.ck-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad-1)}
+.ck-card.ok::after{background:var(--grad-3)}
+.ck-card.hot::after{background:var(--grad-2)}
+.ck-card.warn::after{background:linear-gradient(135deg,#f59e0b,#fb923c)}
+.ck-card .cl{font-size:9px;text-transform:uppercase;color:var(--dim);letter-spacing:.4px;margin-bottom:2px}
+.ck-card .cv{font-size:20px;font-weight:800}
+.ck-card.ok .cv{color:var(--ok)}.ck-card.hot .cv{color:var(--hot)}.ck-card.warn .cv{color:var(--warn)}
+.ck-card .cs{font-size:9px;color:var(--muted);margin-top:1px}
+/* reply table */
+.cockpit-table{background:var(--surface2);border-radius:8px;padding:11px;border:1px solid var(--border)}
+.ct-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.ct-head h4{font-size:11px;font-weight:700}
+.ct-head .pill{font-size:8px;padding:1px 6px;background:rgba(251,146,60,.15);color:var(--hot);border-radius:7px;font-weight:700;letter-spacing:.3px;margin-left:auto}
+.ct-row{display:grid;grid-template-columns:1fr 80px 80px;gap:8px;padding:5px 0;font-size:10px;border-bottom:1px solid var(--border)}
 .ct-row:last-child{border-bottom:none}
 .ct-row .co{font-weight:700;color:var(--text)}
-.ct-row .em{color:var(--muted);font-size:10px}
-.ct-row .pi{display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;letter-spacing:.3px}
+.ct-row .em{color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct-row .pi{display:inline-block;padding:2px 6px;border-radius:7px;font-size:8px;font-weight:700;letter-spacing:.3px}
 .ct-row .pi.ok{background:rgba(16,185,129,.15);color:var(--ok)}
 .ct-row .pi.hot{background:rgba(251,146,60,.15);color:var(--hot)}
 .ct-row .pi.warn{background:rgba(245,158,11,.15);color:var(--warn)}
-.ct-row .ts{color:var(--dim);text-align:right;font-size:10px}
+.ct-row .ts{color:var(--dim);text-align:right;font-size:9px}
+/* job bar */
+.ck-job-bar{display:flex;align-items:center;gap:8px;background:rgba(124,142,255,.07);border:1px solid rgba(124,142,255,.2);border-radius:6px;padding:7px 11px;font-size:10px}
+.ck-spinner{width:11px;height:11px;flex-shrink:0;border:2px solid rgba(124,142,255,.25);border-top-color:var(--accent);border-radius:50%;animation:ck-spin .7s linear infinite}
+.ck-job-pct{margin-left:auto;color:var(--ok);font-size:9px;font-weight:700}
+@keyframes ck-spin{to{transform:rotate(360deg)}}
+@keyframes ck-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 @media(max-width:768px){
   .cockpit-mock{margin:36px -8px 0;border-radius:14px}
   .cockpit-bar{padding:8px 10px}
-  .cockpit-bar .url{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+  .cockpit-bar .url{font-size:9px;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cockpit-topbar{padding:0 10px}
+  .ck-kpi-pill{padding:7px 9px}
+  .ck-kpi-pill .l{font-size:8px}
+  .ck-kpi-pill .v{font-size:13px}
+  .ck-live{display:none}
   .cockpit-body{grid-template-columns:1fr;min-height:auto}
   .cockpit-side{display:none}
-  .cockpit-main{padding:14px 12px}
-  .cockpit-stats{grid-template-columns:repeat(3,1fr);gap:6px;padding-bottom:10px;margin-bottom:14px}
-  .cs{padding:0 4px}
-  .cs:nth-child(3n){border-right:none}
-  .cs .l{font-size:8px}
-  .cs .v{font-size:15px}
-  .cockpit-cards{grid-template-columns:1fr;gap:8px;margin-bottom:14px}
-  .ck{padding:10px}
-  .ck .v{font-size:18px}
-  .cockpit-table{padding:10px}
-  .ct-row{grid-template-columns:1fr 70px;gap:6px}
+  .cockpit-main{padding:11px 10px;gap:9px}
+  .cockpit-toolbar .ck-btn:not(.gold){display:none}
+  .cockpit-kpi-row{grid-template-columns:repeat(2,1fr);gap:6px}
+  .ck-card{padding:8px}
+  .ck-card .cv{font-size:17px}
+  .cockpit-table{padding:8px}
+  .ct-row{grid-template-columns:1fr 68px;gap:5px}
   .ct-row .ts{display:none}
-  .ct-row .em{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ct-row .pi{font-size:8px;padding:2px 5px}
+  .ck-job-bar{font-size:9px;padding:6px 9px}
 }
 
 /* ── Section Headers ── */
@@ -520,44 +548,64 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         <div class="url">https://cockpit.rebellsystem.com/dashboard</div>
         <div style="width:60px"></div>
       </div>
+      <div class="cockpit-topbar">
+        <div class="ck-kpi-pill"><div class="l">Pipeline</div><div class="v acc">184</div></div>
+        <div class="ck-kpi-pill"><div class="l">Gesendet</div><div class="v ok">128</div></div>
+        <div class="ck-kpi-pill"><div class="l">Heute</div><div class="v">12</div></div>
+        <div class="ck-kpi-pill"><div class="l">Replies</div><div class="v acc">8</div></div>
+        <div class="ck-kpi-pill"><div class="l">Hot 🔥</div><div class="v hot">3</div></div>
+        <div class="ck-kpi-pill"><div class="l">Follow-up</div><div class="v warn">12</div></div>
+        <div class="ck-live"><div class="ck-live-dot"></div>LIVE</div>
+      </div>
       <div class="cockpit-body">
         <div class="cockpit-side">
-          <div class="cockpit-brand"><div class="m">B²</div><strong>Premium Cockpit</strong></div>
-          <div class="cockpit-nav-item active"><span>📊</span> Dashboard</div>
-          <div class="cockpit-nav-item"><span>👥</span> Leads <span class="b">184</span></div>
-          <div class="cockpit-nav-item"><span>✉</span> Bereit <span class="b">56</span></div>
-          <div class="cockpit-nav-item"><span>📤</span> Versendet <span class="b">128</span></div>
-          <div class="cockpit-nav-item"><span>💬</span> Antworten <span class="b hot">3</span></div>
-          <div class="cockpit-nav-item"><span>🔁</span> Follow-ups <span class="b">12</span></div>
-          <div class="cockpit-nav-item"><span>🚀</span> Automation</div>
+          <div class="cockpit-brand"><div class="m">B²</div><strong>Akquise Cockpit</strong></div>
+          <div class="ck-nav-section">
+            <h5>Workflow</h5>
+            <div class="cockpit-nav-item active"><span>📊</span> Dashboard</div>
+            <div class="cockpit-nav-item"><span>👥</span> Leads <span class="b">184</span></div>
+            <div class="cockpit-nav-item"><span>✉</span> Bereit zum Senden <span class="b">56</span></div>
+            <div class="cockpit-nav-item"><span>📤</span> Versendet <span class="b">128</span></div>
+            <div class="cockpit-nav-item"><span>💬</span> Antworten <span class="b hot">3</span></div>
+            <div class="cockpit-nav-item"><span>🔁</span> Follow-ups <span class="b">12</span></div>
+            <div class="cockpit-nav-item"><span>💼</span> LinkedIn <span class="b">47</span></div>
+          </div>
+          <div class="ck-nav-section">
+            <h5>Aktionen</h5>
+            <div class="cockpit-nav-item"><span>🔍</span> Lead-Suche</div>
+            <div class="cockpit-nav-item"><span>🚀</span> Automation</div>
+            <div class="cockpit-nav-item"><span>⚙</span> Job-Log</div>
+          </div>
         </div>
         <div class="cockpit-main">
-          <div class="cockpit-stats">
-            <div class="cs"><div class="l">Pipeline</div><div class="v acc">184</div></div>
-            <div class="cs"><div class="l">Gesendet</div><div class="v ok">128</div></div>
-            <div class="cs"><div class="l">Heute</div><div class="v">12</div></div>
-            <div class="cs"><div class="l">Replies</div><div class="v acc">8</div></div>
-            <div class="cs"><div class="l">Hot 🔥</div><div class="v hot">3</div></div>
-            <div class="cs"><div class="l">Termine</div><div class="v warn">5</div></div>
+          <div class="cockpit-toolbar">
+            <span class="ck-label">⚡ SCHNELL-AKTIONEN</span>
+            <div class="ck-btn">📥 Sync Replies</div>
+            <div class="ck-btn">🧠 Verarbeiten</div>
+            <div class="ck-btn">✉ Preview</div>
+            <div class="ck-btn gold">🚀 FULL AUTO</div>
           </div>
-          <div class="cockpit-cards">
-            <div class="ck ok"><div class="l">📤 Versendet</div><div class="v">128</div><div class="s">12 heute</div></div>
-            <div class="ck"><div class="l">🚀 Freigegeben</div><div class="v">56</div><div class="s">bereit zum Versand</div></div>
-            <div class="ck hot"><div class="l">🔥 Hot Replies</div><div class="v">3</div><div class="s">Interesse signalisiert</div></div>
+          <div class="cockpit-kpi-row">
+            <div class="ck-card ok"><div class="cl">📤 Gesendet</div><div class="cv">128</div><div class="cs">12 heute</div></div>
+            <div class="ck-card"><div class="cl">🚀 Freigegeben</div><div class="cv">56</div><div class="cs">bereit zum Versand</div></div>
+            <div class="ck-card warn"><div class="cl">⏸ Warten auf Approval</div><div class="cv">8</div><div class="cs">Vorschau bereit</div></div>
+            <div class="ck-card hot"><div class="cl">🔥 Hot Replies</div><div class="cv">3</div><div class="cs">Interesse signalisiert</div></div>
+            <div class="ck-card"><div class="cl">💬 Antworten offen</div><div class="cv">5</div><div class="cs">Review nötig</div></div>
+            <div class="ck-card"><div class="cl">🔁 Follow-up</div><div class="cv">12</div><div class="cs">Wiedervorlage</div></div>
           </div>
           <div class="cockpit-table">
             <div class="ct-head">
-              <h4>📥 Neueste Antworten</h4>
+              <h4>🔥 Neueste Antworten</h4>
               <span class="pill">3 NEU</span>
             </div>
             <div class="ct-row">
-              <div><div class="co">Berger Industries GmbH</div><div class="em">geschaftsfuhrung@berger-ind.de</div></div>
-              <span class="pi ok">interested</span>
+              <div><div class="co">Berger Industries GmbH</div><div class="em">k.berger@berger-ind.de</div></div>
+              <span class="pi hot">Termin 🔥</span>
               <div class="ts">heute · 09:42</div>
             </div>
             <div class="ct-row">
               <div><div class="co">CloudByte AG</div><div class="em">m.schulz@cloudbyte.de</div></div>
-              <span class="pi hot">appointment</span>
+              <span class="pi ok">interested</span>
               <div class="ts">heute · 11:18</div>
             </div>
             <div class="ct-row">
@@ -566,23 +614,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
               <div class="ts">gestern</div>
             </div>
           </div>
+          <div class="ck-job-bar">
+            <div class="ck-spinner"></div>
+            <strong style="color:var(--accent);font-size:10px">Mining läuft…</strong>
+            <span style="color:var(--muted)">Immobilienmakler · München · 47 / 200</span>
+            <span class="ck-job-pct">23%</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </header>
 
-<!-- ═════════════ HONESTY BAR ═════════════ -->
-<section style="background:linear-gradient(90deg,rgba(124,142,255,.08),rgba(192,132,252,.05));border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:24px 0">
-  <div class="wrap" style="display:flex;gap:24px;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center">
-    <div style="font-size:13px;color:var(--muted);max-width:920px;line-height:1.6">
-      <strong style="color:var(--text)">Ehrlich gesagt:</strong>
-      E-Mail läuft <strong style="color:var(--ok)">vollautomatisch (mit deinem Approval-Klick)</strong> ·
-      LinkedIn ist <strong style="color:var(--accent2)">manuell mit Power-Cockpit</strong> (Auto-Versand würde deinen LinkedIn-Account riskieren) ·
-      Termine buchst <strong style="color:var(--gold)">du selbst</strong>, der Bot liefert dir die warmen Leads sortiert ins Cockpit.
-    </div>
-  </div>
-</section>
 
 <!-- ═════════════ PAIN POINTS ═════════════ -->
 <section class="section">
