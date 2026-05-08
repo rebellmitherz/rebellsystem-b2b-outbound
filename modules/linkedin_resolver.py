@@ -19,7 +19,7 @@ from ddgs.exceptions import DDGSException, RatelimitException
 logger = logging.getLogger(__name__)
 
 SearchFn = Callable[[str, int, int, str], list[dict[str, Any]]]
-MAX_LINKEDIN_RESOLVER_QUERIES = 3
+MAX_LINKEDIN_RESOLVER_QUERIES = 5
 
 
 @dataclass(frozen=True)
@@ -128,7 +128,7 @@ def resolve_linkedin_via_ddg(
     website: str = "",
     city: str = "",
     region: str = "de-de",
-    max_results: int = 8,
+    max_results: int = 12,
     search_fn: SearchFn | None = None,
 ) -> LinkedInResolution:
     """Resolve public LinkedIn URLs via SERP only."""
@@ -148,10 +148,8 @@ def resolve_linkedin_via_ddg(
             hits = fn(query, max_results, 1, region)
         except Exception as exc:  # noqa: BLE001 - resolver must never break caller
             logger.warning("[linkedin_resolver] search skipped: %s", exc)
-            return LinkedInResolution(
-                linkedin_match_reason="serp_search_error_search_link_only",
-                linkedin_resolution_status="search_link_only",
-            )
+            # Do not abort – try next query instead
+            continue
         for hit in hits:
             url = str(hit.get("href") or hit.get("url") or "").strip().split("?")[0].rstrip("/")
             if not url or url in seen:
