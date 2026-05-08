@@ -264,7 +264,8 @@ def block_bad_contact_tokens(name: str, *, city_hints: set[str] | None = None) -
         flags.append("bad_keyword:" + ",".join(keyword_hits[:5]))
     if any(b in folded for b in _BAD_SUBSTRINGS):
         flags.append("bad_substring")
-    if cityset and tokset.intersection(cityset):
+    # Nur city_token_as_name setzen, wenn alle Tokens aus der Stadtliste stammen
+    if cityset and tokset.intersection(cityset) and not (tokset - cityset):
         flags.append("city_token_as_name")
     if len(raw) > 80:
         flags.append("too_long")
@@ -445,9 +446,14 @@ def build_linkedin_resolution_fields(lead: dict[str, Any] | None) -> dict[str, A
         confidence = 0.0
     reason = "no_linkedin_lookup_performed"
     if person_url:
-        status = "likely_person"
-        confidence = max(confidence, 0.8)
-        reason = str(lead.get("linkedin_match_reason") or "existing_public_person_url")
+        if has_person:
+            status = "likely_person"
+            confidence = max(confidence, 0.8)
+            reason = str(lead.get("linkedin_match_reason") or "existing_public_person_url")
+        else:
+            status = "review"
+            confidence = min(max(confidence, 0.3), 0.5)
+            reason = "person_url_without_valid_name"
     elif company_url:
         status = "verified_company"
         confidence = max(confidence, 0.75)
