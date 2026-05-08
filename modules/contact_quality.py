@@ -303,8 +303,9 @@ def is_valid_person_name(name: str, *, city_hints: set[str] | None = None) -> bo
         low = part.rstrip(".").casefold()
         if low in {"von", "van", "de", "der", "di", "del"}:
             continue
-        letters = re.sub(r"[^A-Za-zÄÖÜäöüß-]", "", part)
-        if len(letters.replace("-", "")) < 3:
+        # allow apostrophes in names (e.g. O'Brien)
+        letters_only = re.sub(r"[^A-Za-zÄÖÜäöüß]", "", part)
+        if len(letters_only) < 2:
             return False
         if not part[0].isupper():
             return False
@@ -521,7 +522,8 @@ def _safe_salutation_for(clean_name: str) -> str:
         return f"Guten Tag Frau {last},"
     if first_low in _MALE_FIRST_NAMES:
         return f"Guten Tag Herr {last},"
-    return "Guten Tag,"
+    # Fallback: use last name without gender prefix
+    return f"Guten Tag {last},"
 
 
 def gender_known_for_first_name(first_name: str) -> bool:

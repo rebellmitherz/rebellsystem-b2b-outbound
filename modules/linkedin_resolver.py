@@ -92,15 +92,15 @@ def resolve_linkedin_from_hits(
             if score > best_company[0]:
                 best_company = (score, company_url, reason)
 
-    if best_person[1] and best_person[0] >= 75:
+    if best_person[1] and best_person[0] >= 85:
         return LinkedInResolution(
             linkedin_person_url=best_person[1],
-            linkedin_company_url_verified=best_company[1] if best_company[0] >= 65 else "",
+            linkedin_company_url_verified=best_company[1] if best_company[0] >= 70 else "",
             linkedin_match_confidence=min(0.98, best_person[0] / 100),
             linkedin_match_reason=best_person[2],
             linkedin_resolution_status="likely_person",
         )
-    if best_company[1] and best_company[0] >= 65:
+    if best_company[1] and best_company[0] >= 70:
         return LinkedInResolution(
             linkedin_company_url_verified=best_company[1],
             linkedin_match_confidence=min(0.9, best_company[0] / 100),
@@ -158,8 +158,7 @@ def resolve_linkedin_via_ddg(
                 continue
             seen.add(url)
             all_hits.append(hit)
-        if any("linkedin.com/in/" in str(h.get("href") or "").lower() for h in all_hits):
-            break
+        # don't break early – collect all queries to get best match
     if not all_hits:
         return LinkedInResolution(linkedin_match_reason="serp_empty_or_unavailable", linkedin_resolution_status="search_link_only")
     return resolve_linkedin_from_hits(
@@ -239,17 +238,23 @@ def _ddg_search_with_retry(query: str, per_query: int, attempts: int, region: st
 
 def _score_person_hit(blob: str, person_tokens: set[str], company_tokens: set[str], city_tokens: set[str]) -> tuple[int, str]:
     b = _norm(blob)
-    score = 35
+    score = 20
     reasons = ["person_linkedin_url"]
     if person_tokens:
-        hits = sum(1 for t in person_tokens if t in b)
-        score += min(35, hits * 18)
-        reasons.append(f"person_tokens={hits}/{len(person_tokens)}")
+        hits = sum(1 for t in person_tokens if re.search(r'\b' + re.escape(t) + r'\b', b))
+        if hits >= 2:
+            score += min(35, hits * 18)
+            reasons.append(f"person_tokens={hits}/{len(person_tokens)}")
+        else:
+            reasons.append("person_tokens_insufficient")
     if company_tokens:
-        hits = sum(1 for t in company_tokens if t in b)
-        score += min(22, hits * 8)
-        reasons.append(f"company_tokens={hits}/{len(company_tokens)}")
-    if city_tokens and any(t in b for t in city_tokens):
+        hits = sum(1 for t in company_tokens if re.search(r'\b' + re.escape(t) + r'\b', b))
+        if hits >= 2:
+            score += min(22, hits * 8)
+            reasons.append(f"company_tokens={hits}/{len(company_tokens)}")
+        else:
+            reasons.append("company_tokens_insufficient")
+    if city_tokens and any(re.search(r'\b' + re.escape(t) + r'\b', b) for t in city_tokens):
         score += 6
         reasons.append("city_match")
     return min(100, score), ";".join(reasons)
@@ -260,10 +265,13 @@ def _score_company_hit(blob: str, company_tokens: set[str], city_tokens: set[str
     score = 35
     reasons = ["company_linkedin_url"]
     if company_tokens:
-        hits = sum(1 for t in company_tokens if t in b)
-        score += min(42, hits * 14)
-        reasons.append(f"company_tokens={hits}/{len(company_tokens)}")
-    if city_tokens and any(t in b for t in city_tokens):
+        hits = sum(1 for t in company_tokens if re.search(r'\b' + re.escape(t) + r'\b', b))
+        if hits >= 2:
+            score += min(42, hits * 14)
+            reasons.append(f"company_tokens={hits}/{len(company_tokens)}")
+        else:
+            reasons.append("company_tokens_insufficient")
+    if city_tokens and any(re.search(r'\b' + re.escape(t) + r'\b', b) for t in city_tokens):
         score += 6
         reasons.append("city_match")
     return min(100, score), ";".join(reasons)
