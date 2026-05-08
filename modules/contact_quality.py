@@ -448,28 +448,24 @@ def build_linkedin_resolution_fields(lead: dict[str, Any] | None) -> dict[str, A
         confidence = 0.0
     reason = "no_linkedin_lookup_performed"
     if person_url:
+        # Always keep fresh leads as "not_checked" so they appear under "Neu".
+        # Confidence and reason are still computed for downstream personalization
+        # once the lead is manually approved.
         if has_person:
-            status = "likely_person"
             confidence = max(confidence, 0.8)
             reason = str(lead.get("linkedin_match_reason") or "existing_public_person_url")
-        # NEU: auch ohne validierten Namen als likely_person einstufen,
-        # wenn die Konfidenz hoch genug ist
         elif confidence >= 0.85:
-            status = "likely_person"
             confidence = max(confidence, 0.8)
             reason = str(lead.get("linkedin_match_reason") or "high-confidence-person-url") + "_via_score"
         else:
-            # Person URL exists but no safe contact person and confidence < 0.85.
-            # Keep as "not_checked" so that this fresh lead appears in the "Neu" area,
-            # not in "Approve".  The person URL and moderate confidence are retained
-            # for manual review.
-            status = "not_checked"
             confidence = min(max(confidence, 0.3), 0.6)
             reason = "person_url_found_no_valid_name_not_checked"
+        # status stays "not_checked" – fresh lead, not yet approved/sent
     elif company_url:
-        status = "verified_company"
+        # Keep as "not_checked" so the lead shows in "Neu".
         confidence = max(confidence, 0.75)
         reason = str(lead.get("linkedin_match_reason") or "existing_public_company_url")
+        # status stays "not_checked"
     elif search_url:
         status = "search_link_only"
         confidence = 0.35 if has_person else 0.2
@@ -507,11 +503,13 @@ def build_linkedin_resolution_fields(lead: dict[str, Any] | None) -> dict[str, A
                     if serp_status in ("likely_person", "verified_company") and (serp_person or serp_company):
                         person_url = serp_person or person_url
                         company_url = serp_company or company_url
-                        status = serp_status
-                        try:
-                            confidence = max(confidence, float(serp_fields.get("linkedin_match_confidence") or 0.0))
-                        except (TypeError, ValueError):
-                            pass
+                        # Keep status as "not_checked" so the lead stays in "Neu".
+                        # Only update reason and maybe confidence, but don’t promote.
+                        if any((serp_person, serp_company)):
+                            try:
+                                confidence = max(confidence, float(serp_fields.get("linkedin_match_confidence") or 0.0))
+                            except (TypeError, ValueError):
+                                pass
                         reason = str(serp_fields.get("linkedin_match_reason") or reason) + "_via_ddg"
                     elif serp_status == "review":
                         reason = str(serp_fields.get("linkedin_match_reason") or reason) + "_review_via_ddg"
