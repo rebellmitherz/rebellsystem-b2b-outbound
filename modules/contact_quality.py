@@ -459,9 +459,13 @@ def build_linkedin_resolution_fields(lead: dict[str, Any] | None) -> dict[str, A
             confidence = max(confidence, 0.8)
             reason = str(lead.get("linkedin_match_reason") or "high-confidence-person-url") + "_via_score"
         else:
-            status = "review"
-            confidence = min(max(confidence, 0.3), 0.5)
-            reason = "person_url_without_valid_name"
+            # Person URL exists but no safe contact person and confidence < 0.85.
+            # Keep as "not_checked" so that this fresh lead appears in the "Neu" area,
+            # not in "Approve".  The person URL and moderate confidence are retained
+            # for manual review.
+            status = "not_checked"
+            confidence = min(max(confidence, 0.3), 0.6)
+            reason = "person_url_found_no_valid_name_not_checked"
     elif company_url:
         status = "verified_company"
         confidence = max(confidence, 0.75)
