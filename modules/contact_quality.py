@@ -406,6 +406,8 @@ _HIGH_ARTIFACT_FLAG_MARKERS = (
     "contains_email_or_url",
     "contains_digit",
     "city_token_as_name",
+    # Neu: generische info/kontakt/O‑Tokens werden konsequent als high eingestuft
+    "bad_token:",
 )
 
 
@@ -450,6 +452,12 @@ def build_linkedin_resolution_fields(lead: dict[str, Any] | None) -> dict[str, A
             status = "likely_person"
             confidence = max(confidence, 0.8)
             reason = str(lead.get("linkedin_match_reason") or "existing_public_person_url")
+        # NEU: auch ohne validierten Namen als likely_person einstufen,
+        # wenn die Konfidenz hoch genug ist
+        elif confidence >= 0.85:
+            status = "likely_person"
+            confidence = max(confidence, 0.8)
+            reason = str(lead.get("linkedin_match_reason") or "high-confidence-person-url") + "_via_score"
         else:
             status = "review"
             confidence = min(max(confidence, 0.3), 0.5)
