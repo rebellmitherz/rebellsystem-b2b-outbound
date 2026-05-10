@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-05-10T16:14:36.486749+00:00",
+  "input_file": "C:\\Users\\micha\\Desktop\\Neuer Ordner\\bot_builder\\generated_bots\\b2bbot\\output\\latest\\intent_target_preview_report.json",
+  "companies_loaded": 3,
+  "companies_processed": 3,
+  "websites_found": 1,
+  "emails_found": 1,
+  "phones_found": 1,
+  "ready_for_approval": 1,
+  "needs_manual_enrichment": 0,
+  "results": [
+    {
+      "company_name": "Seokratie GmbH",
+      "website": "https://www.seokratie.de/impressum/",
+      "source_signal_title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "source_signal_url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "fit_status": "target_fit",
+      "fit_score": 1.0,
+      "contact_name": "Wissen Blog SEO",
+      "email": "kontakt@seokratie.de",
+      "email_type": "generic_email",
+      "phone": "+49 89 219 09 84 11",
+      "contact_quality": "good",
+      "recommended_first_line": "mir ist aufgefallen, dass Seokratie GmbH aktuell im Bereich Vertrieb/Marketing wächst bzw. eine passende Rolle ausgeschrieben hat (Content Marketing Manager (m/w/d) - in München - Stepstone).",
+      "outreach_angle": "sales_growth_signal",
+      "email_subject": "Kurze Frage zu planbaren B2B-Erstgesprächen für Seokratie GmbH",
+      "email_body": "Hallo Wissen Blog SEO,\n\nmir ist aufgefallen, dass Sie aktuell im Bereich Vertrieb/Marketing wachsen bzw. eine passende Rolle ausgeschrieben haben (Content Marketing Manager (m/w/d) - in München - Stepstone).\n\nIch unterstütze B2B-Unternehmen dabei, planbar qualifizierte Erstgespräche mit passenden Geschäftskunden aufzubauen, ohne dass intern sofort ein kompletter Akquise-Apparat entstehen muss.\n\nWäre es sinnvoll, kurz zu prüfen, ob das für Seokratie GmbH aktuell relevant ist?",
+      "ready_for_approval": true,
+      "missing_fields": [],
+      "next_action": "approve_for_send"
+    },
+    {
+      "company_name": "Blessing Marketing GmbH",
+      "website": "",
+      "source_signal_title": "Vertriebsmitarbeiter/in im Innendienst - Vollzeit/Teilzeit (m/w/d) - Job ...",
+      "source_signal_url": "https://www.stepstone.de/stellenangebote--Vertriebsmitarbeiter-in-im-Innendienst-Vollzeit-Teilzeit-m-w-d-Munich-Blessing-Marketing-GmbH--12202728-inline.html",
+      "fit_status": "maybe_fit",
+      "fit_score": 0.5,
+      "contact_name": "",
+      "email": "",
+      "email_type": "",
+      "phone": "",
+      "contact_quality": "weak",
+      "recommended_first_line": "mir ist aufgefallen, dass Blessing Marketing GmbH aktuell im Bereich Vertrieb/Marketing wächst bzw. eine passende Rolle ausgeschrieben hat (Vertriebsmitarbeiter/in im Innendienst - Vollzeit/Teilzeit (m/w/d) - Job ...).",
+      "outreach_angle": "marketing_growth_signal",
+      "email_subject": "Kurze Frage zu planbaren B2B-Erstgesprächen für Blessing Marketing GmbH",
+      "email_body": "",
+      "ready_for_approval": false,
+      "missing_fields": [
+        "website_verification"
+      ],
+      "next_action": "discard"
+    },
+    {
+      "company_name": "THE MARKETER P.S.O. UG (haftungsbeschränkt)",
+      "website": "",
+      "source_signal_title": "PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...",
+      "source_signal_url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "fit_status": "target_fit",
+      "fit_score": 0.9,
+      "contact_name": "",
+      "email": "",
+      "email_type": "",
+      "phone": "",
+      "contact_quality": "weak",
+      "recommended_first_line": "mir ist aufgefallen, dass THE MARKETER P.S.O. UG (haftungsbeschränkt) aktuell im Bereich Vertrieb/Marketing wächst bzw. eine passende Rolle ausgeschrieben hat (PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...).",
+      "outreach_angle": "sales_growth_signal",
+      "email_subject": "Kurze Frage zu planbaren B2B-Erstgesprächen für THE MARKETER P.S.O. UG (haftungsbeschränkt)",
+      "email_body": "",
+      "ready_for_approval": false,
+      "missing_fields": [
+        "website"
+      ],
+      "next_action": "discard"
+    }
+  ]
+}
