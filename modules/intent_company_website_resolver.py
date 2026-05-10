@@ -51,6 +51,72 @@ def _extract_company_from_title(title: str) -> str:
     return parts[0].strip()
 
 
+_LEGAL_FORMS = re.compile(
+    r'\b(GmbH|UG|AG|KG|OHG|SE|Ltd|Inc|GbR|e\.K\.|e\.V\.|Stiftung|AöR|KGaA|Limited|Corporation|Corp|LLC|LLP|S\.A\.|S\.L\.|B\.V\.|N\.V\.|SARL|SAS|Sp\.\s*z\s*o\.\s*o\.|s\.\s*r\.\s*o\.)\b',
+    re.IGNORECASE
+)
+
+_GENERIC_BLOCKLIST = [
+    "marketing und e-commerce",
+    "marketing und e commerce",
+    "marketing jobs",
+    "marketing & sales",
+    "senior account manager",
+    "sales manager",
+    "account manager",
+    "business development",
+    "business development manager",
+    "junior sales manager",
+    "promoter",
+    "kauffrau",
+    "kaufmann",
+    "neukundenakquise",
+    "vertrieb",
+    "karriere",
+    "stellenangebote",
+    "stellenangebot",
+    "job bei der firma",
+    "jobs",
+    "karriereseite",
+]
+
+
+def is_likely_real_company_name(company_name: str) -> tuple:
+    """Prueft ob ein String ein echter Firmenname ist.
+
+    Returns (is_valid, reject_reason).
+    """
+    name = company_name.strip()
+    if not name or len(name) < 3:
+        return False, "too_short"
+
+    name_lower = name.lower()
+
+    if _LEGAL_FORMS.search(name):
+        return True, ""
+
+    for blocked in _GENERIC_BLOCKLIST:
+        if blocked in name_lower:
+            return False, f"contains_generic_term:{blocked}"
+
+    job_title_keywords = {
+        "manager", "sales", "account", "business", "development",
+        "promoter", "kauffrau", "kaufmann", "senior", "junior",
+        "assistant", "director", "consultant", "specialist",
+        "analyst", "coordinator", "executive", "officer",
+        "representative", "agent", "advisor", "head", "lead",
+    }
+    words = re.findall(r'[A-Za-zÄÖÜäöüß]+', name_lower)
+    if len(words) < 2:
+        return False, "single_word_no_legal_form"
+
+    job_word_count = sum(1 for w in words if w in job_title_keywords)
+    if job_word_count >= len(words) * 0.5:
+        return False, "job_title_keywords_dominant"
+
+    return True, ""
+
+
 def _is_company_candidate(item: dict) -> bool:
     """Prueft ob dieses Item ein Kandidat fuer Website-Resolution ist."""
     if item.get("recommended_next_action") == "resolve_company_website":
@@ -150,21 +216,30 @@ def run(industry: str = "", city: str = "") -> dict:
 
         fit_status = str(item.get("fit_status") or item.get("relevance_status") or "unknown")
         fit_score = float(item.get("fit_score") or item.get("relevance_score") or 0)
-        queries = _build_queries(company_name, city or item.get("city", ""))
-        
+
+        name_valid, name_reject = is_likely_real_company_name(company_name)
+        if name_valid:
+            queries = _build_queries(company_name, city or item.get("city", ""))
+            next_action = "search_official_website"
+        else:
+            queries = []
+            next_action = "review_company_name"
+
         candidates.append({
             "company_name": company_name,
+            "company_name_valid": name_valid,
+            "company_name_reject_reason": name_reject,
             "fit_status": fit_status,
             "fit_score": fit_score,
             "original_url": str(item.get("url") or ""),
             "resolution_queries": queries,
             "resolution_status": "preview_only",
             "api_used": False,
-            "next_action": "search_official_website",
+            "next_action": next_action,
         })
 
-    preview_ready = len([c for c in candidates if c["resolution_queries"]])
-    needs_review = len(candidates) - preview_ready
+    preview_ready = len([c for c in candidates if c["company_name_valid"] and c["resolution_queries"]])
+    needs_review = len([c for c in candidates if not c["company_name_valid"]])
 
     result = {
         "phase": "3.9",
