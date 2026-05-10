@@ -1,34 +1,111 @@
 company_name,website,industry,city_region,intent_signal_type,intent_signal_source_url,intent_signal_title,signal_reason,decision_maker_name,decision_maker_role,email,email_type,phone,linkedin_url,contact_quality,outreach_angle,recommended_first_line,email_subject,email_body,followup_1,followup_2,next_action,status,missing_fields
-Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage zu B2B-Erstgesprächen,"Hallo Seokratie-Team, ...","Hallo Seokratie GmbH-Team,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
 
 kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
 Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
 
-Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Seokratie GmbH-Team,
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
 
 letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
 Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
 
-Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,decision_maker_name
-Blessing Marketing GmbH,,Marketingagentur,DE,growth_expansion,https://www.stepstone.de/other-job,Vertriebsmitarbeiter,Wachstumssignal im Marketing-/Account-Bereich: Vertriebsmitarbeiter,,Vertrieb,,,,,weak,marketing_growth_signal,...,,,"Hallo Blessing Marketing GmbH-Team,
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
 
 kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
 Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
 
-Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Blessing Marketing GmbH-Team,
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
 
 letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
 Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
 
-Sonst freue ich mich über eine kurze Rückmeldung.",discard,discard,"email, website, email_body, decision_maker_name, phone"
-THE MARKETER P.S.O. UG,https://example.com,Marketingagentur,INTL,sales_hiring,https://www.stepstone.de/another-job,PR Manager,Aktive Stellenausschreibung im Vertrieb/Sales: PR Manager,,,info@example.com,generic,,,partial,sales_growth_signal,...,Kurze Frage,"Hallo Team, ...","Hallo THE MARKETER P.S.O. UG-Team,
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
 
 kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
 Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
 
-Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo THE MARKETER P.S.O. UG-Team,
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
 
 letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
 Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
 
-Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,"decision_maker_name, phone"
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,
+Seokratie GmbH,https://seokratie.de,Marketingagentur,DE,sales_hiring,https://www.stepstone.de/some-job,Content Marketing Manager (m/w/d),Aktive Stellenausschreibung im Vertrieb/Sales: Content Marketing Manager (m/w/d),Sandra Beispielperson,Marketing Manager,kontakt@seokratie.de,generic,+49 89 219 09 84 11,,good,sales_growth_signal,...,Kurze Frage,"Hallo Seokratie-Team, ...","Hallo Sandra Beispielperson,
+
+kurze Erinnerung an meine letzte Mail. Falls B2B-Erstgespräche aktuell kein Thema sind, kein Stress.
+Falls doch: ein 15-Minuten-Slot reicht, um zu prüfen ob es passt.
+
+Wäre nächste Woche eine kurze Abstimmung machbar?","Hallo Sandra Beispielperson,
+
+letzte Nachricht von meiner Seite zu diesem Thema, damit Sie nicht zugespammt werden.
+Wenn B2B-Erstgespräche aktuell nicht relevant sind, schließe ich das Thema sauber ab.
+
+Sonst freue ich mich über eine kurze Rückmeldung.",approve_for_send,ready_for_approval,

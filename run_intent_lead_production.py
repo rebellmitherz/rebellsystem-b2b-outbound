@@ -25,6 +25,33 @@ EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 GENERIC_PREFIXES = ("info@", "kontakt@", "office@", "hello@", "service@",
                     "support@", "mail@", "contact@", "marketing@", "sales@")
 
+FAKE_EMAIL_TOKENS = ("fixture", "mock", "test", "example", "dummy", "placeholder",
+                    "sample", "foo@", "bar@", "noreply@", "no-reply@")
+FAKE_EMAIL_DOMAINS = ("example.com", "example.org", "example.net", "test.com",
+                     "test.de", "localhost", "invalid", "mailinator.com",
+                     "dummy.com")
+FAKE_SOURCE_TOKENS = ("fixture", "mock", "test", "smoke", "sample")
+
+
+def _is_fake_email(email: str, email_source: str = "") -> tuple[bool, str]:
+    if not email:
+        return False, ""
+    low = email.strip().lower()
+    for tok in FAKE_EMAIL_TOKENS:
+        if tok in low:
+            return True, f"email_token:{tok}"
+    if "@" in low:
+        domain = low.split("@", 1)[1]
+        for fake in FAKE_EMAIL_DOMAINS:
+            if domain == fake or domain.endswith("." + fake):
+                return True, f"email_domain:{fake}"
+    if email_source:
+        slow = str(email_source).strip().lower()
+        for tok in FAKE_SOURCE_TOKENS:
+            if tok in slow:
+                return True, f"email_source:{tok}"
+    return False, ""
+
 LEAD_FIELDS = [
     "company_name", "website", "industry", "city_region",
     "intent_signal_type", "intent_signal_source_url", "intent_signal_title",
@@ -137,6 +164,9 @@ def _normalize(row: dict) -> dict:
                 decision_maker_role = marker
                 break
 
+    email_source = str(row.get("email_source") or "").strip()
+    is_fake, fake_reason = _is_fake_email(email, email_source)
+
     lead = {
         "company_name": company,
         "website": website,
@@ -152,7 +182,7 @@ def _normalize(row: dict) -> dict:
         "email_type": email_type,
         "phone": phone,
         "linkedin_url": "",
-        "contact_quality": contact_quality,
+        "contact_quality": "invalid_or_mock" if is_fake else contact_quality,
         "outreach_angle": angle,
         "recommended_first_line": first_line,
         "email_subject": subject,
@@ -162,16 +192,24 @@ def _normalize(row: dict) -> dict:
         "next_action": "",
         "status": "",
         "missing_fields": [],
+        "_is_fake_email": is_fake,
+        "_fake_reason": fake_reason,
     }
     return lead
 
 
 def _evaluate(lead: dict) -> dict:
     missing: list[str] = []
+    is_fake = bool(lead.pop("_is_fake_email", False))
+    fake_reason = lead.pop("_fake_reason", "")
+
     if not lead.get("email"):
         missing.append("email")
     elif not EMAIL_RE.match(lead["email"]):
         missing.append("email_invalid")
+    elif is_fake:
+        missing.append("valid_real_email")
+
     if not lead.get("website"):
         missing.append("website")
     if not lead.get("intent_signal_source_url"):
@@ -185,18 +223,23 @@ def _evaluate(lead: dict) -> dict:
     if not lead.get("phone"):
         soft_missing.append("phone")
 
-    if not missing:
-        if not soft_missing:
-            lead["status"] = "ready_for_approval"
-            lead["next_action"] = "approve_for_send"
-        else:
-            lead["status"] = "ready_for_approval"
-            lead["next_action"] = "approve_for_send"
+    can_be_ready = (
+        not missing
+        and not is_fake
+        and lead.get("contact_quality") != "invalid_or_mock"
+    )
+
+    if can_be_ready:
+        lead["status"] = "ready_for_approval"
+        lead["next_action"] = "approve_for_send"
+    elif is_fake:
+        # Fake/mock email: never ready, always enrich
+        lead["status"] = "needs_enrichment"
+        lead["next_action"] = "enrich_contact"
     elif missing == ["email"] or missing == ["website"] or missing == ["decision_maker_name"]:
         lead["status"] = "needs_enrichment"
         lead["next_action"] = "enrich_manually"
     else:
-        # If too many critical fields missing (e.g. no email and no website and no body)
         if len(missing) >= 3:
             lead["status"] = "discard"
             lead["next_action"] = "discard"
@@ -205,6 +248,8 @@ def _evaluate(lead: dict) -> dict:
             lead["next_action"] = "enrich_manually"
 
     lead["missing_fields"] = missing + soft_missing
+    if fake_reason:
+        lead["missing_fields"].append(fake_reason)
     return lead
 
 
