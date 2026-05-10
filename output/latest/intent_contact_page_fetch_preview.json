@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-05-10T13:18:30.861776+00:00",
+  "input_file": "C:\\Users\\micha\\Desktop\\Neuer Ordner\\bot_builder\\generated_bots\\b2bbot\\output\\latest\\intent_contact_preview.json",
+  "total_companies": 1,
+  "fetched_companies": 1,
+  "urls_attempted": 4,
+  "emails_found_count": 0,
+  "phones_found_count": 0,
+  "results": [
+    {
+      "company_name": "Ipsos Operations GmbH",
+      "verified_domain": "ipsos.com",
+      "verified_url": "https://www.ipsos.com/de-de/total-operations",
+      "contact_results": [
+        {
+          "url": "https://www.ipsos.com/kontakt",
+          "fetched": false,
+          "http_status": 0,
+          "final_url": "",
+          "page_title": "",
+          "page_type": "unknown",
+          "emails_found": [],
+          "phones_found": [],
+          "contact_persons_found": [],
+          "extraction_confidence": 0.0,
+          "error": "HTTP Error 503: Service Unavailable"
+        },
+        {
+          "url": "https://www.ipsos.com/kontakt.html",
+          "fetched": false,
+          "http_status": 0,
+          "final_url": "",
+          "page_title": "",
+          "page_type": "unknown",
+          "emails_found": [],
+          "phones_found": [],
+          "contact_persons_found": [],
+          "extraction_confidence": 0.0,
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "impressum_results": [
+        {
+          "url": "https://www.ipsos.com/impressum",
+          "fetched": false,
+          "http_status": 0,
+          "final_url": "",
+          "page_title": "",
+          "page_type": "unknown",
+          "emails_found": [],
+          "phones_found": [],
+          "contact_persons_found": [],
+          "extraction_confidence": 0.0,
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "url": "https://www.ipsos.com/de/impressum",
+          "fetched": false,
+          "http_status": 0,
+          "final_url": "",
+          "page_title": "",
+          "page_type": "unknown",
+          "emails_found": [],
+          "phones_found": [],
+          "contact_persons_found": [],
+          "extraction_confidence": 0.0,
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "best_email": "",
+      "best_phone": "",
+      "contact_enrichment_status": "failed",
+      "next_action": "discard"
+    }
+  ]
+}
