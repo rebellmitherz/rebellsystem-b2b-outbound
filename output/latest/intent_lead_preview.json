@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-05-10T13:21:49.115048+00:00",
+  "pipeline_status": "no_lead_created",
+  "total_signal_candidates": 18,
+  "total_job_detail_pages": 18,
+  "total_relevance_fetch_candidates": 2,
+  "total_resolved_companies": 2,
+  "total_verified_websites": 1,
+  "total_contact_enriched": 0,
+  "total_lead_candidates": 0,
+  "discarded_count": 1,
+  "review_count": 1,
+  "lead_candidates": [],
+  "discarded_candidates": [
+    {
+      "company_name": "Ipsos Operations GmbH",
+      "verified_domain": "ipsos.com",
+      "verified_url": "https://www.ipsos.com/de-de/total-operations",
+      "best_email": "",
+      "best_phone": "",
+      "fit_status": "maybe_fit",
+      "verification_status": "verified",
+      "contact_enrichment_status": "failed",
+      "reason": "failed_contact_fetch",
+      "next_action": "discard"
+    }
+  ],
+  "review_candidates": [
+    {
+      "company_name": "Marketing und E-Commerce",
+      "verified_domain": "",
+      "verified_url": "",
+      "best_email": "",
+      "best_phone": "",
+      "fit_status": "maybe_fit",
+      "verification_status": "",
+      "contact_enrichment_status": "",
+      "reason": "generic_company_name",
+      "next_action": "review"
+    }
+  ],
+  "summary": "Intent-Kette technisch erfolgreich, aber kein verwertbarer Lead aus dem aktuellen Kandidaten entstanden."
+}
