@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-05-10T13:14:02.623682+00:00",
+  "phase": "3.12",
+  "total_companies": 1,
+  "preview_ready": 1,
+  "needs_review": 0,
+  "api_used": false,
+  "http_used": false,
+  "companies": [
+    {
+      "company_name": "Ipsos Operations GmbH",
+      "verified_domain": "ipsos.com",
+      "verified_url": "https://www.ipsos.com/de-de/total-operations",
+      "verification_confidence": 1.0,
+      "contact_candidate_urls": [
+        "https://www.ipsos.com/kontakt",
+        "https://www.ipsos.com/kontakt.html",
+        "https://www.ipsos.com/contact",
+        "https://www.ipsos.com/contact.html",
+        "https://www.ipsos.com/de/kontakt",
+        "https://www.ipsos.com/de/contact",
+        "https://www.ipsos.com/en/contact",
+        "https://www.ipsos.com/ueber-uns/kontakt",
+        "https://www.ipsos.com/about/contact",
+        "https://www.ipsos.com/contact-us"
+      ],
+      "impressum_candidate_urls": [
+        "https://www.ipsos.com/impressum",
+        "https://www.ipsos.com/de/impressum",
+        "https://www.ipsos.com/legal/impressum",
+        "https://www.ipsos.com/imprint",
+        "https://www.ipsos.com/de/imprint"
+      ],
+      "enrichment_status": "preview_only",
+      "api_used": false,
+      "http_used": false,
+      "next_action": "fetch_contact_pages_preview"
+    }
+  ]
+}
