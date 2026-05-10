@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-05-10T15:34:59.089750+00:00",
+  "industry": "Marketingagentur",
+  "city": "Muenchen",
+  "signal_type": "sales_hiring",
+  "relevance_focus": "target_industry",
+  "queries_used": 5,
+  "raw_results": 9,
+  "unique_job_detail_pages": 4,
+  "fetched_details": 3,
+  "resolved_companies": 3,
+  "target_fit": 2,
+  "maybe_fit": 1,
+  "discard": 0,
+  "results": [
+    {
+      "url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "company_name": "Seokratie GmbH",
+      "company_name_valid": true,
+      "fit_status": "target_fit",
+      "fit_score": 1.0,
+      "reasons": [
+        "industry_fit",
+        "city_fit",
+        "signal_fit",
+        "high_confidence"
+      ],
+      "industry_fit": true,
+      "city_fit": true,
+      "signal_fit": true,
+      "next_action": "candidate_for_manual_followup"
+    },
+    {
+      "url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "title": "PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...",
+      "company_name": "THE MARKETER P.S.O. UG (haftungsbeschränkt)",
+      "company_name_valid": true,
+      "fit_status": "target_fit",
+      "fit_score": 0.9,
+      "reasons": [
+        "industry_fit",
+        "signal_fit",
+        "high_confidence"
+      ],
+      "industry_fit": true,
+      "city_fit": false,
+      "signal_fit": true,
+      "next_action": "candidate_for_manual_followup"
+    },
+    {
+      "url": "https://www.stepstone.de/stellenangebote--Vertriebsmitarbeiter-in-im-Innendienst-Vollzeit-Teilzeit-m-w-d-Munich-Blessing-Marketing-GmbH--12202728-inline.html",
+      "title": "Vertriebsmitarbeiter/in im Innendienst - Vollzeit/Teilzeit (m/w/d) - Job ...",
+      "company_name": "Blessing Marketing GmbH",
+      "company_name_valid": true,
+      "fit_status": "maybe_fit",
+      "fit_score": 0.5,
+      "reasons": [
+        "signal_fit",
+        "high_confidence"
+      ],
+      "industry_fit": false,
+      "city_fit": false,
+      "signal_fit": true,
+      "next_action": "candidate_for_manual_followup"
+    }
+  ]
+}
