@@ -112,14 +112,46 @@ def _intent_preview_payload() -> dict:
     decision = _safe_read_json(INTENT_FOCUS_DECISION_FILE)
     live = _safe_read_json(INTENT_JOB_DETAIL_LIVE_FILE)
     relevance = _safe_read_json(INTENT_JOB_DETAIL_RELEVANCE_FILE)
-    if not decision and not live:
+    target = _safe_read_json(INTENT_TARGET_PREVIEW_FILE)
+
+    # Target Preview Report immer lesen, auch wenn alte Preview-Dateien fehlen
+    target_preview_report = None
+    if target:
+        target_results = list(target.get("results") or [])
+        target_candidates = []
+        for r in target_results:
+            target_candidates.append({
+                "company": str(r.get("company_name") or "-"),
+                "fit_status": str(r.get("fit_status") or ""),
+                "score": float(r.get("fit_score") or 0),
+                "next_action": str(r.get("next_action") or ""),
+                "source_url": str(r.get("url") or ""),
+            })
+        target_preview_report = {
+            "available": True,
+            "queries_used": int(target.get("queries_used") or 0),
+            "raw_results": int(target.get("raw_results") or 0),
+            "unique_job_detail_pages": int(target.get("unique_job_detail_pages") or 0),
+            "fetched_details": int(target.get("fetched_details") or 0),
+            "resolved_companies": int(target.get("resolved_companies") or 0),
+            "target_fit": int(target.get("target_fit") or 0),
+            "maybe_fit": int(target.get("maybe_fit") or 0),
+            "discard": int(target.get("discard") or 0),
+            "candidates": target_candidates,
+        }
+
+    has_classic_preview = bool(decision or live or relevance)
+    has_target_preview = bool(target_preview_report)
+    if not has_classic_preview and not has_target_preview:
         return {
             "available": False,
             "message": "Intent Preview noch nicht erzeugt.",
             "recommended_default_focus": "",
             "focus_scores": {},
             "job_detail_summary": {},
+            "job_detail_raw_result_count": 0,
             "top_job_detail_urls": [],
+            "note": "Preview only \u2013 noch nicht in normale Lead-Pipeline integriert.",
             "relevance_summary": None,
             "relevance_fetch_candidates": [],
             "target_preview_report": None,
@@ -137,7 +169,6 @@ def _intent_preview_payload() -> dict:
         if len(top_job_detail_urls) >= 5:
             break
 
-    # Relevance-Filter-Daten aufbauen
     relevance_summary = None
     relevance_fetch_candidates = []
     if relevance:
@@ -163,33 +194,6 @@ def _intent_preview_payload() -> dict:
                     "relevance_reasons": list(item.get("relevance_reasons") or []),
                     "rejection_reasons": list(item.get("rejection_reasons") or []),
                 })
-
-    # Target Preview Report (Phase 3.18 run_intent_target_preview.py)
-    target = _safe_read_json(INTENT_TARGET_PREVIEW_FILE)
-    target_preview_report = None
-    if target:
-        target_results = list(target.get("results") or [])
-        target_candidates = []
-        for r in target_results:
-            target_candidates.append({
-                "company": str(r.get("company_name") or "-"),
-                "fit_status": str(r.get("fit_status") or ""),
-                "score": float(r.get("fit_score") or 0),
-                "next_action": str(r.get("next_action") or ""),
-                "source_url": str(r.get("url") or ""),
-            })
-        target_preview_report = {
-            "available": True,
-            "queries_used": int(target.get("queries_used") or 0),
-            "raw_results": int(target.get("raw_results") or 0),
-            "unique_job_detail_pages": int(target.get("unique_job_detail_pages") or 0),
-            "fetched_details": int(target.get("fetched_details") or 0),
-            "resolved_companies": int(target.get("resolved_companies") or 0),
-            "target_fit": int(target.get("target_fit") or 0),
-            "maybe_fit": int(target.get("maybe_fit") or 0),
-            "discard": int(target.get("discard") or 0),
-            "candidates": target_candidates,
-        }
 
     return {
         "available": True,
