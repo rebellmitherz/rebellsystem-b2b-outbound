@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-05-10T13:49:45.525166+00:00",
+  "input_file": "C:\\Users\\micha\\Desktop\\Neuer Ordner\\bot_builder\\generated_bots\\b2bbot\\output\\latest\\intent_target_dedup_funnel.json",
+  "total_selected": 3,
+  "fetched_count": 3,
+  "resolved_valid_count": 3,
+  "rejected_count": 0,
+  "unresolved_count": 0,
+  "failed_count": 0,
+  "results": [
+    {
+      "original_title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "original_url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "fetched": true,
+      "http_status": 200,
+      "company_name_extracted_raw": "Seokratie GmbH",
+      "company_name_extracted": "Seokratie GmbH",
+      "company_name_valid": true,
+      "company_name_reject_reason": "",
+      "extraction_method": "json_ld_hiringOrganization",
+      "extraction_confidence": 0.95,
+      "resolver_status": "resolved_valid",
+      "next_action": "fit_check_company",
+      "error": ""
+    },
+    {
+      "original_title": "PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...",
+      "original_url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "fetched": true,
+      "http_status": 200,
+      "company_name_extracted_raw": "THE MARKETER P.S.O. UG (haftungsbeschränkt)",
+      "company_name_extracted": "THE MARKETER P.S.O. UG (haftungsbeschränkt)",
+      "company_name_valid": true,
+      "company_name_reject_reason": "",
+      "extraction_method": "json_ld_hiringOrganization",
+      "extraction_confidence": 0.95,
+      "resolver_status": "resolved_valid",
+      "next_action": "fit_check_company",
+      "error": ""
+    },
+    {
+      "original_title": "Medienkaufmann, Mediengestalter als Kaufmännischer ... - Stepstone",
+      "original_url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "fetched": true,
+      "http_status": 200,
+      "company_name_extracted_raw": "PWG Professional-Werbe-Gesellschaft mbH",
+      "company_name_extracted": "PWG Professional-Werbe-Gesellschaft mbH",
+      "company_name_valid": true,
+      "company_name_reject_reason": "",
+      "extraction_method": "json_ld_hiringOrganization",
+      "extraction_confidence": 0.95,
+      "resolver_status": "resolved_valid",
+      "next_action": "fit_check_company",
+      "error": ""
+    }
+  ]
+}
