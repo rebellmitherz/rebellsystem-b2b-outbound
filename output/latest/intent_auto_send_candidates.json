@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-05-10T16:20:40.457890+00:00",
+  "mode": "auto",
+  "candidates": [
+    {
+      "company_name": "Seokratie GmbH",
+      "email": "kontakt@seokratie.de",
+      "phone": "+49 89 219 09 84 11",
+      "website": "https://seokratie.de",
+      "source_signal_url": "https://www.stepstone.de/some-job",
+      "email_subject": "Kurze Frage zu B2B-Erstgesprächen",
+      "email_body": "Hallo Seokratie-Team, ...",
+      "contact_quality": "good",
+      "next_action": "ready_for_existing_outreach_pipeline"
+    }
+  ]
+}

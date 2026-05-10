@@ -1,5 +1,14 @@
 {
-  "generated_at": "2026-05-10T17:00:00Z",
+  "generated_at": "2026-05-10T16:20:40.458260+00:00",
+  "mode": "auto",
+  "companies_loaded": 3,
+  "companies_processed": 3,
+  "emails_found": 2,
+  "auto_eligible": 1,
+  "auto_send_attempted": 0,
+  "auto_sent": 0,
+  "skipped_reason": "SKIPPED_AUTO_SEND_DISABLED",
+  "send_log": [],
   "results": [
     {
       "company_name": "Seokratie GmbH",
@@ -19,7 +28,9 @@
       "email_body": "Hallo Seokratie-Team, ...",
       "ready_for_approval": true,
       "missing_fields": [],
-      "next_action": "approve_for_send"
+      "next_action": "approve_for_send",
+      "auto_eligible": true,
+      "auto_eligibility_reasons": []
     },
     {
       "company_name": "Blessing Marketing GmbH",
@@ -42,7 +53,16 @@
         "website",
         "email"
       ],
-      "next_action": "discard"
+      "next_action": "discard",
+      "auto_eligible": false,
+      "auto_eligibility_reasons": [
+        "missing_email",
+        "quality_not_eligible:weak",
+        "missing_website",
+        "missing_email_subject",
+        "missing_email_body",
+        "next_action_not_eligible:discard"
+      ]
     },
     {
       "company_name": "THE MARKETER P.S.O. UG",
@@ -64,7 +84,12 @@
       "missing_fields": [
         "phone"
       ],
-      "next_action": "approve_for_send"
+      "next_action": "approve_for_send",
+      "auto_eligible": false,
+      "auto_eligibility_reasons": [
+        "invalid_domain",
+        "quality_not_eligible:partial"
+      ]
     }
   ]
 }
