@@ -1627,6 +1627,8 @@ button{cursor:pointer;border:none;background:transparent}
   .main{grid-column:1}
   .drawer{width:100vw}
 }
+.intent-link,.intent-link:visited{color:var(--text);text-decoration:none}
+.intent-link:hover{color:#fff;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -2716,14 +2718,14 @@ function renderIntentPreview() {
     const s = fs[k] || {};
     return `<tr><td><strong>${E(k)}</strong></td><td>${E(s.score ?? '–')}</td><td>${E(s.company_site_total ?? '–')}</td><td>${E(s.portal_signal_total ?? '–')}</td><td>${E(s.low_quality_total ?? '–')}</td><td>${E(s.average_confidence ?? '–')}</td></tr>`;
   }).join('');
-  const urlRows = urls.length ? urls.map(u => `<tr><td class="cell-company">${E(u.portal_domain||'')}<small>${E(u.title||'')}</small></td><td style="word-break:break-all"><a href="${E(u.url||'#')}" target="_blank" rel="noopener">${E(u.url||'')}</a></td></tr>`).join('') : '<tr><td colspan="2" class="empty">Keine job_detail_page URLs vorhanden.</td></tr>';
+  const urlRows = urls.length ? urls.map(u => `<tr><td class="cell-company">${E(u.portal_domain||'')}<small>${E(u.title||'')}</small></td><td style="word-break:break-all"><a class="intent-link" href="${E(u.url||'#')}" target="_blank" rel="noopener">${E(u.url||'')}</a></td></tr>`).join('') : '<tr><td colspan="2" class="empty">Keine job_detail_page URLs vorhanden.</td></tr>';
   const relStatusPill = {
     relevant: 'ok', maybe_relevant: 'warn', needs_review: 'warn', irrelevant: 'err'
   };
   const relCandRows = relCandidates.map(c =>
     `<tr>
       <td class="cell-company"><strong>${E(c.title||'')}</strong><br><small>Score: ${(c.relevance_score??0).toFixed(2)} · <span class="pill ${relStatusPill[c.relevance_status]||''}">${E(c.relevance_status||'')}</span> · ${E(c.recommended_next_action||'')}</small><br><small style="color:var(--green)">+ ${(c.relevance_reasons||[]).join(', ')||'–'}</small><br><small style="color:var(--red)">− ${(c.rejection_reasons||[]).join(', ')||'–'}</small></td>
-      <td style="word-break:break-all"><a href="${E(c.url||'#')}" target="_blank" rel="noopener">${E(c.url||'')}</a></td>
+      <td style="word-break:break-all"><a class="intent-link" href="${E(c.url||'#')}" target="_blank" rel="noopener">${E(c.url||'')}</a></td>
     </tr>`
   ).join('');
   const relCandTable = relCandRows
