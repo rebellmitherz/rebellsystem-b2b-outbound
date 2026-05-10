@@ -35,6 +35,7 @@ SENT_LOG_JSON = OUT / "sent_log.json"
 SEARCH_META_FILE = OUT / "_search_meta.json"
 INTENT_FOCUS_DECISION_FILE = OUT / "latest" / "intent_focus_decision_report.json"
 INTENT_JOB_DETAIL_LIVE_FILE = OUT / "latest" / "intent_job_detail_live_test.json"
+INTENT_JOB_DETAIL_RELEVANCE_FILE = OUT / "latest" / "intent_job_detail_relevance.json"
 
 PYTHON = sys.executable
 MINE = str(ROOT / "mine.py")
@@ -108,6 +109,7 @@ def _safe_read_json(path: Path) -> dict:
 def _intent_preview_payload() -> dict:
     decision = _safe_read_json(INTENT_FOCUS_DECISION_FILE)
     live = _safe_read_json(INTENT_JOB_DETAIL_LIVE_FILE)
+    relevance = _safe_read_json(INTENT_JOB_DETAIL_RELEVANCE_FILE)
     if not decision and not live:
         return {
             "available": False,
@@ -116,6 +118,8 @@ def _intent_preview_payload() -> dict:
             "focus_scores": {},
             "job_detail_summary": {},
             "top_job_detail_urls": [],
+            "relevance_summary": None,
+            "relevance_fetch_candidates": [],
         }
 
     results = list(live.get("results") or [])
@@ -130,6 +134,33 @@ def _intent_preview_payload() -> dict:
         if len(top_job_detail_urls) >= 5:
             break
 
+    # Relevance-Filter-Daten aufbauen
+    relevance_summary = None
+    relevance_fetch_candidates = []
+    if relevance:
+        counts = dict(relevance.get("counts") or {})
+        relevance_summary = {
+            "total_job_detail_pages": int(relevance.get("total_job_detail_pages") or 0),
+            "relevant": int(counts.get("relevant") or 0),
+            "maybe_relevant": int(counts.get("maybe_relevant") or 0),
+            "needs_review": int(counts.get("needs_review") or 0),
+            "irrelevant": int(counts.get("irrelevant") or 0),
+            "fetch_detail_count": int(counts.get("fetch_detail") or 0),
+            "review_count": int(counts.get("review") or 0),
+            "discard_count": int(counts.get("discard") or 0),
+        }
+        for item in (relevance.get("results") or []):
+            if item.get("recommended_next_action") == "fetch_detail":
+                relevance_fetch_candidates.append({
+                    "title": str(item.get("title") or ""),
+                    "url": str(item.get("url") or ""),
+                    "relevance_score": float(item.get("relevance_score") or 0),
+                    "relevance_status": str(item.get("relevance_status") or ""),
+                    "recommended_next_action": str(item.get("recommended_next_action") or ""),
+                    "relevance_reasons": list(item.get("relevance_reasons") or []),
+                    "rejection_reasons": list(item.get("rejection_reasons") or []),
+                })
+
     return {
         "available": True,
         "message": "",
@@ -138,7 +169,9 @@ def _intent_preview_payload() -> dict:
         "job_detail_summary": dict(live.get("classification_counts") or {}),
         "job_detail_raw_result_count": int(live.get("raw_result_count") or 0),
         "top_job_detail_urls": top_job_detail_urls,
-        "note": "Preview only – noch nicht in normale Lead-Pipeline integriert.",
+        "note": "Preview only \u2013 noch nicht in normale Lead-Pipeline integriert.",
+        "relevance_summary": relevance_summary,
+        "relevance_fetch_candidates": relevance_fetch_candidates,
     }
 
 
@@ -2677,11 +2710,34 @@ function renderIntentPreview() {
   const fs = d.focus_scores || {};
   const sum = d.job_detail_summary || {};
   const urls = d.top_job_detail_urls || [];
+  const relSummary = d.relevance_summary;
+  const relCandidates = d.relevance_fetch_candidates || [];
   const scoreRows = ['balanced','company_site_focus','portal_signal_focus'].map(k => {
     const s = fs[k] || {};
     return `<tr><td><strong>${E(k)}</strong></td><td>${E(s.score ?? '–')}</td><td>${E(s.company_site_total ?? '–')}</td><td>${E(s.portal_signal_total ?? '–')}</td><td>${E(s.low_quality_total ?? '–')}</td><td>${E(s.average_confidence ?? '–')}</td></tr>`;
   }).join('');
   const urlRows = urls.length ? urls.map(u => `<tr><td class="cell-company">${E(u.portal_domain||'')}<small>${E(u.title||'')}</small></td><td style="word-break:break-all"><a href="${E(u.url||'#')}" target="_blank" rel="noopener">${E(u.url||'')}</a></td></tr>`).join('') : '<tr><td colspan="2" class="empty">Keine job_detail_page URLs vorhanden.</td></tr>';
+  const relStatusPill = {
+    relevant: 'ok', maybe_relevant: 'warn', needs_review: 'warn', irrelevant: 'err'
+  };
+  const relCandRows = relCandidates.map(c =>
+    `<tr>
+      <td class="cell-company"><strong>${E(c.title||'')}</strong><br><small>Score: ${(c.relevance_score??0).toFixed(2)} · <span class="pill ${relStatusPill[c.relevance_status]||''}">${E(c.relevance_status||'')}</span> · ${E(c.recommended_next_action||'')}</small><br><small style="color:var(--green)">+ ${(c.relevance_reasons||[]).join(', ')||'–'}</small><br><small style="color:var(--red)">− ${(c.rejection_reasons||[]).join(', ')||'–'}</small></td>
+      <td style="word-break:break-all"><a href="${E(c.url||'#')}" target="_blank" rel="noopener">${E(c.url||'')}</a></td>
+    </tr>`
+  ).join('');
+  const relCandTable = relCandRows
+    ? `<div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>Kandidat</th><th>URL</th></tr></thead><tbody>${relCandRows}</tbody></table></div>`
+    : '<div class="empty" style="margin-top:8px">Keine fetch-fähigen Kandidaten.</div>';
+  const relSummaryRows = relSummary
+    ? `<tr><td>Total Job-Detail-Seiten</td><td>${E(relSummary.total_job_detail_pages)}</td></tr>
+       <tr><td>Relevant</td><td><span class="pill ok">${E(relSummary.relevant)}</span></td></tr>
+       <tr><td>Maybe Relevant</td><td><span class="pill warn">${E(relSummary.maybe_relevant)}</span></td></tr>
+       <tr><td>Needs Review</td><td><span class="pill warn">${E(relSummary.needs_review)}</span></td></tr>
+       <tr><td>Irrelevant</td><td><span class="pill err">${E(relSummary.irrelevant)}</span></td></tr>
+       <tr><td>→ Fetch Detail</td><td><strong>${E(relSummary.fetch_detail_count)}</strong></td></tr>
+       <tr><td>→ Discard</td><td>${E(relSummary.discard_count)}</td></tr>`
+    : '<tr><td colspan="2" class="empty">Relevance Filter noch nicht erzeugt.</td></tr>';
   note.textContent = d.note || 'Preview only – noch nicht in normale Lead-Pipeline integriert.';
   box.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -2702,7 +2758,11 @@ function renderIntentPreview() {
         </tbody></table></div>
       </div>
     </div>
-    <div style="margin-top:14px"><strong>Top 5 job_detail_page URLs</strong></div>
+    <div style="margin-top:18px"><strong>🧠 Relevance Filter</strong></div>
+      <div class="tbl-wrap" style="margin-top:6px"><table class="tbl"><tbody>${relSummaryRows}</tbody></table></div>
+    <div style="margin-top:18px"><strong>📌 Fetch-fähige Kandidaten nach Relevance Filter</strong></div>
+      ${relCandTable}
+    <div style="margin-top:18px"><strong>Raw Job Detail URLs</strong></div>
     <div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><tbody>${urlRows}</tbody></table></div>`;
 }
 
