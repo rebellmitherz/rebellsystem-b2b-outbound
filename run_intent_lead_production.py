@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 ROOT = Path(__file__).resolve().parent
 LATEST = ROOT / "output" / "latest"
@@ -34,14 +34,33 @@ HARD_MAX_LIMIT = 10
 DEFAULT_MODE = "preview"
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
-GENERIC_PREFIXES = ("info@", "kontakt@", "office@", "hello@", "service@",
-                    "support@", "mail@", "contact@", "marketing@", "sales@")
+GENERIC_PREFIXES = (
+    "info@", "kontakt@", "office@", "hello@", "service@",
+    "support@", "mail@", "contact@", "marketing@", "sales@",
+)
+CONTACT_PAGE_TOKENS = ("impressum", "kontakt", "datenschutz")
+INVALID_NAME_TOKENS = (
+    "blog", "seo", "wissen", "impressum", "kontakt", "datenschutz",
+    "karriere", "team", "menu", "menü", "breadcrumb", "navigation",
+)
+INVALID_NAME_PHRASES = (
+    "wissen blog", "blog seo", "seo blog", "kontaktformular", "impressum kontakt",
+)
+WEAK_SIGNAL_ROLE_TOKENS = ("content marketing", "pr", "communications", "mediengestaltung")
+STRONG_SIGNAL_ROLE_TOKENS = (
+    "sales", "vertrieb", "account manager", "business development",
+    "neukundenakquise", "vertriebsmitarbeiter",
+)
 
-FAKE_EMAIL_TOKENS = ("fixture", "mock", "test", "example", "dummy", "placeholder",
-                    "sample", "foo@", "bar@", "noreply@", "no-reply@")
-FAKE_EMAIL_DOMAINS = ("example.com", "example.org", "example.net", "test.com",
-                     "test.de", "localhost", "invalid", "mailinator.com",
-                     "dummy.com")
+FAKE_EMAIL_TOKENS = (
+    "fixture", "mock", "test", "example", "dummy", "placeholder",
+    "sample", "foo@", "bar@", "noreply@", "no-reply@",
+)
+FAKE_EMAIL_DOMAINS = (
+    "example.com", "example.org", "example.net", "test.com",
+    "test.de", "localhost", "invalid", "mailinator.com",
+    "dummy.com",
+)
 FAKE_SOURCE_TOKENS = ("fixture", "mock", "test", "smoke", "sample")
 
 LEAD_FIELDS = [
@@ -115,6 +134,57 @@ def _intent_signal_type_from_angle(angle: str, fallback: str = "") -> str:
     return "manual_signal"
 
 
+def _normalize_contact_url(website: str) -> tuple[str, str]:
+    website = (website or "").strip()
+    if not website:
+        return "", ""
+    parsed = urlparse(website)
+    path_low = (parsed.path or "").lower().strip("/")
+    root_url = urlunparse((parsed.scheme or "https", parsed.netloc, "", "", "", ""))
+    if any(token in path_low.split("/") for token in CONTACT_PAGE_TOKENS):
+        return root_url.rstrip("/"), website
+    return website, ""
+
+
+def _clean_name_part(part: str) -> str:
+    part = re.sub(r"[^A-Za-zÄÖÜäöüß\-\s]", " ", part or "")
+    return re.sub(r"\s+", " ", part).strip()
+
+
+def is_valid_decision_maker_name(name: str) -> bool:
+    raw = (name or "").strip()
+    if not raw:
+        return False
+    low = raw.lower()
+    if any(phrase in low for phrase in INVALID_NAME_PHRASES):
+        return False
+    if any(tok in low for tok in INVALID_NAME_TOKENS):
+        return False
+    if any(sep in raw for sep in ("|", ">", "/", "::")):
+        return False
+
+    cleaned = _clean_name_part(raw)
+    parts = [p for p in cleaned.split() if p]
+    if len(parts) < 2:
+        return False
+    if len(parts) > 4:
+        return False
+
+    plausible = []
+    for part in parts:
+        low_part = part.lower()
+        if low_part in INVALID_NAME_TOKENS:
+            return False
+        if len(part) < 2:
+            return False
+        if part.upper() == part and len(part) > 4:
+            return False
+        if not re.match(r"^[A-ZÄÖÜ][A-Za-zÄÖÜäöüß\-]+$", part):
+            return False
+        plausible.append(part)
+    return len(plausible) >= 2
+
+
 def _build_followups(company: str, contact_name: str) -> tuple[str, str]:
     greeting = f"Hallo {contact_name}," if contact_name else f"Hallo {company}-Team,"
     fu1 = (
@@ -150,9 +220,35 @@ def _domain_to_region(website: str) -> str:
     return ""
 
 
+def _extract_signal_strength(signal_title: str) -> tuple[str, list[str], str]:
+    title_low = (signal_title or "").lower()
+    risk_flags: list[str] = []
+    role = ""
+
+    for marker in (
+        "Sales Manager", "Account Manager", "Business Development",
+        "Vertrieb", "Vertriebsmitarbeiter", "Neukundenakquise",
+        "Marketing Manager", "Content Marketing", "PR", "Communications", "Mediengestaltung",
+    ):
+        if marker.lower() in title_low:
+            role = marker
+            break
+
+    is_strong = any(token in title_low for token in STRONG_SIGNAL_ROLE_TOKENS)
+    is_weak = any(token in title_low for token in WEAK_SIGNAL_ROLE_TOKENS)
+
+    if is_weak and not is_strong:
+        risk_flags.append("weak_sales_signal")
+        return "weak", risk_flags, role
+    if is_strong:
+        return "strong", risk_flags, role
+    return "neutral", risk_flags, role
+
+
 def _normalize(row: dict, *, industry: str, city: str, signal_type: str) -> dict:
     company = str(row.get("company_name") or "").strip()
-    website = str(row.get("website") or "").strip()
+    website_raw = str(row.get("website") or "").strip()
+    website, contact_source_url = _normalize_contact_url(website_raw)
     email = str(row.get("email") or "").strip()
     phone = str(row.get("phone") or "").strip()
     contact_name = str(row.get("contact_name") or "").strip()
@@ -164,21 +260,27 @@ def _normalize(row: dict, *, industry: str, city: str, signal_type: str) -> dict
     body = str(row.get("email_body") or "").strip()
     first_line = str(row.get("recommended_first_line") or "").strip()
 
-    fu1, fu2 = _build_followups(company, contact_name)
     email_type = _classify_email_type(email)
     intent_signal = _intent_signal_type_from_angle(angle, fallback=signal_type)
     signal_reason_text = _signal_reason(angle, signal_title)
-
-    decision_maker_role = ""
-    if signal_title:
-        for marker in ("Sales Manager", "Account Manager", "Business Development",
-                       "Vertrieb", "Marketing Manager", "Content Manager"):
-            if marker.lower() in signal_title.lower():
-                decision_maker_role = marker
-                break
+    signal_strength, risk_flags, decision_maker_role = _extract_signal_strength(signal_title)
 
     email_source = str(row.get("email_source") or "").strip()
     is_fake, fake_reason = _is_fake_email(email, email_source)
+    valid_decision_maker = is_valid_decision_maker_name(contact_name)
+    if not valid_decision_maker:
+        contact_name = ""
+
+    salutation_name = contact_name if valid_decision_maker else ""
+    fu1, fu2 = _build_followups(company, salutation_name)
+
+    if body:
+        if valid_decision_maker:
+            body = re.sub(r"^Hallo\s+[^,\n]+,", f"Hallo {contact_name},", body, count=1)
+        else:
+            body = re.sub(r"^Hallo\s+[^,\n]+,", f"Hallo {company}-Team,", body, count=1)
+            if not body.startswith("Hallo "):
+                body = f"Hallo {company}-Team,\n\n{body}"
 
     region = (city or "").strip() or (_domain_to_region(website) or "DE")
 
@@ -207,8 +309,14 @@ def _normalize(row: dict, *, industry: str, city: str, signal_type: str) -> dict
         "next_action": "",
         "status": "",
         "missing_fields": [],
+        "risk_flags": risk_flags,
+        "signal_strength": signal_strength,
+        "contact_source_url": contact_source_url,
+        "source_contact_url": contact_source_url,
+        "explicit_allow_generic": bool(row.get("explicit_allow_generic") or False),
         "_is_fake_email": is_fake,
         "_fake_reason": fake_reason,
+        "_valid_decision_maker": valid_decision_maker,
     }
     return lead
 
@@ -217,6 +325,10 @@ def _evaluate(lead: dict) -> dict:
     missing: list[str] = []
     is_fake = bool(lead.pop("_is_fake_email", False))
     fake_reason = lead.pop("_fake_reason", "")
+    valid_decision_maker = bool(lead.pop("_valid_decision_maker", False))
+    explicit_allow_generic = bool(lead.get("explicit_allow_generic", False))
+    email_type = lead.get("email_type") or _classify_email_type(lead.get("email", ""))
+    risk_flags = list(lead.get("risk_flags") or [])
 
     if not lead.get("email"):
         missing.append("email")
@@ -231,28 +343,32 @@ def _evaluate(lead: dict) -> dict:
         missing.append("intent_signal_source_url")
     if not lead.get("email_body"):
         missing.append("email_body")
-
-    soft_missing: list[str] = []
-    if not lead.get("decision_maker_name"):
-        soft_missing.append("decision_maker_name")
+    if not valid_decision_maker:
+        missing.append("valid_decision_maker_name")
     if not lead.get("phone"):
-        soft_missing.append("phone")
+        missing.append("phone")
 
-    can_be_ready = (
-        not missing
+    if not valid_decision_maker:
+        lead["decision_maker_name"] = ""
+
+    hard_ready_requirements = (
+        not any(field in missing for field in ("email", "email_invalid", "valid_real_email", "website", "intent_signal_source_url", "email_body"))
         and not is_fake
         and lead.get("contact_quality") != "invalid_or_mock"
     )
 
-    if can_be_ready:
-        lead["status"] = "ready_for_approval"
-        lead["next_action"] = "approve_for_send"
-    elif is_fake:
+    generic_without_valid_owner = email_type == "generic" and not valid_decision_maker and not explicit_allow_generic
+    weak_generic_combo = "weak_sales_signal" in risk_flags and email_type == "generic"
+
+    if weak_generic_combo:
         lead["status"] = "needs_enrichment"
         lead["next_action"] = "enrich_contact"
-    elif missing == ["email"] or missing == ["website"] or missing == ["decision_maker_name"]:
+    elif hard_ready_requirements and email_type == "personal" and valid_decision_maker:
+        lead["status"] = "ready_for_approval"
+        lead["next_action"] = "approve_for_send"
+    elif is_fake or generic_without_valid_owner:
         lead["status"] = "needs_enrichment"
-        lead["next_action"] = "enrich_manually"
+        lead["next_action"] = "enrich_contact"
     else:
         if len(missing) >= 3:
             lead["status"] = "discard"
@@ -261,7 +377,7 @@ def _evaluate(lead: dict) -> dict:
             lead["status"] = "needs_enrichment"
             lead["next_action"] = "enrich_manually"
 
-    lead["missing_fields"] = missing + soft_missing
+    lead["missing_fields"] = missing
     if fake_reason:
         lead["missing_fields"].append(fake_reason)
     return lead
@@ -368,7 +484,8 @@ def _run_stage(label: str, script: Path, *, industry: str, city: str, signal_typ
     )
     output = ((proc.stdout or "") + (proc.stderr or "")).strip()
     if output:
-        print(output)
+        safe_output = output.encode("cp1252", errors="replace").decode("cp1252", errors="replace")
+        print(safe_output)
     return proc.returncode, output
 
 
