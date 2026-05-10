@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-05-10T13:46:21.877062+00:00",
+  "input_file": "C:\\Users\\micha\\Desktop\\Neuer Ordner\\bot_builder\\generated_bots\\b2bbot\\output\\latest\\intent_job_detail_target_live_test.json",
+  "raw_result_count": 6,
+  "unique_job_detail_count": 3,
+  "selected_for_fetch_count": 3,
+  "duplicates_removed_count": 3,
+  "selected_candidates": [
+    {
+      "title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "signal_type": "sales_hiring",
+      "portal_url_type": "job_detail_page",
+      "relevance_status": "maybe_relevant",
+      "relevance_score": 0.7,
+      "recommended_next_action": "fetch_detail",
+      "company_hint_from_url_or_title": "Stepstone",
+      "next_action": "fetch_job_detail_preview"
+    },
+    {
+      "title": "PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...",
+      "url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "signal_type": "sales_hiring",
+      "portal_url_type": "job_detail_page",
+      "relevance_status": "maybe_relevant",
+      "relevance_score": 0.7,
+      "recommended_next_action": "fetch_detail",
+      "company_hint_from_url_or_title": "Job ...",
+      "next_action": "fetch_job_detail_preview"
+    },
+    {
+      "title": "Medienkaufmann, Mediengestalter als Kaufmännischer ... - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "signal_type": "sales_hiring",
+      "portal_url_type": "job_detail_page",
+      "relevance_status": "needs_review",
+      "relevance_score": 0.4,
+      "recommended_next_action": "review",
+      "company_hint_from_url_or_title": "Stepstone",
+      "next_action": "fetch_job_detail_preview"
+    }
+  ]
+}
