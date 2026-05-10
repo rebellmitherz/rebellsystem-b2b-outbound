@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-05-10T13:11:02.789772+00:00",
+  "total_websites": 1,
+  "verified": 1,
+  "likely_verified": 0,
+  "needs_review": 0,
+  "failed": 0,
+  "results": [
+    {
+      "company_name": "Ipsos Operations GmbH",
+      "candidate_domain": "ipsos.com",
+      "candidate_url": "https://www.ipsos.com/de-de/total-operations",
+      "final_url": "https://www.ipsos.com/de-de/total-operations",
+      "http_status": 200,
+      "page_title": "Total Operations | Ipsos",
+      "meta_description": "Als Total Operations sind wir die Experten für Datenerhebung, Datenauswertung und Datenintegration bei Ipsos.",
+      "brand_match": true,
+      "domain_match": true,
+      "has_contact_link": true,
+      "has_impressum_link": true,
+      "verification_confidence": 1.0,
+      "verification_status": "verified",
+      "next_action": "enrich_company_contact_preview"
+    }
+  ]
+}
