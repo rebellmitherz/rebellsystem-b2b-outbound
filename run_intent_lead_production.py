@@ -4,7 +4,9 @@ import argparse
 import csv
 import json
 import re
+import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -13,13 +15,23 @@ ROOT = Path(__file__).resolve().parent
 LATEST = ROOT / "output" / "latest"
 
 INPUT_FILE = LATEST / "intent_outreach_preview.json"
+TARGET_PREVIEW_FILE = LATEST / "intent_target_preview_report.json"
 OUTPUT_JSON = LATEST / "intent_lead_production.json"
 OUTPUT_CSV = LATEST / "intent_lead_production.csv"
 OUTPUT_MD = LATEST / "intent_lead_production.md"
 
+TARGET_PREVIEW_SCRIPT = ROOT / "run_intent_target_preview.py"
+OUTREACH_PREVIEW_SCRIPT = ROOT / "run_intent_outreach_preview.py"
+
 ALLOWED_MODES = ("preview", "approval", "auto")
+ALLOWED_SIGNAL_TYPES = ("sales_hiring", "growth_expansion", "demand_generation_gap")
+
+DEFAULT_INDUSTRY = "Marketingagentur"
+DEFAULT_CITY = "Muenchen"
+DEFAULT_SIGNAL_TYPE = "sales_hiring"
 DEFAULT_LIMIT = 10
 HARD_MAX_LIMIT = 10
+DEFAULT_MODE = "preview"
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 GENERIC_PREFIXES = ("info@", "kontakt@", "office@", "hello@", "service@",
@@ -31,6 +43,20 @@ FAKE_EMAIL_DOMAINS = ("example.com", "example.org", "example.net", "test.com",
                      "test.de", "localhost", "invalid", "mailinator.com",
                      "dummy.com")
 FAKE_SOURCE_TOKENS = ("fixture", "mock", "test", "smoke", "sample")
+
+LEAD_FIELDS = [
+    "company_name", "website", "industry", "city_region",
+    "intent_signal_type", "intent_signal_source_url", "intent_signal_title",
+    "signal_reason",
+    "decision_maker_name", "decision_maker_role",
+    "email", "email_type", "phone", "linkedin_url",
+    "contact_quality", "outreach_angle",
+    "recommended_first_line",
+    "email_subject", "email_body",
+    "followup_1", "followup_2",
+    "next_action", "status",
+    "missing_fields",
+]
 
 
 def _is_fake_email(email: str, email_source: str = "") -> tuple[bool, str]:
@@ -51,20 +77,6 @@ def _is_fake_email(email: str, email_source: str = "") -> tuple[bool, str]:
             if tok in slow:
                 return True, f"email_source:{tok}"
     return False, ""
-
-LEAD_FIELDS = [
-    "company_name", "website", "industry", "city_region",
-    "intent_signal_type", "intent_signal_source_url", "intent_signal_title",
-    "signal_reason",
-    "decision_maker_name", "decision_maker_role",
-    "email", "email_type", "phone", "linkedin_url",
-    "contact_quality", "outreach_angle",
-    "recommended_first_line",
-    "email_subject", "email_body",
-    "followup_1", "followup_2",
-    "next_action", "status",
-    "missing_fields",
-]
 
 
 def _safe_read_json(path: Path) -> dict:
@@ -93,11 +105,13 @@ def _signal_reason(angle: str, signal_title: str) -> str:
     return f"Bedarfssignal: {signal_title}"
 
 
-def _intent_signal_type(angle: str) -> str:
+def _intent_signal_type_from_angle(angle: str, fallback: str = "") -> str:
     if angle == "sales_growth_signal":
         return "sales_hiring"
     if angle == "marketing_growth_signal":
         return "growth_expansion"
+    if fallback:
+        return fallback
     return "manual_signal"
 
 
@@ -136,7 +150,7 @@ def _domain_to_region(website: str) -> str:
     return ""
 
 
-def _normalize(row: dict) -> dict:
+def _normalize(row: dict, *, industry: str, city: str, signal_type: str) -> dict:
     company = str(row.get("company_name") or "").strip()
     website = str(row.get("website") or "").strip()
     email = str(row.get("email") or "").strip()
@@ -152,12 +166,11 @@ def _normalize(row: dict) -> dict:
 
     fu1, fu2 = _build_followups(company, contact_name)
     email_type = _classify_email_type(email)
-    intent_signal_type = _intent_signal_type(angle)
+    intent_signal = _intent_signal_type_from_angle(angle, fallback=signal_type)
     signal_reason_text = _signal_reason(angle, signal_title)
 
     decision_maker_role = ""
     if signal_title:
-        # rough role hint from signal title (no logic change to bot)
         for marker in ("Sales Manager", "Account Manager", "Business Development",
                        "Vertrieb", "Marketing Manager", "Content Manager"):
             if marker.lower() in signal_title.lower():
@@ -167,12 +180,14 @@ def _normalize(row: dict) -> dict:
     email_source = str(row.get("email_source") or "").strip()
     is_fake, fake_reason = _is_fake_email(email, email_source)
 
+    region = (city or "").strip() or (_domain_to_region(website) or "DE")
+
     lead = {
         "company_name": company,
         "website": website,
-        "industry": "Marketingagentur",
-        "city_region": _domain_to_region(website) or "DE",
-        "intent_signal_type": intent_signal_type,
+        "industry": industry or DEFAULT_INDUSTRY,
+        "city_region": region,
+        "intent_signal_type": intent_signal,
         "intent_signal_source_url": signal_url,
         "intent_signal_title": signal_title,
         "signal_reason": signal_reason_text,
@@ -233,7 +248,6 @@ def _evaluate(lead: dict) -> dict:
         lead["status"] = "ready_for_approval"
         lead["next_action"] = "approve_for_send"
     elif is_fake:
-        # Fake/mock email: never ready, always enrich
         lead["status"] = "needs_enrichment"
         lead["next_action"] = "enrich_contact"
     elif missing == ["email"] or missing == ["website"] or missing == ["decision_maker_name"]:
@@ -253,6 +267,18 @@ def _evaluate(lead: dict) -> dict:
     return lead
 
 
+def _resolve_mode(mode_requested: str) -> tuple[str, bool]:
+    if mode_requested == "auto":
+        return "approval", True
+    return mode_requested, False
+
+
+def _resolve_limit(requested: int) -> tuple[int, int]:
+    req = max(1, int(requested or DEFAULT_LIMIT))
+    eff = min(req, HARD_MAX_LIMIT)
+    return req, eff
+
+
 def _write_outputs(report: dict, leads: list[dict]) -> None:
     OUTPUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -268,8 +294,27 @@ def _write_outputs(report: dict, leads: list[dict]) -> None:
         "# Intent Lead Production Report",
         "",
         f"Generated: {report.get('generated_at','-')}",
-        f"Mode: {report.get('mode','-')}",
-        f"Limit: {report.get('limit',0)}",
+        f"Started at: {report.get('started_at','-')}",
+        f"Finished at: {report.get('finished_at','-')}",
+        f"Duration seconds: {report.get('duration_seconds',0)}",
+        f"Industry: {report.get('industry','-')}",
+        f"City: {report.get('city','-')}",
+        f"Signal: {report.get('signal_type','-')}",
+        f"Mode requested: {report.get('mode_requested','-')}",
+        f"Mode effective: {report.get('mode_effective','-')}",
+        f"Auto send disabled: {report.get('auto_send_disabled', False)}",
+        f"Requested limit: {report.get('requested_limit',0)}",
+        f"Effective limit: {report.get('effective_limit',0)}",
+        f"Refreshed: {report.get('refreshed', False)}",
+        f"Target preview exit code: {report.get('target_preview_exit_code')}",
+        f"Outreach preview exit code: {report.get('outreach_preview_exit_code')}",
+        "",
+        "## Source Files Used",
+        "",
+    ]
+    for src in report.get("source_files_used") or []:
+        md.append(f"- {src}")
+    md.extend([
         "",
         "## Summary",
         "",
@@ -283,7 +328,7 @@ def _write_outputs(report: dict, leads: list[dict]) -> None:
         "",
         "| Company | Email | Phone | Quality | Status |",
         "|---------|-------|-------|---------|--------|",
-    ]
+    ])
     for lead in leads:
         md.append(
             f"| {lead.get('company_name','-')} | {lead.get('email','-') or '-'} | "
@@ -292,27 +337,233 @@ def _write_outputs(report: dict, leads: list[dict]) -> None:
     OUTPUT_MD.write_text("\n".join(md), encoding="utf-8")
 
 
-def run(mode: str = "preview", limit: int = DEFAULT_LIMIT) -> dict:
+def _build_stage_command(script: Path, *, industry: str, city: str, signal_type: str, limit: int, mode: str) -> list[str]:
+    return [
+        sys.executable,
+        str(script),
+        "--industry", industry,
+        "--city", city,
+        "--signal-type", signal_type,
+        "--limit", str(limit),
+        "--mode", mode,
+    ]
+
+
+def _run_stage(label: str, script: Path, *, industry: str, city: str, signal_type: str, limit: int, mode: str) -> tuple[int, str]:
+    command = _build_stage_command(
+        script,
+        industry=industry,
+        city=city,
+        signal_type=signal_type,
+        limit=limit,
+        mode=mode,
+    )
+    proc = subprocess.run(
+        command,
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    output = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if output:
+        print(output)
+    return proc.returncode, output
+
+
+def _failure_report(
+    *,
+    started_at: datetime,
+    finished_at: datetime,
+    industry: str,
+    city: str,
+    signal_type: str,
+    mode_requested: str,
+    mode_effective: str,
+    auto_send_disabled: bool,
+    requested_limit: int,
+    effective_limit: int,
+    refreshed: bool,
+    target_preview_exit_code: int | None,
+    outreach_preview_exit_code: int | None,
+    source_files_used: list[str],
+    failed_stage: str,
+    failed_output: str,
+) -> dict:
+    duration_seconds = round((finished_at - started_at).total_seconds(), 3)
+    report = {
+        "generated_at": finished_at.isoformat(),
+        "started_at": started_at.isoformat(),
+        "finished_at": finished_at.isoformat(),
+        "duration_seconds": duration_seconds,
+        "status": "failed",
+        "failed_stage": failed_stage,
+        "failed_output": failed_output,
+        "mode": mode_effective,
+        "mode_requested": mode_requested,
+        "mode_effective": mode_effective,
+        "auto_send_disabled": auto_send_disabled,
+        "limit": effective_limit,
+        "requested_limit": requested_limit,
+        "effective_limit": effective_limit,
+        "industry": industry,
+        "city": city,
+        "signal_type": signal_type,
+        "input_file": str(INPUT_FILE),
+        "refreshed": refreshed,
+        "target_preview_exit_code": target_preview_exit_code,
+        "outreach_preview_exit_code": outreach_preview_exit_code,
+        "source_files_used": source_files_used,
+        "loaded_candidates": 0,
+        "normalized_leads": 0,
+        "ready_for_approval": 0,
+        "needs_enrichment": 0,
+        "discard": 0,
+        "leads": [],
+    }
+    _write_outputs(report, [])
+    return report
+
+
+def run(
+    mode: str = DEFAULT_MODE,
+    limit: int = DEFAULT_LIMIT,
+    *,
+    industry: str = DEFAULT_INDUSTRY,
+    city: str = DEFAULT_CITY,
+    signal_type: str = DEFAULT_SIGNAL_TYPE,
+    skip_refresh: bool = False,
+) -> dict:
     if mode not in ALLOWED_MODES:
         raise ValueError(f"Unknown mode: {mode!r}. Allowed: {list(ALLOWED_MODES)}")
-    limit = max(1, min(int(limit), HARD_MAX_LIMIT))
+    if signal_type not in ALLOWED_SIGNAL_TYPES:
+        raise ValueError(
+            f"Unknown signal_type: {signal_type!r}. Allowed: {list(ALLOWED_SIGNAL_TYPES)}"
+        )
+    industry = (industry or DEFAULT_INDUSTRY).strip() or DEFAULT_INDUSTRY
+    city = (city or DEFAULT_CITY).strip() or DEFAULT_CITY
+
+    requested_limit, effective_limit = _resolve_limit(limit)
+    mode_effective, auto_send_disabled = _resolve_mode(mode)
 
     LATEST.mkdir(parents=True, exist_ok=True)
+    started_at = datetime.now(timezone.utc)
+    started_perf = time.perf_counter()
+    refreshed = not skip_refresh
+    target_preview_exit_code: int | None = None
+    outreach_preview_exit_code: int | None = None
+    source_files_used: list[str] = []
+
+    if refreshed:
+        print("[1/3] Target Preview läuft...")
+        target_preview_exit_code, target_output = _run_stage(
+            "target_preview",
+            TARGET_PREVIEW_SCRIPT,
+            industry=industry,
+            city=city,
+            signal_type=signal_type,
+            limit=effective_limit,
+            mode=mode,
+        )
+        source_files_used.append(str(TARGET_PREVIEW_FILE))
+        if target_preview_exit_code != 0:
+            finished_at = datetime.now(timezone.utc)
+            report = _failure_report(
+                started_at=started_at,
+                finished_at=finished_at,
+                industry=industry,
+                city=city,
+                signal_type=signal_type,
+                mode_requested=mode,
+                mode_effective=mode_effective,
+                auto_send_disabled=auto_send_disabled,
+                requested_limit=requested_limit,
+                effective_limit=effective_limit,
+                refreshed=refreshed,
+                target_preview_exit_code=target_preview_exit_code,
+                outreach_preview_exit_code=outreach_preview_exit_code,
+                source_files_used=source_files_used,
+                failed_stage="target_preview",
+                failed_output=target_output,
+            )
+            print("RUN_FAILED")
+            return report
+
+        print("[2/3] Outreach Preview läuft...")
+        outreach_preview_exit_code, outreach_output = _run_stage(
+            "outreach_preview",
+            OUTREACH_PREVIEW_SCRIPT,
+            industry=industry,
+            city=city,
+            signal_type=signal_type,
+            limit=effective_limit,
+            mode=mode,
+        )
+        source_files_used.append(str(INPUT_FILE))
+        if outreach_preview_exit_code != 0:
+            finished_at = datetime.now(timezone.utc)
+            report = _failure_report(
+                started_at=started_at,
+                finished_at=finished_at,
+                industry=industry,
+                city=city,
+                signal_type=signal_type,
+                mode_requested=mode,
+                mode_effective=mode_effective,
+                auto_send_disabled=auto_send_disabled,
+                requested_limit=requested_limit,
+                effective_limit=effective_limit,
+                refreshed=refreshed,
+                target_preview_exit_code=target_preview_exit_code,
+                outreach_preview_exit_code=outreach_preview_exit_code,
+                source_files_used=source_files_used,
+                failed_stage="outreach_preview",
+                failed_output=outreach_output,
+            )
+            print("RUN_FAILED")
+            return report
+    else:
+        source_files_used.append(str(INPUT_FILE))
+
+    print("[3/3] Lead Production normalisiert...")
     payload = _safe_read_json(INPUT_FILE)
-    raw_rows = list(payload.get("results") or [])[:limit]
+    raw_rows = list(payload.get("results") or [])[:effective_limit]
     loaded = len(raw_rows)
 
-    leads = [_evaluate(_normalize(r)) for r in raw_rows]
+    leads = [
+        _evaluate(_normalize(r, industry=industry, city=city, signal_type=signal_type))
+        for r in raw_rows
+    ]
 
     ready = sum(1 for l in leads if l["status"] == "ready_for_approval")
     needs = sum(1 for l in leads if l["status"] == "needs_enrichment")
     discarded = sum(1 for l in leads if l["status"] == "discard")
 
+    finished_at = datetime.now(timezone.utc)
+    duration_seconds = round(time.perf_counter() - started_perf, 3)
+
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "mode": mode,
-        "limit": limit,
+        "generated_at": finished_at.isoformat(),
+        "started_at": started_at.isoformat(),
+        "finished_at": finished_at.isoformat(),
+        "duration_seconds": duration_seconds,
+        "status": "ok",
+        "mode": mode_effective,
+        "mode_requested": mode,
+        "mode_effective": mode_effective,
+        "auto_send_disabled": auto_send_disabled,
+        "limit": effective_limit,
+        "requested_limit": requested_limit,
+        "effective_limit": effective_limit,
+        "industry": industry,
+        "city": city,
+        "signal_type": signal_type,
         "input_file": str(INPUT_FILE),
+        "refreshed": refreshed,
+        "target_preview_exit_code": target_preview_exit_code,
+        "outreach_preview_exit_code": outreach_preview_exit_code,
+        "source_files_used": source_files_used,
         "loaded_candidates": loaded,
         "normalized_leads": len(leads),
         "ready_for_approval": ready,
@@ -323,13 +574,25 @@ def run(mode: str = "preview", limit: int = DEFAULT_LIMIT) -> dict:
 
     _write_outputs(report, leads)
 
-    print(f"mode: {mode}")
-    print(f"limit: {limit}")
+    print(f"industry: {industry}")
+    print(f"city: {city}")
+    print(f"signal_type: {signal_type}")
+    print(f"mode_requested: {mode}")
+    print(f"mode_effective: {mode_effective}")
+    print(f"auto_send_disabled: {auto_send_disabled}")
+    print(f"requested_limit: {requested_limit}")
+    print(f"effective_limit: {effective_limit}")
+    print(f"refreshed: {refreshed}")
+    print(f"target_preview_exit_code: {target_preview_exit_code}")
+    print(f"outreach_preview_exit_code: {outreach_preview_exit_code}")
     print(f"loaded_candidates: {loaded}")
     print(f"normalized_leads: {len(leads)}")
     print(f"ready_for_approval: {ready}")
     print(f"needs_enrichment: {needs}")
     print(f"discard: {discarded}")
+    print(f"started_at: {report['started_at']}")
+    print(f"finished_at: {report['finished_at']}")
+    print(f"duration_seconds: {report['duration_seconds']}")
     for lead in leads:
         print(f"{lead.get('company_name','-')} | {lead.get('email','-') or '-'} | "
               f"{lead.get('phone','-') or '-'} | {lead.get('contact_quality','-')} | {lead.get('status','-')}")
@@ -339,12 +602,28 @@ def run(mode: str = "preview", limit: int = DEFAULT_LIMIT) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Intent Lead Production Runner")
-    parser.add_argument("--mode", choices=ALLOWED_MODES, default="preview")
+    parser.add_argument("--mode", choices=ALLOWED_MODES, default=DEFAULT_MODE)
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
                         help=f"Max leads per run (hard cap {HARD_MAX_LIMIT})")
+    parser.add_argument("--industry", type=str, default=DEFAULT_INDUSTRY,
+                        help="Branche/Zielgruppe")
+    parser.add_argument("--city", type=str, default=DEFAULT_CITY,
+                        help="Stadt/Region")
+    parser.add_argument("--signal-type", dest="signal_type",
+                        choices=ALLOWED_SIGNAL_TYPES, default=DEFAULT_SIGNAL_TYPE,
+                        help="Signaltyp")
+    parser.add_argument("--skip-refresh", action="store_true",
+                        help="Nur vorhandene intent_outreach_preview.json normalisieren")
     args = parser.parse_args(argv)
-    run(args.mode, args.limit)
-    return 0
+    report = run(
+        mode=args.mode,
+        limit=args.limit,
+        industry=args.industry,
+        city=args.city,
+        signal_type=args.signal_type,
+        skip_refresh=args.skip_refresh,
+    )
+    return 0 if report.get("status") == "ok" else 1
 
 
 if __name__ == "__main__":

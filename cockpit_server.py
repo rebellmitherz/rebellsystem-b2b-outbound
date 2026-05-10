@@ -38,6 +38,11 @@ INTENT_JOB_DETAIL_LIVE_FILE = OUT / "latest" / "intent_job_detail_live_test.json
 INTENT_JOB_DETAIL_RELEVANCE_FILE = OUT / "latest" / "intent_job_detail_relevance.json"
 INTENT_TARGET_PREVIEW_FILE = OUT / "latest" / "intent_target_preview_report.json"
 INTENT_TARGET_PREVIEW_SCRIPT = str(ROOT / "run_intent_target_preview.py")
+INTENT_LEAD_PRODUCTION_FILE = OUT / "latest" / "intent_lead_production.json"
+INTENT_LEAD_PRODUCTION_SCRIPT = str(ROOT / "run_intent_lead_production.py")
+INTENT_LP_ALLOWED_SIGNALS = ("sales_hiring", "growth_expansion", "demand_generation_gap")
+INTENT_LP_ALLOWED_MODES = ("preview", "approval", "auto")
+INTENT_LP_HARD_MAX_LIMIT = 10
 
 PYTHON = sys.executable
 MINE = str(ROOT / "mine.py")
@@ -207,6 +212,90 @@ def _intent_preview_payload() -> dict:
         "relevance_summary": relevance_summary,
         "relevance_fetch_candidates": relevance_fetch_candidates,
         "target_preview_report": target_preview_report,
+    }
+
+
+def _intent_lead_production_payload() -> dict:
+    data = _safe_read_json(INTENT_LEAD_PRODUCTION_FILE)
+    if not data:
+        return {
+            "available": False,
+            "message": "Intent Lead Production noch nicht erzeugt.",
+            "loaded_candidates": 0,
+            "normalized_leads": 0,
+            "ready_for_approval": 0,
+            "needs_enrichment": 0,
+            "discard": 0,
+            "requested_limit": 0,
+            "effective_limit": 0,
+            "industry": "",
+            "city": "",
+            "signal_type": "",
+            "mode_requested": "",
+            "mode_effective": "",
+            "auto_send_disabled": False,
+            "refreshed": False,
+            "duration_seconds": 0,
+            "target_preview_exit_code": None,
+            "outreach_preview_exit_code": None,
+            "source_files_used": [],
+            "started_at": "",
+            "finished_at": "",
+            "leads": [],
+        }
+    return {
+        "available": True,
+        "message": "",
+        "generated_at": str(data.get("generated_at") or ""),
+        "loaded_candidates": int(data.get("loaded_candidates") or 0),
+        "normalized_leads": int(data.get("normalized_leads") or 0),
+        "ready_for_approval": int(data.get("ready_for_approval") or 0),
+        "needs_enrichment": int(data.get("needs_enrichment") or 0),
+        "discard": int(data.get("discard") or 0),
+        "requested_limit": int(data.get("requested_limit") or data.get("limit") or 0),
+        "effective_limit": int(data.get("effective_limit") or data.get("limit") or 0),
+        "industry": str(data.get("industry") or ""),
+        "city": str(data.get("city") or ""),
+        "signal_type": str(data.get("signal_type") or ""),
+        "mode_requested": str(data.get("mode_requested") or data.get("mode") or ""),
+        "mode_effective": str(data.get("mode_effective") or data.get("mode") or ""),
+        "auto_send_disabled": bool(data.get("auto_send_disabled") or False),
+        "refreshed": bool(data.get("refreshed") or False),
+        "duration_seconds": float(data.get("duration_seconds") or 0),
+        "target_preview_exit_code": data.get("target_preview_exit_code"),
+        "outreach_preview_exit_code": data.get("outreach_preview_exit_code"),
+        "source_files_used": list(data.get("source_files_used") or []),
+        "started_at": str(data.get("started_at") or ""),
+        "finished_at": str(data.get("finished_at") or ""),
+        "leads": [
+            {
+                "company_name": str(ld.get("company_name") or "-"),
+                "website": str(ld.get("website") or ""),
+                "industry": str(ld.get("industry") or ""),
+                "city_region": str(ld.get("city_region") or ""),
+                "intent_signal_type": str(ld.get("intent_signal_type") or ""),
+                "intent_signal_source_url": str(ld.get("intent_signal_source_url") or ""),
+                "intent_signal_title": str(ld.get("intent_signal_title") or ""),
+                "signal_reason": str(ld.get("signal_reason") or ""),
+                "decision_maker_name": str(ld.get("decision_maker_name") or ""),
+                "decision_maker_role": str(ld.get("decision_maker_role") or ""),
+                "email": str(ld.get("email") or ""),
+                "email_type": str(ld.get("email_type") or ""),
+                "phone": str(ld.get("phone") or ""),
+                "linkedin_url": str(ld.get("linkedin_url") or ""),
+                "contact_quality": str(ld.get("contact_quality") or ""),
+                "outreach_angle": str(ld.get("outreach_angle") or ""),
+                "recommended_first_line": str(ld.get("recommended_first_line") or ""),
+                "email_subject": str(ld.get("email_subject") or ""),
+                "email_body": str(ld.get("email_body") or ""),
+                "followup_1": str(ld.get("followup_1") or ""),
+                "followup_2": str(ld.get("followup_2") or ""),
+                "next_action": str(ld.get("next_action") or ""),
+                "status": str(ld.get("status") or ""),
+                "missing_fields": list(ld.get("missing_fields") or []),
+            }
+            for ld in (data.get("leads") or [])
+        ],
     }
 
 
@@ -918,6 +1007,8 @@ class Handler(BaseHTTPRequestHandler):
                                         "log": list(_log_buffer)[-30:]})
             if p == "/api/intent-preview":
                 return self._json(_intent_preview_payload())
+            if p == "/api/intent-lead-production":
+                return self._json(_intent_lead_production_payload())
             if p.startswith("/api/job/"):
                 jid = p.rsplit("/", 1)[-1]
                 with _jobs_lock:
@@ -996,6 +1087,43 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"job_id": _start_job("FULL AUTO", [PYTHON, MINE, "--outreach", "full-auto"])})
             if p == "/api/intent-target-preview/run":
                 return self._json({"job_id": _start_job("Intent Target Preview", [PYTHON, INTENT_TARGET_PREVIEW_SCRIPT])})
+            if p == "/api/intent-lead-production/run":
+                industry = str(b.get("industry") or "").strip()
+                city = str(b.get("city") or "").strip()
+                signal_type = str(b.get("signal_type") or "").strip() or "sales_hiring"
+                mode = str(b.get("mode") or "").strip() or "preview"
+                try:
+                    raw_limit = int(b.get("limit") or 10)
+                except (TypeError, ValueError):
+                    raw_limit = 10
+                if not industry:
+                    return self._json({"error": "industry_required"}, 400)
+                if signal_type not in INTENT_LP_ALLOWED_SIGNALS:
+                    return self._json({"error": f"signal_type_invalid: {signal_type}"}, 400)
+                if mode not in INTENT_LP_ALLOWED_MODES:
+                    return self._json({"error": f"mode_invalid: {mode}"}, 400)
+                # Hard cap at server boundary too — defence in depth.
+                effective_limit = max(1, min(raw_limit, INTENT_LP_HARD_MAX_LIMIT))
+                if not city:
+                    city = "Muenchen"
+                cmd = [
+                    PYTHON, INTENT_LEAD_PRODUCTION_SCRIPT,
+                    "--industry", industry,
+                    "--city", city,
+                    "--signal-type", signal_type,
+                    "--limit", str(effective_limit),
+                    "--mode", mode,
+                ]
+                job_id = _start_job("Intent Lead Production", cmd)
+                return self._json({
+                    "job_id": job_id,
+                    "industry": industry,
+                    "city": city,
+                    "signal_type": signal_type,
+                    "mode": mode,
+                    "requested_limit": raw_limit,
+                    "effective_limit": effective_limit,
+                })
 
             if p == "/api/approve-all":
                 lim = int(b.get("limit", 9999) or 9999)
@@ -1845,6 +1973,58 @@ button{cursor:pointer;border:none;background:transparent}
         <div id="intent-preview-note" style="color:var(--muted);font-size:12px;margin-bottom:10px">Preview only – noch nicht in normale Lead-Pipeline integriert.</div>
         <div id="intent-preview-content"><div class="loader">Lade…</div></div>
       </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>🎯 Intent Lead Production</h2>
+          <span class="badge" id="intent-lp-badge">Production</span>
+        </div>
+
+        <!-- Steuerformular: Signalbasierte Lead-Produktion starten -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <strong style="font-size:14px">🎯 Signalbasierte Lead-Produktion starten</strong>
+            <span style="color:var(--muted);font-size:11px">Branche + Stadt + Signaltyp + Limit → personalisierte Erstmail-Drafts (kein Versand)</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px">
+            <div>
+              <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Branche / Zielgruppe</label>
+              <input id="intent-prod-industry" class="tb-input" value="Marketingagentur" placeholder="z.B. Marketingagentur" style="width:100%">
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Stadt / Region</label>
+              <input id="intent-prod-city" class="tb-input" value="Muenchen" placeholder="z.B. Muenchen" style="width:100%">
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Signaltyp</label>
+              <select id="intent-prod-signal" class="tb-input" style="width:100%">
+                <option value="sales_hiring" selected>sales_hiring</option>
+                <option value="growth_expansion">growth_expansion</option>
+                <option value="demand_generation_gap">demand_generation_gap</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Limit (max 10)</label>
+              <input id="intent-prod-limit" class="tb-input" type="number" min="1" max="10" value="10" style="width:100%">
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px">Modus</label>
+              <select id="intent-prod-mode" class="tb-input" style="width:100%">
+                <option value="preview" selected>preview</option>
+                <option value="approval">approval</option>
+                <option value="auto">auto (kein Versand)</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn warn sm" onclick="startIntentLeadProduction()">🚀 Intent Lead Production starten</button>
+            <span style="color:var(--muted);font-size:11px">⚠ Modus <code>auto</code> sendet aktuell <strong>nicht</strong> – fallback auf <code>approval</code>.</span>
+          </div>
+        </div>
+
+        <div id="intent-lp-summary" style="margin-bottom:12px"></div>
+        <div id="intent-lp-content"><div class="loader">Lade…</div></div>
+      </div>
     </div>
 
     <!-- ── LEADS ── -->
@@ -2615,7 +2795,7 @@ function applySort(rows, mode) {
 // LOAD DATA
 // ═════════════════════════════════════════════════════════
 async function loadAll() {
-  await Promise.all([loadStats(), loadLeads(), loadReplies(), loadSent(), loadIntentPreview()]);
+  await Promise.all([loadStats(), loadLeads(), loadReplies(), loadSent(), loadIntentPreview(), loadIntentLeadProduction()]);
   renderDashboard();
   try { renderLiSearchHistory(); } catch(e) {}
   if (state.page==='leads') renderLeads();
@@ -2640,6 +2820,45 @@ async function loadSent() {
 }
 async function loadIntentPreview() {
   const d = await fetchJSON('/api/intent-preview'); if (d) state.intentPreview = d;
+}
+async function loadIntentLeadProduction() {
+  const d = await fetchJSON('/api/intent-lead-production'); if (d) state.intentLeadProduction = d;
+}
+async function startIntentLeadProduction() {
+  const industry = (document.getElementById('intent-prod-industry')?.value||'').trim();
+  const city = (document.getElementById('intent-prod-city')?.value||'').trim();
+  const signalType = (document.getElementById('intent-prod-signal')?.value||'sales_hiring').trim();
+  const modeSel = (document.getElementById('intent-prod-mode')?.value||'preview').trim();
+  let limit = parseInt(document.getElementById('intent-prod-limit')?.value||'10', 10);
+  if (!Number.isFinite(limit) || limit < 1) limit = 10;
+  if (limit > 10) limit = 10;
+  if (!industry) {
+    toast('warn', 'Branche fehlt', 'Bitte gib eine Branche / Zielgruppe ein.');
+    return;
+  }
+  toast('info', '🎯 Intent Lead Production gestartet', `${industry}${city?' · '+city:''} · ${signalType} · limit ${limit} · ${modeSel}`);
+  try {
+    const r = await fetch('/api/intent-lead-production/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({industry, city, signal_type: signalType, mode: modeSel, limit}),
+    });
+    const j = await r.json();
+    if (j.error) {
+      toast('err', 'Fehler', j.error);
+      return;
+    }
+    if (j.job_id) {
+      // Refresh nach kurzer Wartezeit, damit der Background-Job die Ausgabe schreiben kann.
+      setTimeout(async () => {
+        await loadIntentLeadProduction();
+        renderIntentLeadProduction();
+        toast('ok', '✓ Intent Lead Production aktualisiert', 'Dashboard zeigt neue Daten.');
+      }, 4000);
+    }
+  } catch (e) {
+    toast('err', 'Netzwerkfehler', String(e));
+  }
 }
 async function loadJobs() {
   const d = await fetchJSON('/api/jobs'); if (!d) return;
@@ -2735,6 +2954,7 @@ function renderDashboard() {
   }
 
   renderIntentPreview();
+  renderIntentLeadProduction();
 }
 
 function renderIntentPreview() {
@@ -2837,6 +3057,117 @@ function renderTargetPreviewReport(report) {
     </tbody></table></div>
     <div style="margin-top:12px"><strong>Kandidaten</strong></div>
     <div class="tbl-wrap" style="margin-top:6px"><table class="tbl"><thead><tr><th>Firma</th><th>Fit</th><th>Score</th><th>Action</th><th>URL</th></tr></thead><tbody>${candRows}</tbody></table></div>`;
+}
+
+function renderIntentLeadProduction() {
+  const box = document.getElementById('intent-lp-content');
+  const summary = document.getElementById('intent-lp-summary');
+  const d = state.intentLeadProduction;
+  if (!box) return;
+  if (!d || !d.available) {
+    summary.innerHTML = '';
+    box.innerHTML = '<div class="empty"><span class="big">🎯</span>Intent Lead Production noch nicht erzeugt.</div>';
+    return;
+  }
+  // Summary pills
+  const statusPill = (label, count, cls) =>
+    `<span class="pill ${cls}" style="font-size:14px;padding:6px 14px">${label}: <strong>${count}</strong></span>`;
+  // Param-Zeile (Branche/Stadt/Signal/Modus/Limits) — nur wenn Daten vorhanden
+  const paramChips = [];
+  if (d.industry) paramChips.push(`<span class="pill" style="font-size:11px">Branche: <strong>${E(d.industry)}</strong></span>`);
+  if (d.city) paramChips.push(`<span class="pill" style="font-size:11px">Stadt: <strong>${E(d.city)}</strong></span>`);
+  if (d.signal_type) paramChips.push(`<span class="pill acc" style="font-size:11px">Signal: <strong>${E(d.signal_type)}</strong></span>`);
+  if (d.mode_requested || d.mode_effective) {
+    const modeReq = d.mode_requested || '–';
+    const modeEff = d.mode_effective || '–';
+    const modeMatch = modeReq === modeEff;
+    paramChips.push(`<span class="pill ${modeMatch ? '' : 'warn'}" style="font-size:11px">Modus: <strong>${E(modeReq)}</strong>${modeMatch ? '' : ' → <strong>' + E(modeEff) + '</strong>'}</span>`);
+  }
+  if (d.auto_send_disabled) paramChips.push('<span class="pill err" style="font-size:11px">⚠ Auto-Send deaktiviert</span>');
+  if (d.requested_limit || d.effective_limit) {
+    const reqL = d.requested_limit || 0;
+    const effL = d.effective_limit || 0;
+    const cap = reqL !== effL && reqL > 0;
+    paramChips.push(`<span class="pill ${cap ? 'warn' : ''}" style="font-size:11px">Limit: <strong>${E(effL)}</strong>${cap ? ' (angefragt: ' + E(reqL) + ')' : ''}</span>`);
+  }
+
+  summary.innerHTML = `
+    ${paramChips.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">' + paramChips.join('') + '</div>' : ''}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      ${statusPill('Geladen', d.loaded_candidates, '')}
+      ${statusPill('Normalisiert', d.normalized_leads, '')}
+      ${statusPill('Ready', d.ready_for_approval, 'ok')}
+      ${statusPill('Enrichment', d.needs_enrichment, 'warn')}
+      ${statusPill('Discard', d.discard, 'err')}
+      ${d.generated_at ? `<span style="color:var(--muted);font-size:10px;margin-left:8px">Stand: ${E(d.generated_at)}</span>` : ''}
+    </div>`;
+
+  const leads = d.leads || [];
+  if (!leads.length) {
+    box.innerHTML = '<div class="empty"><span class="big">📋</span>Keine Leads vorhanden.</div>';
+    return;
+  }
+
+  const statusCls = {
+    ready_for_approval: 'ok',
+    needs_enrichment: 'warn',
+    discard: 'err',
+  };
+
+  const rows = leads.map((ld, idx) => {
+    const isMock = (ld.contact_quality || '').toLowerCase() === 'invalid_or_mock';
+    const stCls = statusCls[ld.status] || '';
+    const mockBadge = isMock ? '<br><span class="pill err" style="font-size:9px;margin-top:2px">⚠ Fake/Test-Mail blockiert</span>' : '';
+    const missingTags = (ld.missing_fields || []).length
+      ? '<br><span style="color:var(--warn);font-size:10px">Fehlt: ' + E((ld.missing_fields||[]).join(', ')) + '</span>'
+      : '';
+
+    // Encode body for clipboard copy
+    const bodyEncoded = encodeURIComponent(ld.email_body || '');
+    const subjEncoded = encodeURIComponent(ld.email_subject || '');
+
+    return `<tr style="${isMock ? 'opacity:.55' : ''}">
+      <td class="cell-company">
+        <strong>${E(ld.company_name||'-')}</strong>
+        ${ld.intent_signal_title ? '<br><small style="color:var(--accent)">📡 ' + E(ld.intent_signal_title) + '</small>' : ''}
+        ${ld.signal_reason ? '<br><small style="color:var(--muted);font-size:10px">' + E(ld.signal_reason).substring(0, 100) + '</small>' : ''}
+      </td>
+      <td>
+        ${ld.email ? '<div>' + E(ld.email) + ' <span class="pill dim" style="font-size:9px">' + E(ld.email_type||'') + '</span></div>' : '<span style="color:var(--muted)">–</span>'}
+        ${ld.phone ? '<div style="font-size:11px">📞 ' + E(ld.phone) + '</div>' : ''}
+        ${mockBadge}
+        ${missingTags}
+      </td>
+      <td>
+        <span class="pill ${stCls}">${E(ld.status||'')}</span>
+        ${ld.next_action ? '<br><small style="color:var(--muted);font-size:10px">→ ' + E(ld.next_action) + '</small>' : ''}
+        ${ld.decision_maker_name ? '<br><small style="font-size:10px">' + E(ld.decision_maker_name) + (ld.decision_maker_role ? ' · ' + E(ld.decision_maker_role) : '') + '</small>' : ''}
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        ${ld.email_body ? `<button class="btn ghost sm" title="Mailtext kopieren" onclick="event.stopPropagation();navigator.clipboard.writeText(decodeURIComponent('${bodyEncoded}'));toast('ok','Kopiert','Mailtext kopiert')">📋 Mailtext</button>` : ''}
+        ${ld.intent_signal_source_url ? `<a class="btn ghost sm" href="${E(ld.intent_signal_source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Signal öffnen">📡 Signal</a>` : ''}
+        ${ld.website ? `<a class="btn ghost sm" href="${E(ld.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Website öffnen">🌐 Website</a>` : ''}
+      </td>
+    </tr>
+    <tr class="email-preview-row" style="background:var(--surface2);font-size:12px">
+      <td colspan="4" style="padding:8px 16px">
+        ${ld.email_subject ? '<div style="margin-bottom:4px"><strong>Betreff:</strong> ' + E(ld.email_subject) + '</div>' : ''}
+        <div style="color:var(--muted);white-space:pre-wrap;max-height:120px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px">${E((ld.email_body || '').substring(0, 600))}${(ld.email_body||'').length > 600 ? '…' : ''}</div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Firma / Signal</th><th>Kontakt</th><th>Status</th><th style="text-align:right">Aktionen</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;color:var(--muted);font-size:11px">
+      🟢 Ready for Approval · 🟡 Needs Enrichment · 🔴 Discard
+      · <a href="#" onclick="event.preventDefault();window.open('/api/intent-lead-production','_blank')" style="color:var(--accent)">📄 JSON Rohdaten</a>
+    </div>`;
 }
 
 function leadFilter(l) {
