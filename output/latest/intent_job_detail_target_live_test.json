@@ -1,0 +1,160 @@
+{
+  "generated_at": "2026-05-10T13:41:09.142885+00:00",
+  "provider": "serper",
+  "industry": "Marketingagentur",
+  "city": "Muenchen",
+  "signal_type": "sales_hiring",
+  "relevance_focus": "target_industry",
+  "query_count": 3,
+  "raw_result_count": 6,
+  "queries_used": [
+    "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Sales Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+    "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Business Development\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+    "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Account Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit"
+  ],
+  "counts": {
+    "job_detail_page": 5,
+    "listing_page": 0,
+    "search_page": 1,
+    "company_profile": 0,
+    "unknown": 0,
+    "should_fetch_detail": 5,
+    "relevant": 0,
+    "maybe_relevant": 3,
+    "needs_review": 2,
+    "irrelevant": 0
+  },
+  "results": [
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Sales Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "snippet": "Seokratie ist eine renommierte Online Marketing Agentur mit Hauptsitz in München, die sich auf die Bereiche SEO, SEA und Content Marketing spezialisiert hat ...",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "job_detail_page",
+      "confidence": 0.8,
+      "reason": "url_contains_detail_markers: ['stellenangebot']",
+      "should_fetch_detail": true,
+      "relevance_status": "maybe_relevant",
+      "relevance_score": 0.7,
+      "city_match": true,
+      "industry_match": true,
+      "role_signal_match": false,
+      "relevance_reasons": [
+        "city_match",
+        "industry_match"
+      ],
+      "rejection_reasons": [],
+      "recommended_next_action": "fetch_detail"
+    },
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Sales Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "PR / Communications Manager (m/w/d) für Kanzleimarketing - Job ...",
+      "url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "snippet": "THE MARKETER ist die spezialisierte Marketingagentur oder Go-To-Agentur in Projekten für Kanzleien, Rechtsanwälte und Steuerberater.",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--PR-Communications-Manager-m-w-d-fuer-Kanzleimarketing-Munich-THE-MARKETER-P-S-O-UG-haftungsbeschraenkt--13803968-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "job_detail_page",
+      "confidence": 0.8,
+      "reason": "url_contains_detail_markers: ['stellenangebot']",
+      "should_fetch_detail": true,
+      "relevance_status": "maybe_relevant",
+      "relevance_score": 0.7,
+      "city_match": true,
+      "industry_match": true,
+      "role_signal_match": false,
+      "relevance_reasons": [
+        "city_match",
+        "industry_match"
+      ],
+      "rejection_reasons": [],
+      "recommended_next_action": "fetch_detail"
+    },
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Sales Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "Medienkaufmann, Mediengestalter als Kaufmännischer ... - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "snippet": "Du bist kompetenter Ansprechpartner (m/w/d) für unsere Kunden rund um die Themen Recruiting und Personalmarketing, inklusive Auftragsabwicklung ...",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "job_detail_page",
+      "confidence": 0.8,
+      "reason": "url_contains_detail_markers: ['stellenangebot']",
+      "should_fetch_detail": true,
+      "relevance_status": "needs_review",
+      "relevance_score": 0.4,
+      "city_match": true,
+      "industry_match": false,
+      "role_signal_match": false,
+      "relevance_reasons": [
+        "city_match"
+      ],
+      "rejection_reasons": [],
+      "recommended_next_action": "review"
+    },
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Account Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "Content Marketing Manager (m/w/d) - in München - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "snippet": "Seokratie ist eine renommierte Online Marketing Agentur mit Hauptsitz in München, die sich auf die Bereiche SEO, SEA und Content Marketing spezialisiert hat ...",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--Content-Marketing-Manager-m-w-d-in-Muenchen-Muenchen-Seokratie-GmbH--13922477-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "job_detail_page",
+      "confidence": 0.8,
+      "reason": "url_contains_detail_markers: ['stellenangebot']",
+      "should_fetch_detail": true,
+      "relevance_status": "maybe_relevant",
+      "relevance_score": 0.7,
+      "city_match": true,
+      "industry_match": true,
+      "role_signal_match": false,
+      "relevance_reasons": [
+        "city_match",
+        "industry_match"
+      ],
+      "rejection_reasons": [],
+      "recommended_next_action": "fetch_detail"
+    },
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Account Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "Medienkaufmann, Mediengestalter als Kaufmännischer ... - Stepstone",
+      "url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "snippet": "Du bist kompetenter Ansprechpartner (m/w/d) für unsere Kunden rund um die Themen Recruiting und Personalmarketing, inklusive Auftragsabwicklung ...",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--Medienkaufmann-Mediengestalter-als-Kaufmaennischer-Sachbearbeiter-Personalmarketing-m-w-d-Muenchen-PWG-Professional-Werbe-Gesellschaft-mbH--13949622-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "job_detail_page",
+      "confidence": 0.8,
+      "reason": "url_contains_detail_markers: ['stellenangebot']",
+      "should_fetch_detail": true,
+      "relevance_status": "needs_review",
+      "relevance_score": 0.4,
+      "city_match": true,
+      "industry_match": false,
+      "role_signal_match": false,
+      "relevance_reasons": [
+        "city_match"
+      ],
+      "rejection_reasons": [],
+      "recommended_next_action": "review"
+    },
+    {
+      "query": "site:stepstone.de/stellenangebote-- \"Marketingagentur\" \"Muenchen\" \"Account Manager\" \"m/w/d\" -Bosch -Diageo -Hamburg -Berlin -Ingolstadt -Remote -Deutschlandweit",
+      "title": "Wir suchen Promoter in Bayern - auch Quereinsteiger Willkommen ...",
+      "url": "https://www.stepstone.de/stellenangebote--Wir-suchen-Promoter-in-Bayern-auch-Quereinsteiger-Willkommen-m-w-d-Munich-Werbeagentur-Fellner-Inh-Gerhard-Fellner--13773161-inline.html",
+      "snippet": "Aktuelles Stellenangebot als Wir suchen Promoter in Bayern - auch Quereinsteiger Willkommen m/w/d in Munich bei der Firma Werbeagentur Fellner Inh. Gerhard ...",
+      "provider": "serper",
+      "original_url": "https://www.stepstone.de/stellenangebote--Wir-suchen-Promoter-in-Bayern-auch-Quereinsteiger-Willkommen-m-w-d-Munich-Werbeagentur-Fellner-Inh-Gerhard-Fellner--13773161-inline.html",
+      "portal_domain": "",
+      "portal_url_type": "search_page",
+      "confidence": 0.85,
+      "reason": "url_contains_search_params: ['suche']",
+      "should_fetch_detail": false
+    }
+  ]
+}
