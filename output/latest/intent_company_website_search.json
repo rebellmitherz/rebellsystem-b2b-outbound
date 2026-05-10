@@ -1,0 +1,79 @@
+{
+  "generated_at": "2026-05-10T12:56:43.697248+00:00",
+  "provider": "serper",
+  "total_companies": 2,
+  "searched_companies": 1,
+  "official_candidates_count": 1,
+  "results": [
+    {
+      "company_name": "Ipsos Operations GmbH",
+      "fit_status": "maybe_fit",
+      "fit_score": 0.6,
+      "queries_used": [
+        "Ipsos Operations GmbH offizielle Website",
+        "Ipsos Operations GmbH Impressum"
+      ],
+      "candidates": [
+        {
+          "title": "Globale Spezialisten für Markt- und Sozialforschung - Ipsos",
+          "url": "https://www.ipsos.com/de-de",
+          "snippet": "Ipsos ist eines der weltweit führenden Unternehmen für Markt- und Sozialforschung. Wir liefern zuverlässige Informationen für ein echtes Verständnis der ...",
+          "domain": "ipsos.com",
+          "is_official_candidate": true,
+          "domain_confidence": 0.65,
+          "reject_reason": ""
+        },
+        {
+          "title": "Total Operations - Ipsos",
+          "url": "https://www.ipsos.com/de-de/total-operations",
+          "snippet": "Als Total Operations sind wir die Experten für Datenerhebung, Datenauswertung und Datenintegration bei Ipsos. Unabhängig von der Erhebungsmethode bietet ...",
+          "domain": "ipsos.com",
+          "is_official_candidate": true,
+          "domain_confidence": 0.8,
+          "reject_reason": ""
+        },
+        {
+          "title": "Wer wir sind - Ipsos",
+          "url": "https://www.ipsos.com/de-de/wer-wir-sind",
+          "snippet": "Inhaltsbereiche: Automotive · Brand · Künstliche Intelligenz · Meinungs- und Wahlumfragen. Mediathek: Veröffentlichungen · Umfragen · Aufzeichnungen · Ipsos ...",
+          "domain": "ipsos.com",
+          "is_official_candidate": true,
+          "domain_confidence": 0.65,
+          "reject_reason": ""
+        },
+        {
+          "title": "IPSOS Impressum / Imprint",
+          "url": "https://impressum.ipsos.de/",
+          "snippet": "Angaben gemäß § 5 DDG: Ipsos GmbH ; Postanschrift: Amerigo-Vespucci-Platz 1 20457 Hamburg ; Kontakt: Telefon: +49 (0)40 80 09 60. E-Mail: mailbox@ipsos.com",
+          "domain": "impressum.ipsos.de",
+          "is_official_candidate": true,
+          "domain_confidence": 0.65,
+          "reject_reason": ""
+        },
+        {
+          "title": "Impressum | Ipsos",
+          "url": "https://www.ipsos.com/de-de/impressum",
+          "snippet": "#TeamIpsos · Stellenangebote · Mystery Shopper werden · Interviewer werden. Folgen ... Impressum · Datenschutz · Datenschutzhinweise für telefonische Befragungen ...",
+          "domain": "ipsos.com",
+          "is_official_candidate": true,
+          "domain_confidence": 0.65,
+          "reject_reason": ""
+        },
+        {
+          "title": "Ipsos Operations GmbH, Hamburg - North Data",
+          "url": "https://www.northdata.de/Ipsos%20Operations%20GmbH,%20Hamburg/HRB%2065370",
+          "snippet": "Gegenstand. Die Konzeption und Durchführung von Befragungen sowie die Erhebung von Daten und Informationen in jeglicher Form, deren Verarbeitung, ...",
+          "domain": "northdata.de",
+          "is_official_candidate": false,
+          "domain_confidence": 0.0,
+          "reject_reason": "blocked_domain:northdata.de"
+        }
+      ],
+      "best_official_domain": "ipsos.com",
+      "best_official_url": "https://www.ipsos.com/de-de/total-operations",
+      "best_confidence": 0.8,
+      "website_resolution_status": "official_candidate_found",
+      "next_action": "verify_website"
+    }
+  ]
+}
