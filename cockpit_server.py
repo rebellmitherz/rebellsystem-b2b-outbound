@@ -36,6 +36,8 @@ SEARCH_META_FILE = OUT / "_search_meta.json"
 INTENT_FOCUS_DECISION_FILE = OUT / "latest" / "intent_focus_decision_report.json"
 INTENT_JOB_DETAIL_LIVE_FILE = OUT / "latest" / "intent_job_detail_live_test.json"
 INTENT_JOB_DETAIL_RELEVANCE_FILE = OUT / "latest" / "intent_job_detail_relevance.json"
+INTENT_TARGET_PREVIEW_FILE = OUT / "latest" / "intent_target_preview_report.json"
+INTENT_TARGET_PREVIEW_SCRIPT = str(ROOT / "run_intent_target_preview.py")
 
 PYTHON = sys.executable
 MINE = str(ROOT / "mine.py")
@@ -120,6 +122,7 @@ def _intent_preview_payload() -> dict:
             "top_job_detail_urls": [],
             "relevance_summary": None,
             "relevance_fetch_candidates": [],
+            "target_preview_report": None,
         }
 
     results = list(live.get("results") or [])
@@ -161,6 +164,33 @@ def _intent_preview_payload() -> dict:
                     "rejection_reasons": list(item.get("rejection_reasons") or []),
                 })
 
+    # Target Preview Report (Phase 3.18 run_intent_target_preview.py)
+    target = _safe_read_json(INTENT_TARGET_PREVIEW_FILE)
+    target_preview_report = None
+    if target:
+        target_results = list(target.get("results") or [])
+        target_candidates = []
+        for r in target_results:
+            target_candidates.append({
+                "company": str(r.get("company_name") or "-"),
+                "fit_status": str(r.get("fit_status") or ""),
+                "score": float(r.get("fit_score") or 0),
+                "next_action": str(r.get("next_action") or ""),
+                "source_url": str(r.get("url") or ""),
+            })
+        target_preview_report = {
+            "available": True,
+            "queries_used": int(target.get("queries_used") or 0),
+            "raw_results": int(target.get("raw_results") or 0),
+            "unique_job_detail_pages": int(target.get("unique_job_detail_pages") or 0),
+            "fetched_details": int(target.get("fetched_details") or 0),
+            "resolved_companies": int(target.get("resolved_companies") or 0),
+            "target_fit": int(target.get("target_fit") or 0),
+            "maybe_fit": int(target.get("maybe_fit") or 0),
+            "discard": int(target.get("discard") or 0),
+            "candidates": target_candidates,
+        }
+
     return {
         "available": True,
         "message": "",
@@ -172,6 +202,7 @@ def _intent_preview_payload() -> dict:
         "note": "Preview only \u2013 noch nicht in normale Lead-Pipeline integriert.",
         "relevance_summary": relevance_summary,
         "relevance_fetch_candidates": relevance_fetch_candidates,
+        "target_preview_report": target_preview_report,
     }
 
 
@@ -959,6 +990,8 @@ class Handler(BaseHTTPRequestHandler):
                     [PYTHON, MINE, "--outreach", "send-reply-drafts"])})
             if p == "/api/full-auto":
                 return self._json({"job_id": _start_job("FULL AUTO", [PYTHON, MINE, "--outreach", "full-auto"])})
+            if p == "/api/intent-target-preview/run":
+                return self._json({"job_id": _start_job("Intent Target Preview", [PYTHON, INTENT_TARGET_PREVIEW_SCRIPT])})
 
             if p == "/api/approve-all":
                 lim = int(b.get("limit", 9999) or 9999)
@@ -1803,6 +1836,7 @@ button{cursor:pointer;border:none;background:transparent}
         <div class="section-head">
           <h2>🧠 Intent Discovery Preview</h2>
           <span class="badge" id="intent-preview-badge">Preview</span>
+          <button class="btn warn sm" style="margin-left:auto" onclick="api('/api/intent-target-preview/run',{},'Intent Target Preview')">🧠 Intent Preview starten</button>
         </div>
         <div id="intent-preview-note" style="color:var(--muted);font-size:12px;margin-bottom:10px">Preview only – noch nicht in normale Lead-Pipeline integriert.</div>
         <div id="intent-preview-content"><div class="loader">Lade…</div></div>
@@ -2764,8 +2798,41 @@ function renderIntentPreview() {
       <div class="tbl-wrap" style="margin-top:6px"><table class="tbl"><tbody>${relSummaryRows}</tbody></table></div>
     <div style="margin-top:18px"><strong>📌 Fetch-fähige Kandidaten nach Relevance Filter</strong></div>
       ${relCandTable}
+    <div style="margin-top:18px"><strong>🎯 Target-Industry Preview Report</strong></div>
+      ${renderTargetPreviewReport(d.target_preview_report)}
     <div style="margin-top:18px"><strong>Raw Job Detail URLs</strong></div>
     <div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><tbody>${urlRows}</tbody></table></div>`;
+}
+
+function renderTargetPreviewReport(report) {
+  if (!report || !report.available) {
+    return '<div class="empty" style="margin-top:8px">Noch kein Target Intent Preview Lauf vorhanden.</div>';
+  }
+  const fitPill = {
+    target_fit: 'ok', maybe_fit: 'warn', weak_fit: 'warn', discard: 'err'
+  };
+  const candRows = (report.candidates || []).map(c =>
+    `<tr>
+      <td class="cell-company"><strong>${E(c.company||'-')}</strong></td>
+      <td><span class="pill ${fitPill[c.fit_status]||''}">${E(c.fit_status||'')}</span></td>
+      <td>${(c.score||0).toFixed(3)}</td>
+      <td>${E(c.next_action||'')}</td>
+      <td style="word-break:break-all"><a class="intent-link" href="${E(c.source_url||'#')}" target="_blank" rel="noopener">${E(c.source_url||'')}</a></td>
+    </tr>`
+  ).join('') || '<tr><td colspan="5" class="empty">Keine Kandidaten.</td></tr>';
+  return `
+    <div class="tbl-wrap" style="margin-top:8px"><table class="tbl"><tbody>
+      <tr><td>Queries Used</td><td>${E(report.queries_used)}</td></tr>
+      <tr><td>Raw Ergebnisse</td><td>${E(report.raw_results)}</td></tr>
+      <tr><td>Unique Job-Detail-Seiten</td><td>${E(report.unique_job_detail_pages)}</td></tr>
+      <tr><td>Gefetchte Details</td><td>${E(report.fetched_details)}</td></tr>
+      <tr><td>Resolved Companies</td><td>${E(report.resolved_companies)}</td></tr>
+      <tr><td>Target Fit</td><td><span class="pill ok">${E(report.target_fit)}</span></td></tr>
+      <tr><td>Maybe Fit</td><td><span class="pill warn">${E(report.maybe_fit)}</span></td></tr>
+      <tr><td>Discard</td><td><span class="pill err">${E(report.discard)}</span></td></tr>
+    </tbody></table></div>
+    <div style="margin-top:12px"><strong>Kandidaten</strong></div>
+    <div class="tbl-wrap" style="margin-top:6px"><table class="tbl"><thead><tr><th>Firma</th><th>Fit</th><th>Score</th><th>Action</th><th>URL</th></tr></thead><tbody>${candRows}</tbody></table></div>`;
 }
 
 function leadFilter(l) {
