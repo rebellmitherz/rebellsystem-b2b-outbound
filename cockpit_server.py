@@ -12,6 +12,7 @@ Start:
 """
 from __future__ import annotations
 
+import csv
 import json
 import os
 import re
@@ -50,6 +51,19 @@ INTENT_MANUAL_DECISION_MAKER_REVIEWS_FILE = OUT / "latest" / "intent_manual_deci
 SIGNAL_SOURCE_HARVEST_POOL_FILE = OUT / "latest" / "signal_source_harvest_pool.json"
 INTENT_BATCH_5_DRY_RUN_REPORT_FILE = OUT / "latest" / "intent_batch_5_dry_run_report.json"
 INTENT_TO_OUTREACH_BRIDGE_REPORT_FILE = OUT / "latest" / "intent_to_outreach_bridge_report.json"
+# ── Standard output/latest references (read-only dashboard data) ─────────────
+LATEST                  = OUT / "latest"
+RUN_STATUS_FILE         = LATEST / "run_status.json"
+LEAD_FUNNEL_FILE        = LATEST / "lead_funnel_diagnostics.json"
+SEARCH_DIAG_FILE        = LATEST / "search_diagnostics.json"
+QUALITY_WARNINGS_FILE   = LATEST / "quality_warnings.json"
+LEADS_CSV_FILE          = LATEST / "leads.csv"
+READY_TO_SEND_CSV_FILE  = LATEST / "ready_to_send.csv"
+REVIEW_BEFORE_SEND_CSV_FILE = LATEST / "review_before_send.csv"
+OUTREACH_PREVIEW_JSON_FILE  = LATEST / "outreach_preview.json"
+PIPELINE_LATEST_JSON_FILE   = LATEST / "outreach_pipeline.json"
+LINKEDIN_CSV_FILE       = ROOT / "linkedin_bot" / "output" / "linkedin_outreach.csv"
+REPLY_QUEUE_LATEST_FILE = LATEST / "reply_queue.json"
 INTENT_LP_ALLOWED_SIGNALS = ("sales_hiring", "growth_expansion", "demand_generation_gap")
 INTENT_LP_ALLOWED_MODES = ("preview", "approval", "auto")
 INTENT_LP_HARD_MAX_LIMIT = 10
@@ -122,6 +136,14 @@ def _safe_read_json(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _safe_read_csv(path: Path, max_rows: int = 150) -> list[dict]:
+    try:
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            return list(csv.DictReader(f))[:max_rows]
+    except Exception:
+        return []
 
 
 def _safe_write_json(path: Path, payload: dict) -> None:
@@ -487,12 +509,13 @@ def _premium_source_counts(signals: list[dict]) -> list[dict]:
 
 
 def _premium_dashboard_payload() -> dict:
+    # ── Intent-pipeline specific files ──────────────────────────────────────
     signal_payload = _safe_read_json(SIGNAL_SOURCE_HARVEST_POOL_FILE)
     review_queue = _intent_email_review_queue_payload()
     verified_payload = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
     auto_payload = _safe_read_json(INTENT_AUTO_SEND_CANDIDATES_FILE)
     enriched_payload = _safe_read_json(INTENT_ENRICHED_LEADS_FILE)
-    reply_queue = _safe_read_json(REPLY_QUEUE_JSON)
+    reply_queue_main = _safe_read_json(REPLY_QUEUE_JSON)
     reply_events = _safe_read_json(REPLY_EVENTS_JSON)
     sent_payload = _safe_read_json(SENT_LOG_JSON)
     pipeline_items = [_intent_pipeline_item(e) for e in _load_pipeline()]
@@ -522,6 +545,35 @@ def _premium_dashboard_payload() -> dict:
         or (item.get("personal_email_verified") is not True and str(item.get("personal_email_candidate") or ""))
     )
 
+    # ── Standard output/latest files (refreshed on every dashboard call) ────
+    run_status       = _safe_read_json(RUN_STATUS_FILE)
+    run_funnel       = _safe_read_json(LEAD_FUNNEL_FILE)
+    search_diag      = _safe_read_json(SEARCH_DIAG_FILE)
+    quality_warnings = _safe_read_json(QUALITY_WARNINGS_FILE)
+    leads_found      = _safe_read_csv(LEADS_CSV_FILE)
+    ready_leads      = _safe_read_csv(READY_TO_SEND_CSV_FILE)
+    review_leads     = _safe_read_csv(REVIEW_BEFORE_SEND_CSV_FILE)
+    preview_raw      = _safe_read_json(OUTREACH_PREVIEW_JSON_FILE)
+    preview_rows     = list(preview_raw.get("rows") or []) if preview_raw else []
+    reply_queue_latest = _safe_read_json(REPLY_QUEUE_LATEST_FILE)
+    # LinkedIn CSV (optional – only if bot has been run)
+    linkedin_rows    = _safe_read_csv(LINKEDIN_CSV_FILE, max_rows=50)
+
+    # Canonical pipeline fallback: use latest if main pipeline empty
+    if not pipeline_items:
+        latest_pipe = _safe_read_json(PIPELINE_LATEST_JSON_FILE)
+        pipeline_items = [
+            _intent_pipeline_item(e)
+            for e in (latest_pipe.get("entries") or [])
+            if isinstance(e, dict)
+        ]
+
+    # Merge reply_queue: prefer latest file when it has items
+    reply_queue_items_latest = list((reply_queue_latest or {}).get("items") or [])
+    reply_queue_items_main   = list((reply_queue_main   or {}).get("items") or
+                                    (reply_queue_main or {}).values() or [])
+    reply_queue_merged = reply_queue_latest if reply_queue_items_latest else reply_queue_main
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "data_sources": {
@@ -549,6 +601,13 @@ def _premium_dashboard_payload() -> dict:
             "pipeline": len(pipeline_items),
             "sent": len(sent_events),
             "replies": len(replies),
+            # new counts from output/latest
+            "leads_found": len(leads_found),
+            "ready": len(ready_leads),
+            "review_leads": len(review_leads),
+            "preview_rows": len(preview_rows),
+            "reply_items": len(reply_queue_items_latest) or len(reply_queue_items_main),
+            "linkedin": len(linkedin_rows),
         },
         "signals": signals,
         "sources": _premium_source_counts(signals),
@@ -561,9 +620,19 @@ def _premium_dashboard_payload() -> dict:
             "items": pipeline_items,
         },
         "sent_events": sent_events[-100:],
-        "reply_queue": reply_queue,
+        "reply_queue": reply_queue_merged,
         "reply_events": reply_events,
         "replies": [_reply_summary(r) for r in replies],
+        # new output/latest sections
+        "run_status":       run_status,
+        "run_funnel":       run_funnel,
+        "search_diag":      search_diag,
+        "quality_warnings": quality_warnings,
+        "leads_found":      leads_found,
+        "ready_leads":      ready_leads,
+        "review_leads":     review_leads,
+        "outreach_preview_rows": preview_rows[:50],
+        "linkedin_results": linkedin_rows,
         "safety": {
             "read_only": True,
             "no_smtp": True,
@@ -2258,15 +2327,18 @@ class Handler(BaseHTTPRequestHandler):
                 ind = (b.get("industry") or "").strip()
                 city = (b.get("city") or "").strip()
                 cnt = int(b.get("count", 20) or 20)
+                mode = str(b.get("mode") or "local").strip()
+                if mode not in ("revenue", "local"):
+                    mode = "local"
                 if not ind:
                     return self._json({"error": "industry_required"}, 400)
-                cmd = [PYTHON, MINE, "-i", ind, "-n", str(cnt)]
-                if city:
-                    cmd += ["-c", city]
+                if not city:
+                    return self._json({"error": "city_required"}, 400)
+                cmd = [PYTHON, MINE, "-i", ind, "-c", city, "-n", str(cnt), "--mode", mode]
                 # Such-Startzeit tracken für "Neu"-Filter & inkrementelle Anzeige
                 _set_last_search_started_at(time.strftime("%Y-%m-%dT%H:%M:%S"))
-                # Periodischer Sync alle 5s während Mining → inkrementelle Results im Dashboard
-                return self._json({"job_id": _start_job(f"Suche: {ind} ({cnt})", cmd, periodic_sync=True)})
+                job_id = _start_job(f"Suche: {ind}/{city} ({cnt})", cmd, periodic_sync=True)
+                return self._json({"job_id": job_id, "industry": ind, "city": city, "count": cnt, "mode": mode})
 
             if p == "/api/sync-replies":
                 return self._json({"job_id": _start_job("Replies syncen", [PYTHON, MINE, "--outreach", "sync"])})
