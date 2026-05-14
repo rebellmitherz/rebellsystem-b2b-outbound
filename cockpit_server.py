@@ -22,6 +22,7 @@ import time
 import uuid
 import webbrowser
 from collections import deque
+from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -31,6 +32,7 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "output"
 PIPELINE_JSON = OUT / "outreach_pipeline.json"
 REPLY_QUEUE_JSON = OUT / "reply_queue.json"
+REPLY_EVENTS_JSON = OUT / "reply_events.json"
 SENT_LOG_JSON = OUT / "sent_log.json"
 SEARCH_META_FILE = OUT / "_search_meta.json"
 INTENT_FOCUS_DECISION_FILE = OUT / "latest" / "intent_focus_decision_report.json"
@@ -40,6 +42,14 @@ INTENT_TARGET_PREVIEW_FILE = OUT / "latest" / "intent_target_preview_report.json
 INTENT_TARGET_PREVIEW_SCRIPT = str(ROOT / "run_intent_target_preview.py")
 INTENT_LEAD_PRODUCTION_FILE = OUT / "latest" / "intent_lead_production.json"
 INTENT_LEAD_PRODUCTION_SCRIPT = str(ROOT / "run_intent_lead_production.py")
+INTENT_EMAIL_REVIEW_QUEUE_FILE = OUT / "latest" / "intent_email_review_queue.json"
+INTENT_VERIFIED_LEADS_FILE = OUT / "latest" / "intent_verified_leads.json"
+INTENT_ENRICHED_LEADS_FILE = OUT / "latest" / "intent_enriched_leads.json"
+INTENT_AUTO_SEND_CANDIDATES_FILE = OUT / "latest" / "intent_auto_send_candidates.json"
+INTENT_MANUAL_DECISION_MAKER_REVIEWS_FILE = OUT / "latest" / "intent_manual_decision_maker_reviews.json"
+SIGNAL_SOURCE_HARVEST_POOL_FILE = OUT / "latest" / "signal_source_harvest_pool.json"
+INTENT_BATCH_5_DRY_RUN_REPORT_FILE = OUT / "latest" / "intent_batch_5_dry_run_report.json"
+INTENT_TO_OUTREACH_BRIDGE_REPORT_FILE = OUT / "latest" / "intent_to_outreach_bridge_report.json"
 INTENT_LP_ALLOWED_SIGNALS = ("sales_hiring", "growth_expansion", "demand_generation_gap")
 INTENT_LP_ALLOWED_MODES = ("preview", "approval", "auto")
 INTENT_LP_HARD_MAX_LIMIT = 10
@@ -62,6 +72,7 @@ def _read_key_file(filename: str = "serper_key.txt") -> str:
 
 PORT = int(os.environ.get("COCKPIT_PORT", "8765"))
 HOST = os.environ.get("COCKPIT_HOST", "127.0.0.1")
+os.environ["REPLY_AUTO_SEND"] = "false"
 
 # ── Search Meta ──────────────────────────────────────────────────────────────
 _search_meta_lock = threading.Lock()
@@ -111,6 +122,741 @@ def _safe_read_json(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _safe_write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _intent_email_review_queue_payload() -> dict:
+    data = _safe_read_json(INTENT_EMAIL_REVIEW_QUEUE_FILE)
+    if not data:
+        return {
+            "available": False,
+            "message": "Intent Email Review Queue noch nicht erzeugt.",
+            "enriched_leads_loaded": 0,
+            "review_items_created": 0,
+            "pending": 0,
+            "verified_existing": 0,
+            "rejected": 0,
+            "review_items": [],
+            "safety": {
+                "no_email_sending": True,
+                "no_smtp_verification": True,
+                "no_pipeline_integration": True,
+            },
+        }
+    data = dict(data)
+    data["available"] = True
+    data.setdefault("review_items", [])
+    data.setdefault("review_items_created", len(data.get("review_items") or []))
+    data.setdefault("pending", sum(1 for i in data.get("review_items", []) if i.get("review_status") == "pending"))
+    data.setdefault("verified_existing", 0)
+    data.setdefault("rejected", sum(1 for i in data.get("review_items", []) if i.get("review_status") == "rejected"))
+    return data
+
+
+def _intent_manual_decision_maker_review_payload() -> dict:
+    try:
+        from run_intent_manual_decision_maker_review import load_review_items
+        return load_review_items()
+    except Exception as exc:
+        return {
+            "available": False,
+            "error": str(exc),
+            "items": [],
+            "count": 0,
+            "completed_count": 0,
+            "safety": {
+                "no_send": True,
+                "no_smtp": True,
+                "no_pipeline_integration": True,
+            },
+        }
+
+
+def _save_intent_manual_decision_maker_review(payload: dict) -> tuple[dict, int]:
+    try:
+        from run_intent_manual_decision_maker_review import save_manual_review, load_review_items
+        result = save_manual_review(payload)
+        if not result.get("ok"):
+            return result, 400
+        result["queue"] = load_review_items()
+        return result, 200
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}, 500
+
+
+def _intent_domain_from_url(value: str) -> str:
+    raw = (value or "").strip().lower()
+    if not raw:
+        return ""
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    return (parsed.netloc or parsed.path).split("/")[0].split(":")[0].removeprefix("www.")
+
+
+def _intent_sent_event_keys(events: list[dict]) -> tuple[set[str], set[str]]:
+    emails: set[str] = set()
+    domains: set[str] = set()
+    for ev in events:
+        if not isinstance(ev, dict) or ev.get("ok") is not True:
+            continue
+        if not str(ev.get("kind") or "").startswith(("first", "followup")):
+            continue
+        email = str(ev.get("to") or ev.get("email") or "").strip().lower()
+        if email:
+            emails.add(email)
+            if "@" in email:
+                domains.add(email.rsplit("@", 1)[-1])
+        domain = _intent_domain_from_url(str(ev.get("website") or ev.get("company_domain") or ""))
+        if domain:
+            domains.add(domain)
+    return emails, domains
+
+
+def _pipeline_stage_bucket(entry: dict) -> str:
+    stage = str(entry.get("outreach_stage") or "").strip().lower()
+    reply = str(entry.get("reply_status") or "").strip().lower()
+    sent_already = bool(entry.get("first_sent_at") or entry.get("sent_message_id") or stage == "sent")
+    if stage in ("won", "lost"):
+        return stage
+    if reply and reply not in ("none", "new"):
+        return "replied"
+    if stage in ("followup_1", "followup_2"):
+        return stage
+    if sent_already:
+        return "sent"
+    if _is_approved(entry) and _is_unsent(entry) and str(entry.get("email") or "").strip():
+        return "approved_pending_send"
+    if _is_ready(entry) and _is_unsent(entry):
+        return "ready"
+    return stage or "new"
+
+
+def _intent_pipeline_item(entry: dict) -> dict:
+    return {
+        "entry_key": str(entry.get("entry_key") or ""),
+        "company_name": str(entry.get("company_name") or ""),
+        "email": str(entry.get("email") or ""),
+        "website": str(entry.get("website") or ""),
+        "outreach_stage": str(entry.get("outreach_stage") or ""),
+        "pipeline_bucket": _pipeline_stage_bucket(entry),
+        "approved_for_send": _is_approved(entry),
+        "ready_to_send": str(entry.get("ready_to_send") or ""),
+        "source": str(entry.get("source") or ""),
+        "sent_at": str(entry.get("sent_at") or entry.get("first_sent_at") or ""),
+        "first_sent_at": str(entry.get("first_sent_at") or ""),
+        "reply_status": str(entry.get("reply_status") or ""),
+        "do_not_resend": bool(entry.get("do_not_resend")),
+    }
+
+
+def _intent_blocked_items(
+    *,
+    lead_production: dict,
+    enriched: dict,
+    review_queue: dict,
+    auto_candidates: dict,
+    sent_events: list[dict],
+) -> list[dict]:
+    out: list[dict] = []
+    sent_emails, sent_domains = _intent_sent_event_keys(sent_events)
+
+    def add(company: str, reason: str, source: str, status: str = "blocked", extra: dict | None = None) -> None:
+        payload = {
+            "company_name": company or "-",
+            "reason": reason or "-",
+            "source": source,
+            "status": status,
+        }
+        if extra:
+            payload.update(extra)
+        out.append(payload)
+
+    for lead in lead_production.get("leads") or []:
+        company = str(lead.get("company_name") or "")
+        status = str(lead.get("status") or "")
+        if status in ("already_contacted", "discard"):
+            add(company, str(lead.get("duplicate_reason") or status), "intent_lead_production", status)
+            continue
+        email = str(lead.get("email") or "").strip().lower()
+        domain = _intent_domain_from_url(str(lead.get("website") or ""))
+        if (email and email in sent_emails) or (domain and domain in sent_domains):
+            add(company, "sent_or_already_contacted", "sent_log", "already_contacted")
+
+    for lead in enriched.get("enriched_leads") or []:
+        company = str(lead.get("company_name") or "")
+        if lead.get("rejected_email") or lead.get("rejected_email_reason"):
+            add(company, str(lead.get("rejected_email_reason") or "rejected_email"), "intent_enriched_leads", "rejected_contact", {
+                "rejected_email": str(lead.get("rejected_email") or ""),
+            })
+        if lead.get("rejected_phone") or lead.get("rejected_phone_reason"):
+            add(company, str(lead.get("rejected_phone_reason") or "rejected_phone"), "intent_enriched_leads", "rejected_contact", {
+                "rejected_phone": str(lead.get("rejected_phone") or ""),
+            })
+        if str(lead.get("lead_quality_status") or "") == "discard":
+            add(company, "discard", "intent_enriched_leads", "discard")
+
+    for item in review_queue.get("review_items") or []:
+        if str(item.get("review_status") or "") == "rejected":
+            add(str(item.get("company_name") or ""), "email_candidate_rejected", "intent_email_review_queue", "rejected")
+
+    for cand in auto_candidates.get("candidates") or []:
+        if str(cand.get("auto_send_status") or "") != "auto_eligible":
+            reasons = cand.get("block_reasons") or []
+            add(str(cand.get("company_name") or ""), "; ".join(map(str, reasons)) or "auto_candidate_blocked", "intent_auto_send_candidates", "blocked")
+
+    deduped: list[dict] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for item in out:
+        key = (
+            str(item.get("company_name") or ""),
+            str(item.get("reason") or ""),
+            str(item.get("source") or ""),
+            str(item.get("status") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
+def _intent_operator_queue_payload() -> dict:
+    review_queue = _intent_email_review_queue_payload()
+    verified = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
+    auto_candidates = _safe_read_json(INTENT_AUTO_SEND_CANDIDATES_FILE)
+    enriched = _safe_read_json(INTENT_ENRICHED_LEADS_FILE)
+    lead_production = _safe_read_json(INTENT_LEAD_PRODUCTION_FILE)
+    batch = _safe_read_json(INTENT_BATCH_5_DRY_RUN_REPORT_FILE)
+    bridge = _safe_read_json(INTENT_TO_OUTREACH_BRIDGE_REPORT_FILE)
+    pipeline_entries = _load_pipeline()
+    sent_events = _load_sent_events()
+
+    review_items = list(review_queue.get("review_items") or [])
+    verified_leads = list(verified.get("verified_leads") or [])
+    candidates = list(auto_candidates.get("candidates") or [])
+    pipeline_items = [_intent_pipeline_item(e) for e in pipeline_entries]
+
+    pipeline_counts = {
+        "ready": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "ready"),
+        "approved_pending_send": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "approved_pending_send"),
+        "sent": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "sent"),
+        "replied": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "replied"),
+        "followup_1": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "followup_1"),
+        "followup_2": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "followup_2"),
+        "lost": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "lost"),
+        "won": sum(1 for i in pipeline_items if i["pipeline_bucket"] == "won"),
+    }
+    blocked_items = _intent_blocked_items(
+        lead_production=lead_production,
+        enriched=enriched,
+        review_queue=review_queue,
+        auto_candidates=auto_candidates,
+        sent_events=sent_events,
+    )
+    search_status = str(batch.get("search_status") or batch.get("status") or "")
+    sync_status = str(bridge.get("sync_status") or "")
+    warnings = []
+    if "blocked" in search_status.lower():
+        warnings.append("search_blocked")
+    if sync_status and sync_status not in ("synced", "dry_run_no_write", "no_import"):
+        warnings.append("pipeline_sync_not_ok")
+
+    today = time.strftime("%Y-%m-%d")
+    sent_today_total = sum(
+        1 for ev in sent_events
+        if isinstance(ev, dict)
+        and ev.get("ok") is True
+        and str(ev.get("kind") or "").startswith(("first", "followup"))
+        and str(ev.get("ts") or "").startswith(today)
+    )
+    pending_review = sum(1 for i in review_items if str(i.get("review_status") or "pending") == "pending")
+    auto_eligible = sum(1 for c in candidates if str(c.get("auto_send_status") or "") == "auto_eligible")
+
+    return {
+        "available": True,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_sources": {
+            "review_queue": str(INTENT_EMAIL_REVIEW_QUEUE_FILE),
+            "verified_leads": str(INTENT_VERIFIED_LEADS_FILE),
+            "auto_send_candidates": str(INTENT_AUTO_SEND_CANDIDATES_FILE),
+            "enriched_leads": str(INTENT_ENRICHED_LEADS_FILE),
+            "lead_production": str(INTENT_LEAD_PRODUCTION_FILE),
+            "canonical_pipeline": str(PIPELINE_JSON),
+            "canonical_sent_log": str(SENT_LOG_JSON),
+            "batch_5_dry_run_report": str(INTENT_BATCH_5_DRY_RUN_REPORT_FILE),
+            "bridge_report": str(INTENT_TO_OUTREACH_BRIDGE_REPORT_FILE),
+        },
+        "health": {
+            "search_status": search_status or "unknown",
+            "canonical_pipeline_file": str(PIPELINE_JSON),
+            "pipeline_sync_status": sync_status or "unknown",
+            "sent_today_total": sent_today_total,
+            "pending_review_count": pending_review,
+            "verified_count": len(verified_leads),
+            "auto_eligible_count": auto_eligible,
+            "approved_pending_send_count": pipeline_counts["approved_pending_send"],
+            "sent_count": pipeline_counts["sent"],
+            "warnings": warnings,
+        },
+        "counts": {
+            "pending_review": pending_review,
+            "verified": len(verified_leads),
+            "auto_eligible": auto_eligible,
+            "ready": pipeline_counts["ready"],
+            "approved_pending_send": pipeline_counts["approved_pending_send"],
+            "sent": pipeline_counts["sent"],
+            "blocked_rejected_already_contacted": len(blocked_items),
+        },
+        "needs_email_review": review_items,
+        "manually_verified": verified_leads,
+        "auto_send_candidates": candidates,
+        "outreach_pipeline": {
+            "canonical_pipeline_file": str(PIPELINE_JSON),
+            "counts": pipeline_counts,
+            "items": pipeline_items,
+        },
+        "blocked_rejected_already_contacted": blocked_items,
+        "safety": {
+            "read_only": True,
+            "no_email_sending": True,
+            "no_smtp": True,
+            "canonical_pipeline_only": True,
+        },
+    }
+
+
+def _premium_status_tier(status: str) -> str:
+    status = (status or "").strip()
+    return {
+        "signal_ready_company_resolved": "A",
+        "signal_needs_website_resolution": "B",
+        "signal_needs_manual_review": "C",
+        "blocked_signal": "D",
+    }.get(status, "C")
+
+
+def _premium_signal_vm(row: dict) -> dict:
+    status = str(row.get("status") or "").strip()
+    return {
+        "id": str(row.get("signal_id") or row.get("signal_source_url") or row.get("raw_url") or ""),
+        "tier": _premium_status_tier(status),
+        "status": status,
+        "title": str(row.get("signal_title") or row.get("extracted_job_title") or row.get("raw_title") or ""),
+        "company": str(row.get("extracted_company_name") or ""),
+        "website": str(row.get("extracted_company_website") or ""),
+        "source": str(row.get("signal_source_domain") or row.get("source_type") or ""),
+        "source_type": str(row.get("source_type") or ""),
+        "keyword": str(row.get("job_role_category") or row.get("industry_query") or ""),
+        "city": str(row.get("city") or row.get("extracted_location") or ""),
+        "industry": str(row.get("industry_query") or ""),
+        "url": str(row.get("signal_source_url") or row.get("raw_url") or ""),
+        "score": str(row.get("signal_score") or ""),
+        "duplicate_status": str(row.get("duplicate_status") or ""),
+        "already_contacted": bool(row.get("already_contacted") is True),
+        "next_action": str(row.get("next_action") or ""),
+        "drop_reason": str(row.get("drop_reason") or ""),
+    }
+
+
+def _premium_lead_vm(row: dict) -> dict:
+    return {
+        "company": str(row.get("company_name") or ""),
+        "website": str(row.get("website") or ""),
+        "name": str(row.get("decision_maker_name") or ""),
+        "role": str(row.get("decision_maker_role") or ""),
+        "email": str(row.get("personal_email_candidate") or row.get("personal_email") or row.get("generic_email") or ""),
+        "verified": bool(row.get("personal_email_verified") is True),
+        "status": str(row.get("lead_quality_status") or row.get("review_status") or ""),
+        "next_action": str(row.get("next_action") or row.get("recommended_decision") or ""),
+        "signal": str(row.get("intent_signal_title") or ""),
+        "signal_url": str(row.get("intent_signal_source_url") or ""),
+        "missing": list(row.get("missing_fields") or []),
+        "risk_flags": list(row.get("risk_flags") or []),
+    }
+
+
+def _premium_source_counts(signals: list[dict]) -> list[dict]:
+    counts: dict[str, int] = {}
+    for item in signals:
+        source = str(item.get("source") or item.get("source_type") or "unknown").strip() or "unknown"
+        counts[source] = counts.get(source, 0) + 1
+    return [{"source": k, "count": v} for k, v in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))]
+
+
+def _premium_dashboard_payload() -> dict:
+    signal_payload = _safe_read_json(SIGNAL_SOURCE_HARVEST_POOL_FILE)
+    review_queue = _intent_email_review_queue_payload()
+    verified_payload = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
+    auto_payload = _safe_read_json(INTENT_AUTO_SEND_CANDIDATES_FILE)
+    enriched_payload = _safe_read_json(INTENT_ENRICHED_LEADS_FILE)
+    reply_queue = _safe_read_json(REPLY_QUEUE_JSON)
+    reply_events = _safe_read_json(REPLY_EVENTS_JSON)
+    sent_payload = _safe_read_json(SENT_LOG_JSON)
+    pipeline_items = [_intent_pipeline_item(e) for e in _load_pipeline()]
+
+    signals = [_premium_signal_vm(row) for row in list(signal_payload.get("signals") or []) if isinstance(row, dict)]
+    review_items = list(review_queue.get("review_items") or [])
+    verified_leads = list(verified_payload.get("verified_leads") or [])
+    auto_candidates = list(auto_payload.get("candidates") or [])
+    enriched_leads = list(enriched_payload.get("enriched_leads") or [])
+    sent_events = _load_sent_events()
+    replies = _load_replies()
+
+    sent_companies = {
+        str(ev.get("company_name") or ev.get("company") or "").strip().casefold()
+        for ev in sent_events
+        if isinstance(ev, dict)
+    }
+    safe_auto_candidates = [
+        c for c in auto_candidates
+        if str(c.get("company_name") or "").strip().casefold() not in sent_companies
+    ]
+
+    tier_counts = {tier: sum(1 for s in signals if s.get("tier") == tier) for tier in ("A", "B", "C", "D")}
+    pattern_review = sum(
+        1 for item in review_items
+        if str(item.get("personal_email_source_type") or item.get("source_type") or "").strip() == "pattern_candidate"
+        or (item.get("personal_email_verified") is not True and str(item.get("personal_email_candidate") or ""))
+    )
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_sources": {
+            "signal_source_harvest_pool": str(SIGNAL_SOURCE_HARVEST_POOL_FILE),
+            "intent_email_review_queue": str(INTENT_EMAIL_REVIEW_QUEUE_FILE),
+            "intent_verified_leads": str(INTENT_VERIFIED_LEADS_FILE),
+            "intent_auto_send_candidates": str(INTENT_AUTO_SEND_CANDIDATES_FILE),
+            "intent_enriched_leads": str(INTENT_ENRICHED_LEADS_FILE),
+            "canonical_pipeline": str(PIPELINE_JSON),
+            "canonical_sent_log": str(SENT_LOG_JSON),
+            "reply_queue": str(REPLY_QUEUE_JSON),
+            "reply_events": str(REPLY_EVENTS_JSON),
+        },
+        "counts": {
+            "signals": len(signals),
+            "signal_A": tier_counts["A"],
+            "signal_B": tier_counts["B"],
+            "signal_C": tier_counts["C"],
+            "signal_D": tier_counts["D"],
+            "review_items": len(review_items),
+            "pattern_review": pattern_review,
+            "verified": len(verified_leads),
+            "auto_candidates_not_sent": len(safe_auto_candidates),
+            "enriched": len(enriched_leads),
+            "pipeline": len(pipeline_items),
+            "sent": len(sent_events),
+            "replies": len(replies),
+        },
+        "signals": signals,
+        "sources": _premium_source_counts(signals),
+        "email_review": review_items,
+        "verified_leads": [_premium_lead_vm(row) for row in verified_leads],
+        "auto_send_candidates": [_premium_lead_vm(row) for row in safe_auto_candidates],
+        "enriched_leads": [_premium_lead_vm(row) for row in enriched_leads],
+        "pipeline": {
+            "canonical_pipeline_file": str(PIPELINE_JSON),
+            "items": pipeline_items,
+        },
+        "sent_events": sent_events[-100:],
+        "reply_queue": reply_queue,
+        "reply_events": reply_events,
+        "replies": [_reply_summary(r) for r in replies],
+        "safety": {
+            "read_only": True,
+            "no_smtp": True,
+            "no_send": True,
+            "canonical_pipeline_only": True,
+            "sent_leads_not_ready": True,
+            "pattern_emails_require_review": True,
+        },
+    }
+
+
+def _claude_data_live_js() -> str:
+    """Generate live data.jsx content from output/latest for the /premium Claude dashboard."""
+    try:
+        d = _premium_dashboard_payload()
+    except Exception:
+        d = {}
+    counts = d.get("counts") or {}
+    signals_raw = list(d.get("signals") or [])
+    leads_raw = list(d.get("enriched_leads") or []) + list(d.get("verified_leads") or [])
+    replies_raw = list(d.get("replies") or [])
+    sources_raw = list(d.get("sources") or [])
+
+    n_signals = int(counts.get("signals") or 0)
+    n_enriched = int(counts.get("enriched") or 0)
+    n_review   = int(counts.get("review_items") or 0)
+    n_ready    = int(counts.get("auto_candidates_not_sent") or 0)
+    n_sent     = int(counts.get("sent") or 0)
+    n_replies  = int(counts.get("replies") or 0)
+
+    def _spark(n):
+        if n <= 0:
+            return [0] * 10
+        step = max(1, n // 10)
+        return [max(0, n - step * (9 - i)) for i in range(10)]
+
+    kpis = [
+        {"key": "signals",  "label": "Signale erfasst",    "value": n_signals,  "delta": f"Tier A: {counts.get('signal_A', 0)}", "trend": "up",                              "color": "violet", "spark": _spark(n_signals)},
+        {"key": "enriched", "label": "Leads angereichert", "value": n_enriched, "delta": f"+{n_enriched}",                        "trend": "up",                              "color": "blue",   "spark": _spark(n_enriched)},
+        {"key": "review",   "label": "Prüfung ausstehend", "value": n_review,   "delta": f"{n_review} offen",                     "trend": "up" if n_review > 0 else "flat",  "color": "yellow", "spark": _spark(n_review)},
+        {"key": "ready",    "label": "Versandbereit",      "value": n_ready,    "delta": f"{n_ready}",                            "trend": "up",                              "color": "green",  "spark": _spark(n_ready)},
+        {"key": "sent",     "label": "Versendet",          "value": n_sent,     "delta": f"{n_sent}",                             "trend": "up",                              "color": "accent", "spark": _spark(n_sent)},
+        {"key": "replies",  "label": "Antworten",          "value": n_replies,  "delta": f"{n_replies}",                          "trend": "up" if n_replies > 0 else "flat", "color": "red",    "spark": _spark(n_replies)},
+    ]
+    stages = [
+        {"name": "Erkennung",    "num": n_signals,  "sub": "Rohsignale",    "active": False},
+        {"name": "Anreicherung", "num": n_enriched, "sub": "in Pipeline",   "active": False},
+        {"name": "Prüfung",      "num": n_review,   "sub": "ausstehend",    "active": True},
+        {"name": "Freigegeben",  "num": n_ready,    "sub": "versandbereit", "active": False},
+        {"name": "Versendet",    "num": n_sent,     "sub": "insgesamt",     "active": False},
+    ]
+
+    tier_score = {"A": 90, "B": 75, "C": 55, "D": 30}
+    mapped_signals = []
+    for i, s in enumerate(signals_raw[:20]):
+        tier = str(s.get("tier") or "C")
+        score_raw = s.get("score") or ""
+        try:
+            score = int(score_raw)
+        except Exception:
+            score = tier_score.get(tier, 50)
+        mapped_signals.append({
+            "id":      s.get("id") or f"s-{i}",
+            "title":   str(s.get("title") or ""),
+            "company": str(s.get("company") or ""),
+            "sector":  str(s.get("industry") or s.get("keyword") or ""),
+            "tier":    tier,
+            "source":  str(s.get("source") or ""),
+            "score":   score,
+            "keyword": str(s.get("keyword") or ""),
+            "time":    str(s.get("city") or ""),
+        })
+    if not mapped_signals:
+        mapped_signals = [{"id": "s-0", "title": "Keine Signale geladen", "company": "—", "sector": "—",
+                           "tier": "C", "source": "—", "score": 0, "keyword": "—", "time": "—"}]
+
+    av_colors = ["av-5", "av-3", "av-6", "av-2", "av-4", "av-1"]
+    mapped_sources = []
+    for i, s in enumerate(sources_raw[:6]):
+        name = str(s.get("source") or "Unbekannt")
+        cnt  = int(s.get("count") or 0)
+        mapped_sources.append({
+            "name": name, "abbr": name[:2].upper(),
+            "harvested": cnt, "conv": round(cnt * 0.15, 1),
+            "color": av_colors[i % len(av_colors)],
+        })
+    if not mapped_sources:
+        mapped_sources = [{"name": "Quellen", "abbr": "QU", "harvested": n_signals, "conv": 15.0, "color": "av-5"}]
+
+    seen_leads: set = set()
+    mapped_leads = []
+    status_map = {
+        "ready_for_approval": "needs-review",
+        "approved": "approved",
+        "verified": "verified",
+        "rejected": "rejected",
+        "blocked":  "blocked",
+    }
+    for i, l in enumerate(leads_raw):
+        key = (str(l.get("company") or ""), str(l.get("name") or ""))
+        if key in seen_leads:
+            continue
+        seen_leads.add(key)
+        if len(mapped_leads) >= 20:
+            break
+        name    = str(l.get("name") or "")
+        company = str(l.get("company") or "")
+        inits   = "".join(p[0] for p in name.split()[:2]) if name else (company[:2].upper() if company else "??")
+        status  = str(l.get("status") or "needs-review")
+        mapped_leads.append({
+            "id": f"l-{i}", "company": company,
+            "website":  str(l.get("website") or ""),
+            "name":     name,
+            "role":     str(l.get("role") or ""),
+            "email":    str(l.get("email") or "—"),
+            "quality":  4 if l.get("verified") else 3,
+            "tier":     "A" if l.get("verified") else "B",
+            "missing":  list(l.get("missing") or []),
+            "status":   status_map.get(status, "needs-review"),
+            "reviewer": "—",
+            "initials": inits,
+            "avatar":   f"av-{(i % 8) + 1}",
+            "signal":   str(l.get("signal") or ""),
+            "city": "", "phone": "—",
+        })
+    if not mapped_leads:
+        mapped_leads = [{"id": "l-0", "company": "Keine Leads", "website": "—", "name": "—", "role": "—",
+                         "email": "—", "quality": 0, "tier": "C", "missing": [], "status": "needs-review",
+                         "reviewer": "—", "initials": "??", "avatar": "av-1", "signal": "—", "city": "—", "phone": "—"}]
+
+    mapped_replies = []
+    cat_map = {"interested": "positive", "positive": "positive", "negative": "negative",
+               "auto_reply": "auto", "auto": "auto", "ooo": "auto"}
+    for i, r in enumerate(replies_raw[:10]):
+        name    = str(r.get("from_name") or r.get("contact_name") or "")
+        company = str(r.get("company_name") or "")
+        inits   = "".join(p[0] for p in name.split()[:2]) if name else (company[:2].upper() if company else "??")
+        cat = cat_map.get(str(r.get("category") or r.get("intent") or "").lower(), "human-review")
+        try:
+            conf = int(r.get("confidence") or r.get("intent_score") or 80)
+        except Exception:
+            conf = 80
+        mapped_replies.append({
+            "id":         str(r.get("entry_key") or f"r-{i}"),
+            "from":       str(r.get("from_email") or r.get("reply_from") or ""),
+            "name":       name or company,
+            "company":    company,
+            "subject":    str(r.get("subject") or ""),
+            "category":   cat,
+            "confidence": conf,
+            "preview":    str(r.get("body_snippet") or r.get("preview") or ""),
+            "time":       str(r.get("received_at") or ""),
+            "initials":   inits,
+            "avatar":     f"av-{(i % 8) + 1}",
+        })
+
+    data = {
+        "kpis": kpis, "stages": stages,
+        "signals": mapped_signals, "sources": mapped_sources,
+        "blocked": [], "leads": mapped_leads, "replies": mapped_replies,
+    }
+    ts = datetime.now(timezone.utc).isoformat()
+    return (
+        f"// Live-Daten generiert: {ts}\n"
+        f"const DATA = {json.dumps(data, ensure_ascii=False, default=str)};\n"
+        "function avatarClass(seed) {\n"
+        "  const k = ((seed.charCodeAt(0) || 0) + (seed.charCodeAt(1) || 0)) % 8 + 1;\n"
+        "  return 'av-' + k;\n"
+        "}\n"
+        "window.DATA = DATA;\n"
+        "window.avatarClass = avatarClass;\n"
+    )
+
+
+def _recount_intent_email_review_queue(queue: dict) -> dict:
+    items = list(queue.get("review_items") or [])
+    queue["review_items_created"] = len(items)
+    queue["pending"] = sum(1 for i in items if i.get("review_status") == "pending")
+    queue["rejected"] = sum(1 for i in items if i.get("review_status") == "rejected")
+    verified_data = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
+    queue["verified_existing"] = len(verified_data.get("verified_leads") or [])
+    return queue
+
+
+def _verified_lead_from_review_item(item: dict) -> dict:
+    return {
+        "review_id": str(item.get("review_id") or ""),
+        "company_name": str(item.get("company_name") or ""),
+        "website": str(item.get("website") or ""),
+        "decision_maker_name": str(item.get("decision_maker_name") or ""),
+        "decision_maker_role": str(item.get("decision_maker_role") or ""),
+        "personal_email": str(item.get("personal_email_candidate") or ""),
+        "personal_email_candidate": str(item.get("personal_email_candidate") or ""),
+        "personal_email_verified": True,
+        "generic_email": str(item.get("generic_email") or ""),
+        "phone": str(item.get("phone") or ""),
+        "intent_signal_title": str(item.get("intent_signal_title") or ""),
+        "intent_signal_source_url": str(item.get("intent_signal_source_url") or ""),
+        "email_subject": str(item.get("email_subject") or ""),
+        "email_body": str(item.get("email_body") or ""),
+        "followup_1": str(item.get("followup_1") or ""),
+        "followup_2": str(item.get("followup_2") or ""),
+        "lead_quality_status": "ready_for_approval",
+        "next_action": "approve_for_send",
+        "ready_for_approval": True,
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "verification_method": "manual_dashboard_review",
+    }
+
+
+def _apply_intent_email_review_decision(review_id: str, decision: str) -> tuple[dict, int]:
+    review_id = (review_id or "").strip()
+    decision = (decision or "").strip().lower()
+    if not review_id:
+        return {"error": "review_id_required"}, 400
+    if decision not in ("verified", "rejected"):
+        return {"error": "decision_invalid"}, 400
+
+    queue = _safe_read_json(INTENT_EMAIL_REVIEW_QUEUE_FILE)
+    items = list(queue.get("review_items") or [])
+    item = next((i for i in items if str(i.get("review_id") or "") == review_id), None)
+    if not item:
+        return {"error": "review_item_not_found"}, 404
+
+    now = datetime.now(timezone.utc).isoformat()
+    item["decided_at"] = now
+    item["decision_source"] = "dashboard_manual_review"
+    if decision == "verified":
+        item["review_status"] = "verified"
+        item["recommended_decision"] = "verified"
+        item["personal_email_verified"] = True
+        item["lead_quality_status"] = "ready_for_approval"
+        item["next_action"] = "approve_for_send"
+
+        verified = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
+        verified_leads = list(verified.get("verified_leads") or [])
+        vlead = _verified_lead_from_review_item(item)
+        existing_idx = next((idx for idx, lead in enumerate(verified_leads)
+                             if str(lead.get("review_id") or "") == review_id), None)
+        if existing_idx is None:
+            verified_leads.append(vlead)
+        else:
+            verified_leads[existing_idx] = vlead
+        verified.update({
+            "status": "ok",
+            "updated_at": now,
+            "verified_existing": len(verified_leads),
+            "ready_for_approval": len(verified_leads),
+            "verified_leads": verified_leads,
+            "safety": {
+                "no_email_sending": True,
+                "no_smtp_verification": True,
+                "no_pipeline_integration": True,
+            },
+        })
+        _safe_write_json(INTENT_VERIFIED_LEADS_FILE, verified)
+    else:
+        item["review_status"] = "rejected"
+        item["recommended_decision"] = "reject"
+        item["personal_email_verified"] = False
+        item["lead_quality_status"] = "discard"
+        item["next_action"] = "discard_email_candidate"
+        verified = _safe_read_json(INTENT_VERIFIED_LEADS_FILE)
+        verified_leads = [
+            lead for lead in list(verified.get("verified_leads") or [])
+            if str(lead.get("review_id") or "") != review_id
+        ]
+        verified.update({
+            "status": "ok",
+            "updated_at": now,
+            "verified_existing": len(verified_leads),
+            "ready_for_approval": len(verified_leads),
+            "verified_leads": verified_leads,
+            "safety": {
+                "no_email_sending": True,
+                "no_smtp_verification": True,
+                "no_pipeline_integration": True,
+            },
+        })
+        _safe_write_json(INTENT_VERIFIED_LEADS_FILE, verified)
+
+    queue["status"] = "ok"
+    queue["updated_at"] = now
+    queue["review_items"] = items
+    queue.setdefault("safety", {})
+    queue["safety"].update({
+        "no_email_sending": True,
+        "no_smtp_verification": True,
+        "no_pipeline_integration": True,
+    })
+    queue = _recount_intent_email_review_queue(queue)
+    _safe_write_json(INTENT_EMAIL_REVIEW_QUEUE_FILE, queue)
+    return {"ok": True, "decision": decision, "item": item, "queue": queue}, 200
 
 
 def _intent_preview_payload() -> dict:
@@ -885,7 +1631,7 @@ def _stats() -> dict:
 
     # LinkedIn-Pipeline-KPIs
     li_todo = sum(1 for e in p if (e.get("linkedin_status") or "todo") == "todo"
-                  and (e.get("contact_quality_score") or e.get("score") or 0))
+                  and bool(e.get("company_name") or e.get("company")))
     li_progress = sum(1 for e in p if (e.get("linkedin_status") or "")
                       in ("found", "connect_sent", "connected", "dm_sent"))
     li_replied = sum(1 for e in p if (e.get("linkedin_status") or "")
@@ -954,6 +1700,134 @@ def _reply_summary(r: dict) -> dict:
     }
 
 
+def _sent_log_index(events: list[dict]) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for ev in events:
+        if not isinstance(ev, dict) or ev.get("ok") is not True:
+            continue
+        em = str(ev.get("to") or ev.get("email") or "").strip().lower()
+        if em and em not in out:
+            out[em] = ev
+        sid = str(ev.get("sent_log_id") or "").strip()
+        if sid and sid not in out:
+            out[sid] = ev
+    return out
+
+
+def _reply_operator_item(r: dict, pipeline_by_key: dict[str, dict], pipeline_by_email: dict[str, dict], sent_idx: dict[str, dict]) -> dict:
+    from_email = str(r.get("from_email") or "").strip().lower()
+    actual = str(r.get("from_email_actual") or from_email).strip().lower()
+    entry_key = str(r.get("entry_key") or "").strip()
+    sent_log_id = str(r.get("sent_log_id") or "").strip()
+    entry = pipeline_by_key.get(entry_key) or pipeline_by_email.get(from_email) or pipeline_by_email.get(actual) or {}
+    sent_ev = sent_idx.get(sent_log_id) or sent_idx.get(from_email) or sent_idx.get(actual) or {}
+    source = "pipeline" if entry else ("sent_log" if sent_ev or "sent_log" in str(r.get("reason") or "") else "unmatched")
+    is_auto = bool(r.get("is_auto_reply"))
+    cls = str(r.get("inbound_class") or r.get("sentiment") or "unclear").strip().lower()
+    sentiment = str(r.get("sentiment") or "").strip().lower()
+    reason = str(r.get("reason") or "").strip()
+    appointment = bool(r.get("appointment_ready")) and not is_auto
+    is_positive = (cls in ("positive", "interested") or sentiment == "positive" or appointment) and not is_auto
+    is_negative = cls == "negative" or sentiment == "negative" or "do_not_contact" in reason
+    if is_auto:
+        group = "auto_replies"
+        suggested = "ignore_auto_reply"
+    elif is_negative:
+        group = "negative_do_not_contact"
+        suggested = "mark_do_not_contact"
+    elif is_positive or appointment:
+        group = "positive_appointment_ready"
+        suggested = "human_follow_up"
+    elif source == "unmatched" or cls in ("unclear", ""):
+        group = "unmatched_unclear"
+        suggested = "review_match"
+    else:
+        group = "human_review"
+        suggested = "review_manually"
+    company = str(entry.get("company_name") or sent_ev.get("company_name") or "").strip()
+    return {
+        "key": entry_key or str(r.get("message_id") or ""),
+        "message_id": str(r.get("message_id") or ""),
+        "from_email": from_email,
+        "from_email_actual": actual,
+        "matched_company": company,
+        "matched_entry_source": source,
+        "matched_entry_key": entry_key,
+        "received_account": str(r.get("received_account") or ""),
+        "subject": str(r.get("inbound_subject") or r.get("subject") or ""),
+        "date": str(r.get("received_at") or r.get("ts") or r.get("sent_at") or ""),
+        "inbound_class": cls or "unclear",
+        "sentiment": sentiment or ("neutral" if is_auto else ""),
+        "route": str(r.get("route") or ""),
+        "needs_approval": bool(r.get("needs_approval")),
+        "appointment_ready": appointment,
+        "is_auto_reply": is_auto,
+        "reason": reason,
+        "suggested_action": suggested,
+        "body_preview": str(r.get("inbound_snippet") or r.get("body") or r.get("snippet") or "")[:500],
+        "original_sent_email": str(sent_ev.get("to") or entry.get("email") or from_email),
+        "original_company": company,
+        "auto_reply_reason": str(r.get("auto_reply_reason") or ""),
+        "group": group,
+        "can_classify": bool(entry_key and entry),
+        "not_hot": bool(is_auto),
+    }
+
+
+def _reply_operator_queue_payload() -> dict:
+    os.environ["REPLY_AUTO_SEND"] = "false"
+    replies = _load_replies()
+    pipeline = _load_pipeline()
+    sent_events = _load_sent_events()
+    pipeline_by_key = {str(e.get("entry_key") or ""): e for e in pipeline if isinstance(e, dict) and e.get("entry_key")}
+    pipeline_by_email = {
+        str(e.get("email") or "").strip().lower(): e
+        for e in pipeline
+        if isinstance(e, dict) and str(e.get("email") or "").strip()
+    }
+    sent_idx = _sent_log_index(sent_events)
+    items = [_reply_operator_item(r, pipeline_by_key, pipeline_by_email, sent_idx) for r in replies if isinstance(r, dict)]
+    groups = {
+        "positive_appointment_ready": [i for i in items if i["group"] == "positive_appointment_ready"],
+        "human_review": [i for i in items if i["group"] == "human_review"],
+        "auto_replies": [i for i in items if i["group"] == "auto_replies"],
+        "negative_do_not_contact": [i for i in items if i["group"] == "negative_do_not_contact"],
+        "unmatched_unclear": [i for i in items if i["group"] == "unmatched_unclear"],
+    }
+    positive = len(groups["positive_appointment_ready"])
+    auto = len(groups["auto_replies"])
+    appointment = sum(1 for i in items if i.get("appointment_ready"))
+    return {
+        "available": True,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_sources": {
+            "reply_queue": str(REPLY_QUEUE_JSON),
+            "reply_events": str(OUT / "reply_events.json"),
+            "canonical_pipeline": str(PIPELINE_JSON),
+            "canonical_sent_log": str(SENT_LOG_JSON),
+        },
+        "safety": {
+            "reply_auto_send": os.environ.get("REPLY_AUTO_SEND", "false"),
+            "auto_sent": 0,
+            "no_smtp": True,
+            "no_send_email": True,
+            "read_only": True,
+        },
+        "counts": {
+            "reply_queue_pending": len(items),
+            "positive_count": positive,
+            "auto_reply_count": auto,
+            "appointment_ready_count": appointment,
+            "sent_log_only_count": sum(1 for i in items if i.get("matched_entry_source") == "sent_log"),
+            "human_review_count": len(groups["human_review"]),
+            "negative_count": len(groups["negative_do_not_contact"]),
+            "unmatched_unclear_count": len(groups["unmatched_unclear"]),
+        },
+        "groups": groups,
+        "items": items,
+    }
+
+
 # ── HTTP-Handler ─────────────────────────────────────────────────────────────
 
 class Handler(BaseHTTPRequestHandler):
@@ -980,13 +1854,331 @@ class Handler(BaseHTTPRequestHandler):
             return {}
 
     def do_GET(self):
+
+        # >>> PREMIUM_STATIC_ROUTE_PATCH_V1
+
+        # Serve design_reference exactly like: cd design_reference && python -m http.server
+
+        try:
+
+            import urllib.parse as _premium_urlparse
+
+            import mimetypes as _premium_mimetypes
+
+            from pathlib import Path as _PremiumPath
+
+        
+
+            _premium_path = _premium_urlparse.urlparse(self.path).path
+
+        
+
+            if _premium_path == "/premium":
+
+                self.send_response(302)
+
+                self.send_header("Location", "/premium/")
+
+                self.end_headers()
+
+                return
+
+        
+
+            if _premium_path == "/premium/linkedin-report":
+
+                _li_file = _PremiumPath(__file__).resolve().parent / "linkedin_bot" / "output" / "linkedin_outreach.html"
+
+                if _li_file.exists():
+
+                    _li_data = _li_file.read_bytes()
+
+                else:
+
+                    _li_data = b"<html><head><meta charset='utf-8'><title>LinkedIn</title></head><body style='font-family:sans-serif;padding:40px'><h2>LinkedIn-Report noch nicht erzeugt.</h2><p>Starte den LinkedIn-Bot, um einen Report zu erzeugen.</p></body></html>"
+
+                self.send_response(200)
+
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+
+                self.send_header("Cache-Control", "no-store")
+
+                self.end_headers()
+
+                self.wfile.write(_li_data)
+
+                return
+
+
+
+            if _premium_path == "/premium/workspace":
+
+                _ws_file = _PremiumPath(__file__).resolve().parent / "output" / "latest" / "client_report.html"
+
+                if not _ws_file.exists():
+
+                    _ws_file = _PremiumPath(__file__).resolve().parent / "output" / "latest" / "00_Client_Acquisition_Report.html"
+
+                if _ws_file.exists():
+
+                    _ws_data = _ws_file.read_bytes()
+
+                else:
+
+                    _ws_data = b"<html><head><meta charset='utf-8'><title>Arbeitsbereich</title></head><body style='font-family:sans-serif;padding:40px'><h2>Kein Report vorhanden.</h2><p>output/latest/client_report.html nicht gefunden.</p></body></html>"
+
+                self.send_response(200)
+
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+
+                self.send_header("Cache-Control", "no-store")
+
+                self.end_headers()
+
+                self.wfile.write(_ws_data)
+
+                return
+
+
+
+            if _premium_path.startswith("/premium/"):
+
+                _premium_base = (_PremiumPath(__file__).resolve().parent / "design_reference").resolve()
+
+                _premium_rel = _premium_path[len("/premium/"):] or "index.html"
+
+                _premium_target = (_premium_base / _premium_rel).resolve()
+
+        
+
+                if _premium_target != _premium_base and _premium_base not in _premium_target.parents:
+
+                    self.send_response(403)
+
+                    self.end_headers()
+
+                    self.wfile.write(b"Forbidden")
+
+                    return
+
+        
+
+                if _premium_target.is_dir():
+
+                    _premium_target = _premium_target / "index.html"
+
+        
+
+                if not _premium_target.exists() or not _premium_target.is_file():
+
+                    self.send_response(404)
+
+                    self.end_headers()
+
+                    self.wfile.write(b"Not found")
+
+                    return
+
+        
+
+        
+
+                _premium_data = _premium_target.read_bytes()
+
+                _premium_ct = _premium_mimetypes.guess_type(str(_premium_target))[0] or "application/octet-stream"
+
+        
+
+                if _premium_target.suffix == ".jsx":
+
+                    _premium_ct = "text/javascript; charset=utf-8"
+
+                elif _premium_target.suffix == ".js":
+
+                    _premium_ct = "text/javascript; charset=utf-8"
+
+                elif _premium_target.suffix == ".css":
+
+                    _premium_ct = "text/css; charset=utf-8"
+
+                elif _premium_target.suffix == ".html":
+
+                    _premium_ct = "text/html; charset=utf-8"
+
+                    # Swap mock data.jsx for live-data loader so /premium shows real bot data
+
+                    _premium_data = _premium_data.replace(b'src="data.jsx"', b'src="data-live.jsx"')
+
+
+
+                self.send_response(200)
+
+                self.send_header("Content-Type", _premium_ct)
+
+                self.send_header("Cache-Control", "no-store")
+
+                self.end_headers()
+
+                self.wfile.write(_premium_data)
+
+                return
+
+        except Exception as _premium_exc:
+
+            try:
+
+                if str(getattr(self, "path", "")).startswith("/premium"):
+
+                    self.send_response(500)
+
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+
+                    self.end_headers()
+
+                    self.wfile.write(("Premium route error: " + repr(_premium_exc)).encode("utf-8"))
+
+                    return
+
+            except Exception:
+
+                pass
+
+        # <<< PREMIUM_STATIC_ROUTE_PATCH_V1
+
         raw_path = urlparse(self.path).path.strip()
         p = raw_path.rstrip("/") if raw_path != "/" else raw_path
         if not p:
             p = "/"
         try:
+            if p in ("/relay", "/relay.html"):
+                relay_file = ROOT / "dashboard_relay_premium.html"
+                if relay_file.exists():
+                    return self._send(200, relay_file.read_text(encoding="utf-8").encode("utf-8"))
+                return self._json({"error": "relay_dashboard_missing"}, 404)
+            if p == "/premium":
+                return self._send(200, CLAUDE_DASHBOARD_HTML.encode("utf-8"))
+            if p.startswith("/dr/"):
+                fname = p[4:]
+                if fname and ".." not in fname and "/" not in fname:
+                    dr_file = ROOT / "design_reference" / fname
+                    if dr_file.exists() and dr_file.is_file():
+                        ct = "text/css; charset=utf-8" if fname.endswith(".css") else "application/javascript; charset=utf-8"
+                        return self._send(200, dr_file.read_bytes(), ct)
+                return self._json({"error": "not_found"}, 404)
+            if p == "/api/data-live.jsx":
+                return self._send(200, _claude_data_live_js().encode("utf-8"),
+                                  "application/javascript; charset=utf-8")
             if p in ("/", "/index.html"):
+                # Relay-Dashboard ist das aktive Operator-Cockpit
+                self.send_response(302)
+                self.send_header("Location", "/relay")
+                self.end_headers()
+                return
+            if p in ("/linkedin", "/linkedin.html", "/linkedin/"):
+                return self._send(200, MINIMAL_PREMIUM_HTML.encode("utf-8"))
+            if p in ("/classic", "/classic.html", "/classic/"):
                 return self._send(200, PREMIUM_HTML.encode("utf-8"))
+            if p == "/api/premium/min-leads":
+                _lp = ROOT / "output" / "latest" / "intent_lead_production.json"
+                _op = ROOT / "output" / "latest" / "outreach_pipeline.json"
+                _leads_out = []
+                _source = ""
+                if _lp.exists():
+                    try:
+                        _d = json.loads(_lp.read_text(encoding="utf-8"))
+                        for _L in (_d.get("leads") or []):
+                            _co = str(_L.get("company_name") or "").strip()
+                            _ws = str(_L.get("website") or "").strip()
+                            if _co:
+                                _leads_out.append({"company": _co, "website": _ws})
+                        if _leads_out:
+                            _source = "intent_lead_production"
+                    except Exception:
+                        pass
+                if not _leads_out and _op.exists():
+                    try:
+                        _d = json.loads(_op.read_text(encoding="utf-8"))
+                        _seen = set()
+                        for _e in (_d.get("entries") or []):
+                            _co = str(_e.get("outreach_display_company") or _e.get("company_name_clean") or _e.get("company_name") or "").strip()
+                            _ws = str(_e.get("website") or "").strip()
+                            if not _ws:
+                                _dom = str(_e.get("website_domain") or "").strip()
+                                if _dom:
+                                    _ws = "https://" + _dom
+                            if _co and _co not in _seen:
+                                _seen.add(_co)
+                                _leads_out.append({"company": _co, "website": _ws})
+                        if _leads_out:
+                            _source = "outreach_pipeline"
+                    except Exception:
+                        pass
+                return self._json({"leads": _leads_out, "source": _source})
+            if p == "/api/premium/li-resolve":
+                # Resolves the top Google result for "site:linkedin.com/in NAME COMPANY"
+                # via Serper API. Returns {url} with the actual LinkedIn profile, or
+                # {url: null, fallback_url: googleSearch} when no result found.
+                _qp = urlparse(self.path).query
+                _qs = {}
+                for _kv in _qp.split("&"):
+                    if "=" in _kv:
+                        _k, _v = _kv.split("=", 1)
+                        try:
+                            from urllib.parse import unquote_plus
+                            _qs[_k] = unquote_plus(_v)
+                        except Exception:
+                            _qs[_k] = _v
+                _name = (_qs.get("name") or "").strip()
+                _company = (_qs.get("company") or "").strip()
+                if not _name and not _company:
+                    return self._json({"url": None, "error": "name_or_company_required"}, 400)
+                _key = _read_key_file("serper_key.txt")
+                _query_parts = []
+                if _name: _query_parts.append('"' + _name + '"')
+                if _company: _query_parts.append(_company)
+                _search_q = "site:linkedin.com/in " + " ".join(_query_parts)
+                _fallback_g = "https://www.google.com/search?q=" + quote(_search_q)
+                if not _key:
+                    return self._json({"url": None, "fallback_url": _fallback_g, "reason": "no_serper_key"})
+                try:
+                    import urllib.request as _ur
+                    import urllib.error as _ue
+                    _body = json.dumps({"q": _search_q, "gl": "de", "hl": "de", "num": 5}).encode("utf-8")
+                    _req = _ur.Request(
+                        "https://google.serper.dev/search",
+                        data=_body,
+                        headers={"X-API-KEY": _key, "Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    with _ur.urlopen(_req, timeout=8) as _r:
+                        _sj = json.loads(_r.read().decode("utf-8"))
+                    _hit = None
+                    for _item in (_sj.get("organic") or []):
+                        _u = _item.get("link") or ""
+                        if "linkedin.com/in/" in _u.lower():
+                            _hit = _u
+                            break
+                    if _hit:
+                        return self._json({"url": _hit, "title": (_sj.get("organic") or [{}])[0].get("title", "")})
+                    return self._json({"url": None, "fallback_url": _fallback_g, "reason": "no_li_hit"})
+                except Exception as _ex:
+                    return self._json({"url": None, "fallback_url": _fallback_g, "reason": "serper_error: " + str(_ex)[:120]})
+            if p == "/api/premium/data":
+                _pf = ROOT / "output" / "latest" / "outreach_pipeline.json"
+                _rf = ROOT / "output" / "latest" / "reply_queue.json"
+                _pd: dict = {}
+                _rd: dict = {}
+                if _pf.exists():
+                    try:
+                        _pd = json.loads(_pf.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+                if _rf.exists():
+                    try:
+                        _rd = json.loads(_rf.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+                return self._json({"pipeline": _pd, "replies": _rd})
             if p == "/api/stats":
                 stats = _stats()
                 stats["last_search_started_at"] = _get_last_search_started_at()
@@ -999,6 +2191,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"items": [_lead_summary(e) for e in pipeline], "last_search_started_at": last_search})
             if p == "/api/replies":
                 return self._json({"items": [_reply_summary(r) for r in _load_replies()]})
+            if p == "/api/reply-operator-queue":
+                return self._json(_reply_operator_queue_payload())
             if p == "/api/sent":
                 return self._json({"items": _load_sent_events()[-50:]})
             if p == "/api/jobs":
@@ -1009,6 +2203,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(_intent_preview_payload())
             if p == "/api/intent-lead-production":
                 return self._json(_intent_lead_production_payload())
+            if p == "/api/intent-email-review-queue":
+                return self._json(_intent_email_review_queue_payload())
+            if p == "/api/intent-manual-decision-maker-review":
+                return self._json(_intent_manual_decision_maker_review_payload())
+            if p == "/api/intent-operator-queue":
+                return self._json(_intent_operator_queue_payload())
+            if p == "/api/premium-dashboard":
+                return self._json(_premium_dashboard_payload())
             if p.startswith("/api/job/"):
                 jid = p.rsplit("/", 1)[-1]
                 with _jobs_lock:
@@ -1069,6 +2271,7 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/sync-replies":
                 return self._json({"job_id": _start_job("Replies syncen", [PYTHON, MINE, "--outreach", "sync"])})
             if p == "/api/process-replies":
+                os.environ["REPLY_AUTO_SEND"] = "false"
                 return self._json({"job_id": _start_job("Replies verarbeiten", [PYTHON, MINE, "--outreach", "process-replies"])})
             if p == "/api/preview":
                 return self._json({"job_id": _start_job("Preview generieren", [PYTHON, MINE, "--outreach", "preview"])})
@@ -1124,6 +2327,15 @@ class Handler(BaseHTTPRequestHandler):
                     "requested_limit": raw_limit,
                     "effective_limit": effective_limit,
                 })
+            if p == "/api/intent-email-review/decision":
+                result, code = _apply_intent_email_review_decision(
+                    str(b.get("review_id") or ""),
+                    str(b.get("decision") or ""),
+                )
+                return self._json(result, code)
+            if p == "/api/intent-manual-decision-maker-review/save":
+                result, code = _save_intent_manual_decision_maker_review(b)
+                return self._json(result, code)
 
             if p == "/api/approve-all":
                 lim = int(b.get("limit", 9999) or 9999)
@@ -1400,16 +2612,22 @@ class Handler(BaseHTTPRequestHandler):
                         return False, f"Lead-Suche fehlgeschlagen (exit={rc1}): {err1[-400:]}"
 
                     # Auto-Sync: leads.json → outreach_pipeline.json
-                    _set_progress(72, "sync", "Sync Leads → Pipeline...")
-                    sync_r = subprocess.run(
-                        [PYTHON, MINE, "--outreach", "sync"],
-                        cwd=str(ROOT), capture_output=True,
-                        text=True, encoding="utf-8", errors="replace",
-                        env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8", "LOG_LEVEL": "INFO",
-                             "SERPER_API_KEY": _read_key_file(),
-                             "TAVILY_API_KEY": _read_key_file("tavily_key.txt")},
-                    )
-                    if sync_r.returncode != 0:
+                    _set_progress(72, "sync", "Sync Leads → Pipeline... (max 5 min)")
+                    try:
+                        sync_r = subprocess.run(
+                            [PYTHON, MINE, "--outreach", "sync"],
+                            cwd=str(ROOT), capture_output=True,
+                            text=True, encoding="utf-8", errors="replace",
+                            timeout=300,  # 5 min Hard-Cap — verhindert 72%-Hänger
+                            env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8", "LOG_LEVEL": "INFO",
+                                 "SERPER_API_KEY": _read_key_file(),
+                                 "TAVILY_API_KEY": _read_key_file("tavily_key.txt")},
+                        )
+                    except subprocess.TimeoutExpired:
+                        _log("[warn] LinkedIn-Suche: sync timeout nach 5 min, fahre fort mit Phase 2")
+                        _set_progress(74, "sync", "Sync-Timeout — fahre fort")
+                        sync_r = None
+                    if sync_r is not None and sync_r.returncode != 0:
                         _log(f"[warn] LinkedIn-Suche: sync fehlgeschlagen (exit={sync_r.returncode})")
                     else:
                         # Markiere Leads aus dieser LinkedIn-Suche als source=linkedin
@@ -1492,6 +2710,671 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "unknown"}, 404)
         except Exception as e:
             return self._json({"error": str(e)}, 500)
+
+
+# ── Minimal Premium Dashboard (served at /) ─────────────────────────────────
+
+MINIMAL_PREMIUM_HTML = r"""<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay — LinkedIn-Suche</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --panel: #131316;
+    --panel-2: #18181c;
+    --line: #1f1f24;
+    --line-soft: #1a1a1f;
+    --text: #e4e4e7;
+    --text-dim: #a1a1aa;
+    --text-mute: #71717a;
+    --accent: oklch(72% 0.15 250);
+    --accent-soft: oklch(72% 0.15 250 / 0.14);
+    --blue: oklch(72% 0.16 230);
+    --green: oklch(72% 0.16 152);
+    --green-soft: oklch(72% 0.16 152 / 0.14);
+    --yellow: oklch(82% 0.16 90);
+    --red: oklch(70% 0.18 25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    padding: 16px 32px;
+    display: flex; align-items: center; gap: 14px;
+    background: var(--panel);
+  }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--blue) 100%);
+  }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 11px; color: var(--text-mute); }
+  .spacer { flex: 1; }
+  .topbar a.lnk { color: var(--text-mute); font-size: 12px; text-decoration: none; margin-left: 14px; }
+  .topbar a.lnk:hover { color: var(--text); }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 28px 32px 60px; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+
+  .search-row {
+    display: flex; gap: 10px; margin-bottom: 20px; align-items: stretch;
+  }
+  .input-shell {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 0 14px; min-height: 46px;
+  }
+  .input-shell:focus-within { border-color: var(--accent); }
+  .input-shell svg { color: var(--text-mute); }
+  .input-shell input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 14px; font-family: inherit;
+    padding: 13px 0;
+  }
+  .input-shell.count { flex: 0 0 140px; }
+  .input-shell.count input { text-align: right; font-variant-numeric: tabular-nums; }
+  .input-shell.city { flex: 0 0 240px; }
+  .input-shell .lbl { color: var(--text-mute); font-size: 11.5px; }
+
+  .btn {
+    padding: 0 18px; height: 46px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 13.5px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: opacity 0.12s, background 0.12s;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { opacity: 0.9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.ghost {
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--text); height: 30px; padding: 0 11px; font-size: 11.5px; border-radius: 7px;
+  }
+  .btn.ghost:hover:not(:disabled) { background: var(--panel-2); border-color: var(--accent); }
+  .btn.ghost.li { color: var(--blue); border-color: rgba(110,139,255,0.3); }
+  .btn.ghost.li:hover { background: rgba(110,139,255,0.08); }
+  .btn.ghost.web { color: var(--green); border-color: rgba(52,211,154,0.3); }
+  .btn.ghost.web:hover { background: rgba(52,211,154,0.08); }
+  .btn.ghost.kd { color: var(--yellow); border-color: rgba(240,184,64,0.3); }
+  .btn.ghost.kd:hover { background: rgba(240,184,64,0.08); }
+  .btn.ghost:disabled { opacity: 0.35; }
+
+  .progress-panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  .progress-panel.hidden { display: none; }
+  .progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
+  .progress-phase { color: var(--text-dim); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .progress-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); transition: width 0.4s; }
+  .progress-msg { margin-top: 10px; font-size: 12px; color: var(--text-mute); font-family: 'JetBrains Mono', monospace; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+  }
+  .panel-head {
+    padding: 14px 18px; border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
+  }
+  .panel-head .count-pill {
+    margin-left: auto; padding: 3px 10px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 13px; vertical-align: middle; }
+  th {
+    background: rgba(255,255,255,0.015);
+    color: var(--text-dim); font-weight: 600;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+    position: sticky; top: 0; z-index: 1;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.012); }
+  .name { font-weight: 600; }
+  .firma { color: var(--text-dim); }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .mute { color: var(--text-mute); font-style: italic; font-size: 12px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .empty {
+    padding: 70px 24px; text-align: center; color: var(--text-dim);
+  }
+  .empty .ic { font-size: 30px; opacity: 0.5; margin-bottom: 10px; }
+  a.li-inline {
+    color: var(--blue); text-decoration: none;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px;
+  }
+  a.li-inline:hover { text-decoration: underline; }
+
+  /* Modal */
+  .modal-scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+    z-index: 100; display: none; align-items: center; justify-content: center;
+  }
+  .modal-scrim.open { display: flex; }
+  .modal {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 14px; max-width: 480px; width: 90%;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .modal-avatar {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--blue) 100%);
+    display: grid; place-items: center; color: white; font-weight: 700;
+  }
+  .modal-name { font-size: 17px; font-weight: 700; }
+  .modal-company { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+  .modal-close { background: transparent; border: none; color: var(--text-mute); cursor: pointer; padding: 4px; font-size: 18px; }
+  .modal-close:hover { color: var(--text); }
+  .field-list { display: flex; flex-direction: column; gap: 14px; }
+  .field-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 9px;
+  }
+  .field-ic { color: var(--text-mute); width: 16px; flex-shrink: 0; }
+  .field-meta { flex: 1; min-width: 0; }
+  .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); font-weight: 600; }
+  .field-value { font-size: 13.5px; margin-top: 2px; word-break: break-all; }
+  .field-value.mono { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+  .field-copy { background: transparent; border: none; color: var(--text-mute); cursor: pointer; padding: 4px; }
+  .field-copy:hover { color: var(--text); }
+
+  .status-pill {
+    padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+  .status-pill.running { background: rgba(110,139,255,0.12); color: var(--blue); }
+  .status-pill.ok { background: var(--green-soft); color: var(--green); }
+  .status-pill.error { background: rgba(244,63,94,0.12); color: var(--red); }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-mark"></div>
+  <div class="brand-text">
+    <div class="brand-name">Relay</div>
+    <div class="brand-sub">LinkedIn-Suche</div>
+  </div>
+  <div class="spacer"></div>
+  <a class="lnk" href="/premium/">→ Voller Premium-Bot</a>
+  <a class="lnk" href="/classic">→ Klassisches Cockpit</a>
+</header>
+
+<main class="container">
+  <h1>LinkedIn-Ansprechpartner finden</h1>
+  <div class="sub">Suchbegriff eingeben (z. B. „Marketing“). Der Bot sucht über Tavily + Serper nach Firmen, identifiziert Ansprechpartner und liefert Kontaktdaten + LinkedIn-Profile.</div>
+
+  <div class="search-row">
+    <div class="input-shell">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="qInput" placeholder="Branche / Keyword (z. B. Marketing, Bauunternehmen, Steuerberater …)" autocomplete="off">
+    </div>
+    <div class="input-shell city">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <input id="cityInput" placeholder="Stadt (leer = ganz Deutschland)" autocomplete="off">
+    </div>
+    <div class="input-shell count">
+      <span class="lbl">Anzahl</span>
+      <input id="cntInput" type="number" min="5" max="1000" value="20">
+    </div>
+    <button class="btn" id="searchBtn" onclick="startSearch()">Suchen</button>
+    <button class="btn" id="refreshBtn" onclick="loadResults(true)" style="background: var(--panel); border: 1px solid var(--line); color: var(--text);" title="Aktuelle Pipeline-Leads aus output/latest/outreach_pipeline.json laden">↻ Zwischenstand</button>
+  </div>
+
+  <div class="progress-panel hidden" id="progPanel">
+    <div class="progress-top">
+      <div>
+        <span class="status-pill running" id="statusPill"><span class="dot"></span><span id="statusTxt">läuft</span></span>
+        <span style="margin-left: 10px;" id="progLabel">Initialisiere …</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <span class="progress-phase" id="progPhase">init</span>
+        <span class="mono" style="font-size:13px; font-weight:600;" id="progPct">0%</span>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+    <div class="progress-msg" id="progMsg">—</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span>Gefundene Ansprechpartner</span>
+      <span class="count-pill" id="resultCount">0</span>
+    </div>
+    <div style="max-height: 65vh; overflow: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 18%">Name</th>
+            <th style="width: 22%">Firma</th>
+            <th style="width: 16%">Telefon</th>
+            <th style="width: 19%">E-Mail</th>
+            <th style="width: 25%; text-align: right">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody">
+          <tr><td colspan="5" class="empty"><div class="ic">○</div>Noch keine Suche gestartet.<br><span style="font-size:12px">Suchbegriff eingeben und „Suchen“ klicken.</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="modal-scrim" id="modalScrim" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-avatar" id="mAvatar">?</div>
+      <div style="flex:1; min-width:0">
+        <div class="modal-name" id="mName">—</div>
+        <div class="modal-company" id="mCompany">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="field-list">
+      <div class="field-row">
+        <svg class="field-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="field-meta">
+          <div class="field-label">Name</div>
+          <div class="field-value" id="mfName">—</div>
+        </div>
+        <button class="field-copy" onclick="copyField('mfName')" title="Kopieren">⧉</button>
+      </div>
+      <div class="field-row">
+        <svg class="field-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <div class="field-meta">
+          <div class="field-label">Telefon</div>
+          <div class="field-value mono" id="mfPhone">—</div>
+        </div>
+        <button class="field-copy" onclick="copyField('mfPhone')" title="Kopieren">⧉</button>
+      </div>
+      <div class="field-row">
+        <svg class="field-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <div class="field-meta">
+          <div class="field-label">E-Mail</div>
+          <div class="field-value mono" id="mfEmail">—</div>
+        </div>
+        <button class="field-copy" onclick="copyField('mfEmail')" title="Kopieren">⧉</button>
+      </div>
+      <div class="field-row">
+        <svg class="field-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        <div class="field-meta">
+          <div class="field-label">LinkedIn</div>
+          <div class="field-value mono" id="mfLi">—</div>
+        </div>
+        <button class="field-copy" onclick="copyField('mfLi')" title="Kopieren">⧉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _jobId = null;
+var _pollTimer = null;
+var _searchStartedAt = "";
+var _startedTs = 0;
+var _lastPct = -1;
+var _lastPctChangeTs = 0;
+var _elapsedTimer = null;
+var _running = false;        // Hard-Lock gegen Doppel-Trigger
+var _liResolveCache = {};    // company+name → URL Cache
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function setStatus(state, txt) {
+  var pill = document.getElementById('statusPill');
+  pill.classList.remove('running', 'ok', 'error');
+  pill.classList.add(state);
+  document.getElementById('statusTxt').textContent = txt;
+}
+
+function setProgress(pct, phase, msg) {
+  document.getElementById('progFill').style.width = (pct || 0) + '%';
+  document.getElementById('progPct').textContent = Math.round(pct || 0) + '%';
+  document.getElementById('progPhase').textContent = phase || '—';
+  document.getElementById('progMsg').textContent = msg || '—';
+}
+
+function showProgressPanel() {
+  document.getElementById('progPanel').classList.remove('hidden');
+}
+
+function startSearch() {
+  if (_running) return;                       // Hard-Lock
+  var btn = document.getElementById('searchBtn');
+  if (btn.disabled) return;                   // doppelter Schutz
+  if (_pollTimer)    { clearTimeout(_pollTimer);    _pollTimer = null; }
+  if (_elapsedTimer) { clearInterval(_elapsedTimer); _elapsedTimer = null; }
+  _jobId = null;
+  _running = true;
+
+  var q    = (document.getElementById('qInput').value    || '').trim();
+  var city = (document.getElementById('cityInput').value || '').trim();
+  var cnt  = parseInt(document.getElementById('cntInput').value, 10) || 20;
+  if (cnt < 5) cnt = 5;
+  if (cnt > 1000) cnt = 1000;
+  if (!q) { alert('Bitte einen Suchbegriff eingeben.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Suche läuft …';
+  _startedTs = Date.now();
+  _lastPct = -1;
+  _lastPctChangeTs = _startedTs;
+
+  document.getElementById('leadsBody').innerHTML =
+    '<tr><td colspan="5" class="empty"><div class="ic">⟳</div>Suche läuft …<br><span style="font-size:12px">Tavily + Serper analysieren Firmen und Ansprechpartner.</span></td></tr>';
+  document.getElementById('resultCount').textContent = '...';
+
+  showProgressPanel();
+  setStatus('running', 'läuft');
+  setProgress(2, 'init', 'Starte Suche: ' + q + (city ? ' · ' + city : ' · Deutschland') + ' (' + cnt + ')');
+  document.getElementById('progLabel').textContent = q + (city ? ' · ' + city : ' · DE') + ' · ' + cnt + ' Leads';
+
+  // Elapsed-Timer
+  _elapsedTimer = setInterval(updateElapsed, 1000);
+  updateElapsed();
+
+  fetch('/api/linkedin/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ industry: q, city: city, count: cnt })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.error) {
+      finishSearch('error', d.error + ': ' + (d.msg || ''));
+      return;
+    }
+    _jobId = d.job_id;
+    pollJob();
+  })
+  .catch(function(e) {
+    finishSearch('error', 'Request fehlgeschlagen: ' + e.message);
+  });
+}
+
+function updateElapsed() {
+  if (!_startedTs) return;
+  var s = Math.floor((Date.now() - _startedTs) / 1000);
+  var mm = Math.floor(s / 60), ss = s % 60;
+  var elapsedStr = mm + ':' + (ss < 10 ? '0' : '') + ss;
+  var stalled = Date.now() - _lastPctChangeTs;
+  var suffix = '';
+  if (stalled > 20000) {
+    var stalledS = Math.floor(stalled / 1000);
+    suffix = ' · keine Bewegung seit ' + stalledS + 's (Backend verarbeitet, bitte warten)';
+  }
+  document.getElementById('progLabel').innerHTML =
+    document.getElementById('progLabel').innerHTML.replace(/ · ⏱.*$/, '') +
+    ' · ⏱ ' + elapsedStr + suffix;
+}
+
+function finishSearch(state, msg) {
+  setStatus(state, state === 'ok' ? 'fertig' : 'Fehler');
+  if (state === 'error') setProgress(0, 'error', msg);
+  var btn = document.getElementById('searchBtn');
+  btn.disabled = false;
+  btn.textContent = 'Suchen';
+  if (_pollTimer) { clearTimeout(_pollTimer); _pollTimer = null; }
+  if (_elapsedTimer) { clearInterval(_elapsedTimer); _elapsedTimer = null; }
+  _running = false;
+}
+
+function pollJob() {
+  if (!_jobId) return;
+  fetch('/api/job/' + _jobId)
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      if (!j || j.error) {
+        finishSearch('error', 'Job nicht gefunden');
+        return;
+      }
+      var pct   = j.progress_pct   || 0;
+      var phase = j.progress_phase || '—';
+      var msg   = j.progress_msg   || '';
+      setProgress(pct, phase, msg);
+
+      // Track if pct actually moves
+      if (pct !== _lastPct) {
+        _lastPct = pct;
+        _lastPctChangeTs = Date.now();
+      }
+
+      if (j.status === 'ok') {
+        setProgress(100, 'done', msg || 'Suche fertig');
+        finishSearch('ok', 'fertig');
+        loadResults();
+      } else if (j.status === 'error') {
+        setProgress(pct, 'error', msg || 'Suche fehlgeschlagen');
+        finishSearch('error', msg || 'Suche fehlgeschlagen');
+        document.getElementById('leadsBody').innerHTML =
+          '<tr><td colspan="5" class="empty"><div class="ic">⚠</div>Suche fehlgeschlagen.<br><span style="font-size:12px">' + escapeHtml(msg || '') + '</span></td></tr>';
+      } else {
+        _pollTimer = setTimeout(pollJob, 1500);
+      }
+    })
+    .catch(function(e) {
+      _pollTimer = setTimeout(pollJob, 2500);
+    });
+}
+
+function loadResults(manualRefresh) {
+  fetch('/api/leads')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var items = d.items || [];
+      var cutoff = d.last_search_started_at || '';
+      var fresh = items;
+      if (cutoff && !manualRefresh) {
+        fresh = items.filter(function(l) { return (l.added_at || '') >= cutoff; });
+      }
+      // Manual refresh OR no fresh leads: sort by added_at desc, take top 100
+      if (manualRefresh || (fresh.length === 0 && items.length > 0)) {
+        fresh = items.slice().sort(function(a, b) { return (b.added_at || '').localeCompare(a.added_at || ''); }).slice(0, 100);
+      }
+      window._allLeads = fresh;
+      renderLeads(fresh);
+    })
+    .catch(function(e) {
+      document.getElementById('leadsBody').innerHTML =
+        '<tr><td colspan="5" class="empty"><div class="ic">⚠</div>Ergebnisse konnten nicht geladen werden.<br><span style="font-size:12px">' + escapeHtml(e.message) + '</span></td></tr>';
+    });
+}
+
+function liUrlFor(lead) {
+  // 1. Direct LinkedIn person URL if known
+  if (lead.linkedin_person && /linkedin\.com\/in\//i.test(lead.linkedin_person)) return lead.linkedin_person;
+  return null;  // Need to resolve via Serper
+}
+
+function openLinkedInProfile(idx, btnEl) {
+  var l = (window._allLeads || [])[idx];
+  if (!l) return;
+  // 1) Direct URL?
+  var direct = liUrlFor(l);
+  if (direct) { window.open(direct, '_blank', 'noopener'); return; }
+
+  // 2) Cache check
+  var ck = (l.company || '') + '|' + (l.contact || '');
+  if (_liResolveCache[ck]) { window.open(_liResolveCache[ck], '_blank', 'noopener'); return; }
+
+  // 3) Resolve via Serper
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Suche…'; }
+  var qs = 'name=' + encodeURIComponent(l.contact || '') +
+           '&company=' + encodeURIComponent(l.company || '');
+  fetch('/api/premium/li-resolve?' + qs)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var url = d.url || d.fallback_url || ('https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/in "' + (l.contact || l.company || '') + '"'));
+      _liResolveCache[ck] = url;
+      window.open(url, '_blank', 'noopener');
+    })
+    .catch(function(e) {
+      window.open('https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/in "' + (l.contact || l.company || '') + '"'), '_blank', 'noopener');
+    })
+    .finally(function() {
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'LinkedIn-Profil'; }
+    });
+}
+
+function webUrlFor(lead) {
+  var w = (lead.website || '').trim();
+  if (!w) return '';
+  return /^https?:\/\//.test(w) ? w : ('https://' + w);
+}
+
+function dedupeLeads(leads) {
+  var seen = {};
+  var out = [];
+  for (var i = 0; i < leads.length; i++) {
+    var l = leads[i];
+    var key = ((l.company || '') + '|' + (l.contact || '') + '|' + (l.email || '')).toLowerCase();
+    if (key === '||' || seen[key]) continue;
+    seen[key] = true;
+    out.push(l);
+  }
+  return out;
+}
+
+function renderLeads(leads) {
+  var body = document.getElementById('leadsBody');
+  // Dedupe + Re-index for stable button refs
+  leads = dedupeLeads(leads || []);
+  window._allLeads = leads;
+  document.getElementById('resultCount').textContent = leads.length;
+  if (leads.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" class="empty"><div class="ic">∅</div>Keine Ansprechpartner gefunden.<br><span style="font-size:12px">Anderen Suchbegriff probieren oder Anzahl erhöhen.</span></td></tr>';
+    return;
+  }
+  body.innerHTML = leads.map(function(l, i) {
+    var name    = (l.contact || '').trim();
+    var company = (l.company || '—').trim();
+    var phone   = (l.phone   || '').trim();
+    var email   = (l.email   || '').trim();
+    var webUrl  = webUrlFor(l);
+    var hasContact = !!name;
+    var hasDirectLi = !!(l.linkedin_person && /linkedin\.com\/in\//i.test(l.linkedin_person));
+
+    // Name column: show name OR clear "Kein Ansprechpartner" marker
+    var nameCell = hasContact
+      ? '<div class="name">' + escapeHtml(name) + '</div>'
+      : '<span class="mute">Kein Ansprechpartner</span>';
+
+    // LinkedIn button: enabled when we have anything to search by (name OR company)
+    var liEnabled = hasContact || (company && company !== '—');
+    var liLabel = hasDirectLi ? 'LinkedIn ✓' : 'LinkedIn-Profil';
+    var liBtn = liEnabled
+      ? '<button class="btn ghost li" onclick="openLinkedInProfile(' + i + ', this)" title="' + (hasDirectLi ? 'Direkter Link' : 'Sucht per Google Platz 1') + '">' + liLabel + '</button>'
+      : '<button class="btn ghost li" disabled title="Keine Daten">LinkedIn</button>';
+
+    // Contact button: disable when ALL contact fields are empty
+    var kdEnabled = !!(name || phone || email);
+    var kdBtn = kdEnabled
+      ? '<button class="btn ghost kd" onclick="showContact(' + i + ')">Kontaktdaten</button>'
+      : '<button class="btn ghost kd" disabled title="Keine Kontaktdaten">Kontaktdaten</button>';
+
+    return '<tr>' +
+      '<td>' + nameCell + '</td>' +
+      '<td class="firma">' + escapeHtml(company) + '</td>' +
+      '<td class="mono">' + (phone ? escapeHtml(phone) : '<span class="mute">—</span>') + '</td>' +
+      '<td class="mono">' + (email ? escapeHtml(email) : '<span class="mute">—</span>') + '</td>' +
+      '<td><div class="actions">' +
+        liBtn +
+        (webUrl
+          ? '<button class="btn ghost web" onclick="openUrl(\'' + escapeAttr(webUrl) + '\')">Website</button>'
+          : '<button class="btn ghost web" disabled title="Keine Website">Website</button>') +
+        kdBtn +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function escapeAttr(s) {
+  return String(s || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+function openUrl(u) {
+  if (!u) { alert('Keine URL verfügbar.'); return; }
+  window.open(u, '_blank', 'noopener');
+}
+
+function showContact(i) {
+  var l = (window._allLeads || [])[i];
+  if (!l) return;
+  document.getElementById('mName').textContent     = l.contact || '—';
+  document.getElementById('mCompany').textContent  = l.company || '—';
+  document.getElementById('mAvatar').textContent   = initialsOf(l.contact || l.company || '?');
+  document.getElementById('mfName').textContent    = l.contact || '—';
+  document.getElementById('mfPhone').textContent   = l.phone   || '—';
+  document.getElementById('mfEmail').textContent   = l.email   || '—';
+  var li = l.linkedin_person || l.linkedin_company || '';
+  document.getElementById('mfLi').textContent      = li        || '—';
+  document.getElementById('modalScrim').classList.add('open');
+}
+
+function initialsOf(name) {
+  var p = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  return p.slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase() || '?';
+}
+
+function closeModal(e) {
+  if (e && e.target.id !== 'modalScrim' && e.target.className !== 'modal-close') return;
+  document.getElementById('modalScrim').classList.remove('open');
+}
+
+function copyField(id) {
+  var v = document.getElementById(id).textContent || '';
+  if (!v || v === '—') return;
+  try {
+    navigator.clipboard.writeText(v);
+  } catch(e) {
+    var ta = document.createElement('textarea'); ta.value = v; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+document.getElementById('qInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') startSearch();
+});
+document.getElementById('cityInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') startSearch();
+});
+document.getElementById('cntInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') startSearch();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.getElementById('modalScrim').classList.remove('open');
+});
+
+// Show last existing leads on first load
+loadResults();
+</script>
+</body>
+</html>
+"""
+
 
 
 # ── Premium SPA HTML ─────────────────────────────────────────────────────────
@@ -1794,6 +3677,44 @@ button{cursor:pointer;border:none;background:transparent}
 }
 .intent-link,.intent-link:visited{color:var(--text);text-decoration:none}
 .intent-link:hover{color:#fff;text-decoration:underline}
+
+/* Claude Design Reference integration: dark premium operator shell */
+:root{
+  --bg:#0b0d12;--bg-elev:#11141b;--panel:#141823;--panel-2:#1a1f2c;
+  --line:#232a3a;--line-soft:#1c2230;--text:#e8ecf3;--text-dim:#a3acc0;--text-mute:#6b7588;
+  --accent:#6e8bff;--accent-2:#8d6bff;--green:#34d39a;--green-soft:rgba(52,211,154,.14);
+  --yellow:#f0b840;--yellow-soft:rgba(240,184,64,.14);--red:#ff6b7a;--red-soft:rgba(255,107,122,.14);
+  --blue:#5fb6ff;--blue-soft:rgba(95,182,255,.14);--violet:#b08bff;--violet-soft:rgba(176,139,255,.14);
+  --surface:var(--panel);--surface2:var(--panel-2);--border:var(--line);--border2:#31394f;
+  --muted:var(--text-dim);--dim:var(--text-mute);--ok:var(--green);--warn:var(--yellow);--err:var(--red);
+  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 12px 32px -16px rgba(0,0,0,.6);
+}
+body{background:var(--bg);font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(900px 500px at 12% -10%,rgba(110,139,255,.08),transparent 60%),radial-gradient(800px 600px at 110% 10%,rgba(141,107,255,.06),transparent 60%);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;grid-template-columns:260px 1fr;grid-template-rows:64px 1fr}
+.brand,.sidebar{background:linear-gradient(180deg,#0d1018 0%,#0a0c12 100%);border-color:var(--line-soft)}
+.brand-mark{background:radial-gradient(120% 120% at 0% 0%,rgba(110,139,255,.55),transparent 60%),linear-gradient(135deg,#1d2538 0%,#0e111a 100%);border:1px solid #2a3450;color:transparent;position:relative}
+.brand-mark::after{content:"";position:absolute;inset:8px;border-radius:4px;background:linear-gradient(135deg,var(--accent),var(--accent-2));clip-path:polygon(0 30%,50% 0,100% 30%,100% 70%,50% 100%,0 70%)}
+.topbar{background:rgba(11,13,18,.78);backdrop-filter:blur(14px);border-color:var(--line-soft)}
+.nav-item{border:1px solid transparent;border-radius:10px}
+.nav-item.active{background:linear-gradient(180deg,rgba(110,139,255,.16),rgba(110,139,255,.06));color:var(--text);border-color:rgba(110,139,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.section,.panel,.kpi-card,.premium-card{background:linear-gradient(180deg,var(--panel) 0%,#11151f 100%);border:1px solid var(--line-soft);border-radius:14px;box-shadow:var(--shadow-card)}
+.kpi-card{overflow:hidden}.kpi-card::after{height:2px;background:var(--accent)}.kpi-card.ok::after{background:var(--green)}.kpi-card.warn::after{background:var(--yellow)}.kpi-card.hot::after{background:var(--red)}
+.btn.primary{background:linear-gradient(180deg,#7892ff,#5b78f0);box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 8px 20px -8px rgba(110,139,255,.55)}
+.btn.success{background:linear-gradient(180deg,#3ee0a6,#25b889);color:#06231a}.btn.warn{background:rgba(240,184,64,.12);color:var(--yellow);border-color:rgba(240,184,64,.25)}.btn.danger{background:rgba(255,107,122,.12);color:var(--red);border-color:rgba(255,107,122,.25)}
+.pill.ok{background:var(--green-soft);color:var(--green)}.pill.warn{background:var(--yellow-soft);color:var(--yellow)}.pill.err{background:var(--red-soft);color:var(--red)}.pill.acc{background:var(--blue-soft);color:var(--blue)}.pill.violet{background:var(--violet-soft);color:var(--violet)}
+.tbl thead th{background:rgba(255,255,255,.015);color:var(--text-mute);letter-spacing:.12em}.tbl tbody tr:hover{background:rgba(110,139,255,.045)}
+.premium-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px}
+.premium-grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+#page-dashboard .dash-legacy{display:none !important}
+.source-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line-soft)}.source-row:last-child{border-bottom:none}
+.source-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-size:11px;font-weight:800}
+.premium-title{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800}.premium-sub{color:var(--text-mute);font-size:12px;margin-top:2px}
+.tier{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:7px;font-family:ui-monospace,monospace;font-size:11px;font-weight:800}
+.tier.A{background:var(--green-soft);color:var(--green);border:1px solid rgba(52,211,154,.3)}.tier.B{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(95,182,255,.3)}.tier.C{background:var(--yellow-soft);color:var(--yellow);border:1px solid rgba(240,184,64,.3)}.tier.D{background:var(--red-soft);color:var(--red);border:1px solid rgba(255,107,122,.3)}
+.lead-cell{display:flex;align-items:center;gap:10px}.lead-avatar{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#2a3a66,#1a2240);display:grid;place-items:center;color:#c9d4ff;font-weight:800}.lead-name{font-weight:700}.lead-sub{color:var(--text-mute);font-size:12px}
+.drawer{background:var(--panel);box-shadow:-24px 0 60px -20px rgba(0,0,0,.8)}.drawer-section .row{border-color:var(--line-soft)}
+@media(max-width:1180px){.premium-grid,.premium-grid-4{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -1803,8 +3724,8 @@ button{cursor:pointer;border:none;background:transparent}
   <div class="brand">
     <div class="brand-mark">B²</div>
     <div class="brand-text">
-      <strong>B2B Akquise</strong>
-      <small>Premium Cockpit</small>
+      <strong>Relay</strong>
+      <small>Operator-Cockpit</small>
     </div>
   </div>
 
@@ -1825,19 +3746,18 @@ button{cursor:pointer;border:none;background:transparent}
   <aside class="sidebar">
     <div class="nav-section">
       <h4>Workflow</h4>
-      <div class="nav-item active" data-page="dashboard"><span class="ico">📊</span> Dashboard</div>
-      <div class="nav-item" data-page="leads"><span class="ico">👥</span> Leads <span class="badge" id="nav-leads">–</span></div>
-      <div class="nav-item" data-page="ready"><span class="ico">✉</span> Bereit zum Senden <span class="badge" id="nav-ready">–</span></div>
-      <div class="nav-item" data-page="sent"><span class="ico">📤</span> Versendet <span class="badge" id="nav-sent">–</span></div>
-      <div class="nav-item" data-page="replies"><span class="ico">💬</span> Antworten <span class="badge hot" id="nav-replies">–</span></div>
-      <div class="nav-item" data-page="followup"><span class="ico">🔁</span> Follow-ups <span class="badge" id="nav-fu">–</span></div>
-      <div class="nav-item" data-page="linkedin"><span class="ico">💼</span> LinkedIn <span class="badge" id="nav-li">–</span></div>
+      <div class="nav-item active" data-page="dashboard"><span class="ico">📊</span> Übersicht</div>
+      <div class="nav-item" data-page="signals"><span class="ico">📡</span> Signal-Erkennung <span class="badge" id="nav-signals">–</span></div>
+      <div class="nav-item" data-page="enrichment"><span class="ico">✨</span> Lead-Anreicherung <span class="badge" id="nav-enrichment">–</span></div>
+      <div class="nav-item" data-page="review"><span class="ico">🛡</span> Manuelle Prüfung <span class="badge hot" id="nav-review">–</span></div>
+      <div class="nav-item" data-page="pipeline"><span class="ico">🧭</span> Outreach-Pipeline <span class="badge" id="nav-pipeline">–</span></div>
+      <div class="nav-item" data-page="replycenter"><span class="ico">💬</span> Antwort-Zentrale <span class="badge hot" id="nav-replycenter">–</span></div>
     </div>
     <div class="nav-section">
-      <h4>Aktionen</h4>
-      <div class="nav-item" data-page="search"><span class="ico">🔍</span> Lead-Suche</div>
-      <div class="nav-item" data-page="automation"><span class="ico">🚀</span> Automation</div>
+      <h4>Werkzeuge</h4>
+      <div class="nav-item" data-page="linkedin"><span class="ico">💼</span> LinkedIn-Suche <span class="badge" id="nav-li">–</span></div>
       <div class="nav-item" data-page="jobs"><span class="ico">⚙</span> Job-Log</div>
+      <div class="nav-item" data-page="automation"><span class="ico">🚀</span> Automation</div>
     </div>
   </aside>
 
@@ -1864,7 +3784,100 @@ button{cursor:pointer;border:none;background:transparent}
         <div class="kpi-card"><div class="kpi-lbl"><span class="ico">🔁</span> Follow-up</div><div class="kpi-val" id="d-fu">0</div><div class="kpi-sub">Wiedervorlage</div></div>
       </div>
 
-      <div class="hot-strip" id="awaiting-strip" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border-color:rgba(245,158,11,.3)">
+      <div class="hot-strip">
+        <span class="ico">⚡</span>
+        <div style="flex:1">
+          <strong id="overview-banner-title">Übersicht lädt…</strong>
+          <div id="overview-banner-sub" style="color:var(--muted);font-size:12px;margin-top:2px">Signal-First Operator Cockpit mit echten Datenquellen.</div>
+        </div>
+        <button class="btn primary sm" onclick="goPage('signals')">Signal-Queue öffnen</button>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>🧭 Pipeline auf einen Blick</h2>
+          <span class="badge">letzte 30 Tage</span>
+          <div class="actions">
+            <button class="btn ghost sm" onclick="goPage('pipeline')">Outreach-Pipeline →</button>
+          </div>
+        </div>
+        <div id="overview-stage-strip" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <div style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.015)">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600">Erkennung → Anreicherung</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:18px;font-weight:700" id="overview-conv-1">–</span></div>
+            <div style="background:var(--border);height:8px;border-radius:4px;overflow:hidden;margin-top:8px"><div id="overview-convbar-1" style="height:100%;width:0%;background:var(--accent)"></div></div>
+          </div>
+          <div style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.015)">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600">Anreicherung → Prüfung</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:18px;font-weight:700" id="overview-conv-2">–</span></div>
+            <div style="background:var(--border);height:8px;border-radius:4px;overflow:hidden;margin-top:8px"><div id="overview-convbar-2" style="height:100%;width:0%;background:var(--accent)"></div></div>
+          </div>
+          <div style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.015)">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600">Prüfung → Freigegeben</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font-size:18px;font-weight:700" id="overview-conv-3">–</span></div>
+            <div style="background:var(--border);height:8px;border-radius:4px;overflow:hidden;margin-top:8px"><div id="overview-convbar-3" style="height:100%;width:0%;background:var(--accent)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="premium-grid">
+        <div class="section">
+          <div class="section-head"><h2>🔥 Top-Antworten</h2><span class="badge hot" id="overview-hot-count">0</span><div class="actions"><button class="btn ghost sm" onclick="goPage('replycenter')">Antwort-Zentrale</button></div></div>
+          <div id="overview-top-replies"><div class="empty">Keine Antworten vorhanden.</div></div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>🛡 Wartet auf Prüfung</h2><span class="badge" id="overview-review-count">0</span><div class="actions"><button class="btn ghost sm" onclick="goPage('review')">Warteschlange</button></div></div>
+          <div id="overview-review-table"><div class="empty">Keine Review Items vorhanden.</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h2>⚡ Schnellaktionen</h2><span class="badge">Operator-Shortcuts</span></div>
+        <div id="overview-actions" class="premium-grid-4" style="margin-bottom:0"></div>
+      </div>
+
+      <div class="premium-grid dash-legacy" style="margin-top:18px">
+        <div class="section">
+          <div class="section-head">
+            <h2>📡 Signal Discovery</h2>
+            <span class="badge" id="dash-premium-signals-badge">0 Signale</span>
+            <div class="actions"><button class="btn ghost sm" onclick="goPage('signals')">Öffnen</button></div>
+          </div>
+          <div id="dash-premium-signals" class="premium-grid-4"></div>
+          <div id="dash-premium-signals-table"><div class="empty">Keine Signale geladen.</div></div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <h2>🛡 Manual Review</h2>
+            <span class="badge hot" id="dash-premium-review-badge">0 pending</span>
+            <div class="actions"><button class="btn ghost sm" onclick="goPage('review')">Öffnen</button></div>
+          </div>
+          <div id="dash-premium-review-summary" style="margin-bottom:12px"></div>
+          <div id="dash-premium-review-table"><div class="empty">Keine Review Items geladen.</div></div>
+        </div>
+      </div>
+
+      <div class="premium-grid dash-legacy" style="margin-top:18px">
+        <div class="section">
+          <div class="section-head">
+            <h2>✨ Lead Enrichment</h2>
+            <span class="badge" id="dash-premium-enrichment-badge">0</span>
+            <div class="actions"><button class="btn ghost sm" onclick="goPage('enrichment')">Öffnen</button></div>
+          </div>
+          <div id="dash-premium-enrichment-table"><div class="empty">Keine Enrichment-Daten geladen.</div></div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <h2>💬 Reply Center</h2>
+            <span class="badge hot" id="dash-premium-reply-badge">0</span>
+            <div class="actions"><button class="btn ghost sm" onclick="goPage('replycenter')">Öffnen</button></div>
+          </div>
+          <div id="dash-premium-reply-list"><div class="empty">Keine Replies geladen.</div></div>
+        </div>
+      </div>
+
+      <div class="hot-strip dash-legacy" id="awaiting-strip" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border-color:rgba(245,158,11,.3)">
         <span class="ico">⏸</span>
         <div style="flex:1">
           <strong style="color:var(--warn)" id="awaiting-strip-count">– warten auf Approval</strong>
@@ -1873,7 +3886,7 @@ button{cursor:pointer;border:none;background:transparent}
         <button class="btn primary sm" onclick="goPage('ready')">Anschauen →</button>
       </div>
 
-      <div class="hot-strip" id="hot-strip" style="display:none">
+      <div class="hot-strip dash-legacy" id="hot-strip" style="display:none">
         <span class="ico">🔥</span>
         <div style="flex:1">
           <strong id="hot-strip-count">– Hot Replies</strong>
@@ -1883,7 +3896,7 @@ button{cursor:pointer;border:none;background:transparent}
       </div>
 
       <!-- LinkedIn Quick-Search Card auf dem Dashboard -->
-      <div class="section" style="background:linear-gradient(135deg,rgba(10,102,194,.08),rgba(124,142,255,.04));border:1px solid rgba(10,102,194,.2)">
+      <div class="section dash-legacy" style="background:linear-gradient(135deg,rgba(10,102,194,.08),rgba(124,142,255,.04));border:1px solid rgba(10,102,194,.2)">
         <div class="section-head">
           <h2 style="color:#4d9aff">💼 LinkedIn-Kontaktsuche</h2>
           <span style="font-size:11px;color:var(--muted);font-weight:500">Branche eingeben → Suchen → Link klicken → LinkedIn-Cockpit</span>
@@ -2025,9 +4038,104 @@ button{cursor:pointer;border:none;background:transparent}
         <div id="intent-lp-summary" style="margin-bottom:12px"></div>
         <div id="intent-lp-content"><div class="loader">Lade…</div></div>
       </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Intent Email Review Queue</h2>
+          <span class="badge" id="intent-email-review-badge">Review</span>
+          <div class="actions">
+            <button class="btn ghost sm" onclick="loadIntentEmailReviewQueue().then(renderIntentEmailReviewQueue)">Refresh</button>
+          </div>
+        </div>
+        <div id="intent-email-review-summary" style="margin-bottom:12px"></div>
+        <div id="intent-email-review-content"><div class="loader">Lade…</div></div>
+      </div>
+
+	      <div class="section">
+	        <div class="section-head">
+	          <h2>Manual Decision Maker Review</h2>
+	          <span class="badge" id="intent-manual-dm-badge">Manual</span>
+	          <div class="actions">
+	            <button class="btn ghost sm" onclick="loadIntentManualDecisionMakerReview().then(renderIntentManualDecisionMakerReview)">Refresh</button>
+	          </div>
+	        </div>
+	        <div id="intent-manual-dm-summary" style="margin-bottom:12px"></div>
+	        <div id="intent-manual-dm-content"><div class="loader">Lade...</div></div>
+	      </div>
+
+	      <div class="section">
+	        <div class="section-head">
+	          <h2>Intent Operator Queue</h2>
+          <span class="badge" id="intent-operator-badge">Operator</span>
+          <div class="actions">
+            <button class="btn ghost sm" onclick="loadIntentOperatorQueue().then(renderIntentOperatorQueue)">Refresh</button>
+          </div>
+        </div>
+        <div id="intent-operator-health" style="margin-bottom:12px"></div>
+        <div id="intent-operator-content"><div class="loader">Lade…</div></div>
+      </div>
     </div>
 
     <!-- ── LEADS ── -->
+    <!-- PREMIUM SIGNAL DISCOVERY -->
+    <div class="page" id="page-signals">
+      <div class="premium-grid">
+        <div class="section">
+          <div class="section-head"><h2>📡 Signal-Quellen</h2><span class="badge" id="premium-source-count">0 Quellen</span></div>
+          <div id="premium-sources"><div class="empty">Keine Signalquellen geladen.</div></div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>🏷 Signal-Stufen</h2><span class="badge">A/B/C/D</span></div>
+          <div id="premium-tier-summary" class="premium-grid-4" style="margin-bottom:0"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>Erfasste Signale</h2><span class="badge" id="premium-signals-badge">0</span><div class="actions"><button class="btn ghost sm" onclick="loadAll()">Refresh</button></div></div>
+        <div id="premium-signals-table"><div class="empty">Keine Signale vorhanden.</div></div>
+      </div>
+    </div>
+
+    <!-- PREMIUM ENRICHMENT -->
+    <div class="page" id="page-enrichment">
+      <div class="premium-grid-4" id="premium-enrichment-kpis"></div>
+      <div class="section">
+        <div class="section-head"><h2>✨ Lead-Anreicherung</h2><span class="badge" id="premium-enrichment-badge">0</span><div class="actions"><button class="btn ghost sm" onclick="loadAll()">Refresh</button></div></div>
+        <div id="premium-enrichment-table"><div class="empty">Keine Enrichment-Daten vorhanden.</div></div>
+      </div>
+    </div>
+
+    <!-- PREMIUM MANUAL REVIEW -->
+    <div class="page" id="page-review">
+      <div class="section">
+        <div class="section-head"><h2>🛡 Manual Review</h2><span class="badge hot" id="premium-review-badge">0 pending</span><div class="actions"><button class="btn ghost sm" onclick="loadAll()">Refresh</button></div></div>
+        <div style="color:var(--text-mute);font-size:12px;margin-bottom:12px">Pattern-Mails bleiben manuell pruefpflichtig. Verified/Reject aktualisiert nur Review-Dateien, kein Versand.</div>
+        <div id="premium-review-table"><div class="empty">Keine Review Items vorhanden.</div></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>Manual Decision Maker Review</h2><span class="badge" id="premium-manual-dm-badge">Dashboard Save aktiv</span></div>
+        <div id="premium-manual-dm-mount"></div>
+      </div>
+    </div>
+
+    <!-- PREMIUM PIPELINE -->
+    <div class="page" id="page-pipeline">
+      <div class="premium-grid-4" id="premium-pipeline-kpis"></div>
+      <div class="section">
+        <div class="section-head"><h2>🧭 Outreach Pipeline</h2><span class="badge" id="premium-pipeline-badge">canonical</span></div>
+        <div style="color:var(--text-mute);font-size:12px;margin-bottom:12px">Canonical Pipeline: output/outreach_pipeline.json. Gesendete Leads werden nicht als ready gezaehlt.</div>
+        <div id="premium-pipeline-table"><div class="empty">Keine Pipeline-Daten vorhanden.</div></div>
+      </div>
+    </div>
+
+    <!-- PREMIUM REPLY CENTER -->
+    <div class="page" id="page-replycenter">
+      <div class="section">
+        <div class="section-head"><h2>💬 Reply Center</h2><span class="badge hot" id="premium-reply-badge">0</span><div class="actions"><button class="btn ghost sm" onclick="loadAll()">Refresh</button></div></div>
+        <div style="color:var(--text-mute);font-size:12px;margin-bottom:12px">Reply Queue bleibt read-only, ausser bestehende sichere Aktionen sind bereits vorhanden.</div>
+        <div id="premium-reply-list"><div class="empty">Keine Replies vorhanden.</div></div>
+      </div>
+    </div>
+
     <div class="page" id="page-leads">
       <div class="toolbar">
         <div class="filter-bar" style="flex:1;margin:0">
@@ -2111,9 +4219,11 @@ button{cursor:pointer;border:none;background:transparent}
         <strong>💬 Antworten</strong>
         <button class="btn ghost sm" onclick="api('/api/sync-replies',{},'Replies syncen')">📥 Neue holen</button>
         <button class="btn ghost sm" onclick="api('/api/process-replies',{},'Replies klassifizieren')">🧠 Klassifizieren</button>
-        <button class="btn warn sm" onclick="confirmRun('Alle Reply-Drafts senden?','/api/send-reply-drafts',{},'Reply-Drafts senden')">↩ Drafts senden</button>
+        <button class="btn ghost sm" onclick="loadReplyOperatorQueue().then(renderReplyOperatorQueue)">Reply Queue aktualisieren</button>
       </div>
-      <div id="replies-list"></div>
+      <div id="reply-operator-safety" style="margin-bottom:12px"></div>
+      <div id="reply-operator-list"></div>
+      <div id="replies-list" style="display:none"></div>
     </div>
 
     <!-- ── FOLLOWUPS ── -->
@@ -2308,10 +4418,15 @@ const state = {
   stats: {},
   leads: [],
   replies: [],
+  replyOperatorQueue: null,
   sent: [],
   jobs: [],
   senders: [],
   intentPreview: null,
+  intentEmailReviewQueue: null,
+  intentManualDecisionMakerReview: null,
+  intentOperatorQueue: null,
+  premiumDashboard: null,
   filters: { stage: 'all', contact: 'all', li: 'all' },
   sorts: { leads: 'newest', sent: 'sent_desc', linkedin: 'newest' },
   page: 'dashboard',
@@ -2470,6 +4585,7 @@ function goPage(p) {
   if (p==='replies') renderReplies();
   if (p==='followup') renderFollowup();
   if (p==='linkedin') renderLinkedin();
+  if (['signals','enrichment','review','pipeline','replycenter'].includes(p)) renderPremiumDashboard();
   if (p==='jobs') loadJobs();
   // Bereit zum Senden: erst frisch laden, dann rendern
   if (p==='ready') {
@@ -2795,15 +4911,17 @@ function applySort(rows, mode) {
 // LOAD DATA
 // ═════════════════════════════════════════════════════════
 async function loadAll() {
-  await Promise.all([loadStats(), loadLeads(), loadReplies(), loadSent(), loadIntentPreview(), loadIntentLeadProduction()]);
+  await Promise.all([loadStats(), loadLeads(), loadReplies(), loadReplyOperatorQueue(), loadSent(), loadIntentPreview(), loadIntentLeadProduction(), loadIntentEmailReviewQueue(), loadIntentManualDecisionMakerReview(), loadIntentOperatorQueue(), loadPremiumDashboard()]);
   renderDashboard();
+  renderPremiumDashboard();
   try { renderLiSearchHistory(); } catch(e) {}
   if (state.page==='leads') renderLeads();
   if (state.page==='ready') renderReady();
   if (state.page==='sent') renderSent();
-  if (state.page==='replies') renderReplies();
+  if (state.page==='replies') renderReplyOperatorQueue();
   if (state.page==='followup') renderFollowup();
   if (state.page==='linkedin') renderLinkedin();
+  if (['signals','enrichment','review','pipeline','replycenter'].includes(state.page)) renderPremiumDashboard();
 }
 async function loadStats() {
   const s = await fetchJSON('/api/stats'); if (s) state.stats = s;
@@ -2815,6 +4933,9 @@ async function loadLeads() {
 async function loadReplies() {
   const d = await fetchJSON('/api/replies'); if (d) state.replies = d.items||[];
 }
+async function loadReplyOperatorQueue() {
+  const d = await fetchJSON('/api/reply-operator-queue'); if (d) state.replyOperatorQueue = d;
+}
 async function loadSent() {
   const d = await fetchJSON('/api/sent'); if (d) state.sent = d.items||[];
 }
@@ -2823,6 +4944,18 @@ async function loadIntentPreview() {
 }
 async function loadIntentLeadProduction() {
   const d = await fetchJSON('/api/intent-lead-production'); if (d) state.intentLeadProduction = d;
+}
+async function loadIntentEmailReviewQueue() {
+  const d = await fetchJSON('/api/intent-email-review-queue'); if (d) state.intentEmailReviewQueue = d;
+}
+async function loadIntentManualDecisionMakerReview() {
+  const d = await fetchJSON('/api/intent-manual-decision-maker-review'); if (d) state.intentManualDecisionMakerReview = d;
+}
+async function loadIntentOperatorQueue() {
+  const d = await fetchJSON('/api/intent-operator-queue'); if (d) state.intentOperatorQueue = d;
+}
+async function loadPremiumDashboard() {
+  const d = await fetchJSON('/api/premium-dashboard'); if (d) state.premiumDashboard = d;
 }
 async function startIntentLeadProduction() {
   const industry = (document.getElementById('intent-prod-industry')?.value||'').trim();
@@ -2893,6 +5026,146 @@ function paintStats() {
   if (liNav) liNav.textContent = (s.li_todo||0) + (s.li_progress||0);
 }
 
+function tierBadge(t) { return `<span class="tier ${E(t||'C')}">${E(t||'C')}</span>`; }
+function statusPill(label, cls='acc') { return `<span class="pill ${cls}">${E(label||'-')}</span>`; }
+function initials(name) {
+  const p = String(name||'?').trim().split(/\s+/).filter(Boolean);
+  return p.slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+}
+function renderPremiumDashboard() {
+  const d = state.premiumDashboard || {};
+  const c = d.counts || {};
+  const byId = (id) => document.getElementById(id);
+  if (byId('nav-signals')) byId('nav-signals').textContent = c.signals || 0;
+  if (byId('nav-enrichment')) byId('nav-enrichment').textContent = c.enriched || 0;
+  if (byId('nav-review')) byId('nav-review').textContent = c.review_items || 0;
+  if (byId('nav-pipeline')) byId('nav-pipeline').textContent = c.pipeline || 0;
+  if (byId('nav-replycenter')) byId('nav-replycenter').textContent = c.replies || 0;
+  const overviewTitle = byId('overview-banner-title');
+  const overviewSub = byId('overview-banner-sub');
+  if (overviewTitle) overviewTitle.textContent = `${c.signals || 0} Signale · ${c.review_items || 0} Review Items · ${c.pipeline || 0} Pipeline Leads`;
+  if (overviewSub) overviewSub.textContent = `Signal A: ${c.signal_A || 0} · Signal B: ${c.signal_B || 0} · Pending Reviews: ${c.review_items || 0}`;
+  const stageWrap = byId('overview-stage-strip');
+  if (stageWrap) {
+    const stages = [
+      ['A', c.signal_A || 0, 'ok', 'ready/resolved'],
+      ['B', c.signal_B || 0, 'acc', 'website resolution'],
+      ['C', c.signal_C || 0, 'warn', 'manual review'],
+      ['D', c.signal_D || 0, 'err', 'blocked'],
+    ];
+    stageWrap.innerHTML = stages.map(s => `<div class="premium-card" style="padding:14px;min-width:140px;flex:1"><div>${tierBadge(s[0])}</div><div class="kpi-val" style="font-size:24px;margin-top:8px">${s[1]}</div><div class="kpi-sub">${s[3]}</div></div>`).join('');
+  }
+  const conv1 = byId('overview-conv-1'); const conv2 = byId('overview-conv-2'); const conv3 = byId('overview-conv-3');
+  const convBar1 = byId('overview-convbar-1'); const convBar2 = byId('overview-convbar-2'); const convBar3 = byId('overview-convbar-3');
+  const sig = Math.max(1, c.signals || 1);
+  const review = Math.max(1, c.review_items || 1);
+  if (conv1) conv1.textContent = `${c.enriched || 0}%`;
+  if (conv2) conv2.textContent = `${review}%`;
+  if (conv3) conv3.textContent = `${c.pipeline || 0}%`;
+  if (convBar1) convBar1.style.width = `${Math.min(100, Math.round(((c.enriched || 0) / sig) * 100))}%`;
+  if (convBar2) convBar2.style.width = `${Math.min(100, Math.round(((c.review_items || 0) / Math.max(1, c.enriched || 1)) * 100))}%`;
+  if (convBar3) convBar3.style.width = `${Math.min(100, Math.round(((c.pipeline || 0) / Math.max(1, c.review_items || 1)) * 100))}%`;
+  const hotCount = byId('overview-hot-count');
+  const reviewCount = byId('overview-review-count');
+  if (hotCount) hotCount.textContent = d.replies ? (d.replies.filter(r => r.class === 'positive').length || 0) : 0;
+  if (reviewCount) reviewCount.textContent = d.email_review ? d.email_review.length : 0;
+  const topReplies = byId('overview-top-replies');
+  if (topReplies) {
+    const replies = (d.replies || []).slice(0, 3);
+    topReplies.innerHTML = replies.length ? replies.map(r => `<div class="reply-card"><div class="reply-avatar">${E(initials(r.company||r.from||'?'))}</div><div style="min-width:0"><div class="from">${E(r.subject||'(kein Betreff)')} <span class="muted" style="font-weight:500;font-size:12px">· ${E(r.company||'')}</span></div><div class="subj">${E(r.from||'')}</div><div class="preview">${E(r.preview||r.body_preview||'').slice(0,160)}</div></div><div class="meta">${statusPill(r.class||r.group||'review', r.class==='positive'?'ok':'violet')}<div class="mono">${E(r.ts||'')}</div></div></div>`).join('') : '<div class="empty">Keine Antworten vorhanden.</div>';
+  }
+  const reviewTable = byId('overview-review-table');
+  if (reviewTable) {
+    const items = d.email_review || [];
+    reviewTable.innerHTML = items.length ? `<table class="tbl"><tbody>${items.slice(0,4).map(it => `<tr><td class="cell-company">${E(it.company_name||'-')}<small>${E(it.website||'')}</small></td><td>${E(it.decision_maker_name||'-')}<br><small>${E(it.decision_maker_role||'')}</small></td><td>${emailReviewStatusPill(it.review_status)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Keine Review Items vorhanden.</div>';
+  }
+  const actions = byId('overview-actions');
+  if (actions) {
+    actions.innerHTML = [
+      ['radar','Signale entdecken','Nach Branche + Stadt suchen','signals',''],
+      ['sparkles','Queue anreichern',`${c.enriched || 0} Leads offen`,'enrichment',''],
+      ['shield-check','Prüfung offen',`${c.review_items || 0} warten auf Entscheidung`,'review','yellow'],
+      ['send','Freigeben & senden',`${c.auto_candidates_not_sent || 0} versandbereite Entwürfe`,'pipeline','green'],
+    ].map(x => `<div class="stat-tile" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="goPage('${x[3]}')"><div style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:${x[4]==='yellow'?'var(--yellow-soft)':x[4]==='green'?'var(--green-soft)':'rgba(110,139,255,0.1)'};color:${x[4]==='yellow'?'var(--yellow)':x[4]==='green'?'var(--green)':'var(--accent)'};border:1px solid ${x[4]==='yellow'?'rgba(240,184,64,0.25)':x[4]==='green'?'rgba(52,211,154,0.25)':'rgba(110,139,255,0.25)'}"><span style="font-size:16px">${x[0]==='radar'?'📡':x[0]==='sparkles'?'✨':x[0]==='shield-check'?'🛡':'📤'}</span></div><div style="flex:1"><div style="font-weight:600;font-size:13px">${x[1]}</div><div class="muted" style="font-size:11.5px;margin-top:2px">${x[2]}</div></div><span style="font-size:14px">›</span></div>`).join('');
+  }
+  renderPremiumSignals(d);
+  renderPremiumEnrichment(d);
+  renderPremiumReview(d);
+  renderPremiumPipeline(d);
+  renderPremiumReplies(d);
+}
+function renderPremiumSignals(d) {
+  const signals = d.signals || [], sources = d.sources || [], c = d.counts || {};
+  const sourceBox = document.getElementById('premium-sources');
+  if (!sourceBox) return;
+  document.getElementById('premium-source-count').textContent = `${sources.length} Quellen`;
+  sourceBox.innerHTML = sources.length ? sources.map(s => `
+    <div class="source-row"><div class="source-mark">${E((s.source||'?').slice(0,2).toUpperCase())}</div>
+      <div style="flex:1;min-width:0"><div class="lead-name">${E(s.source)}</div><div class="lead-sub">${E(s.count)} Signale erfasst</div></div>
+      <span class="pill acc">${E(s.count)}</span></div>`).join('') : '<div class="empty">Keine Signalquellen geladen.</div>';
+  document.getElementById('premium-tier-summary').innerHTML = ['A','B','C','D'].map(t => {
+    const val = c['signal_'+t] || 0, cls = t==='A'?'ok':t==='B'?'acc':t==='C'?'warn':'err';
+    return `<div class="premium-card" style="padding:14px"><div>${tierBadge(t)}</div><div class="kpi-val" style="font-size:24px;margin-top:8px">${val}</div><div class="kpi-sub">${t==='A'?'ready/resolved':t==='B'?'website resolution':t==='C'?'manual review':'blocked'}</div></div>`;
+  }).join('');
+  document.getElementById('premium-signals-badge').textContent = signals.length;
+  document.getElementById('premium-signals-table').innerHTML = signals.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Stufe</th><th>Signal</th><th>Firma</th><th>Quelle</th><th>Status</th><th>Next</th></tr></thead><tbody>${
+    signals.slice(0,80).map(s => `<tr onclick="openPremiumDrawer(${JSON.stringify(s).replace(/"/g,'&quot;')},'signal')"><td>${tierBadge(s.tier)}</td><td><strong>${E(s.title)}</strong><br><small>${E(s.city)} · ${E(s.industry)}</small></td><td class="cell-company">${E(s.company||'-')}<small>${E(s.website||'')}</small></td><td><a class="intent-link" href="${E(s.url)}" target="_blank" rel="noopener">${E(s.source||'-')}</a></td><td>${statusPill(s.status, s.tier==='A'?'ok':s.tier==='B'?'acc':s.tier==='C'?'warn':'err')}</td><td>${E(s.next_action||'-')}</td></tr>`).join('')
+  }</tbody></table></div>` : '<div class="empty">Keine Signale vorhanden.</div>';
+}
+function renderPremiumEnrichment(d) {
+  const rows = d.enriched_leads || [], c = d.counts || {};
+  const kpis = document.getElementById('premium-enrichment-kpis');
+  if (!kpis) return;
+  kpis.innerHTML = [
+    ['Aufgelöste Firmen', c.enriched||0, 'acc'],
+    ['Review Items', c.review_items||0, 'warn'],
+    ['Verified', c.verified||0, 'ok'],
+    ['Pattern Review', c.pattern_review||0, 'warn'],
+  ].map(x => `<div class="kpi-card"><div class="kpi-lbl">${x[0]}</div><div class="kpi-val ${x[2]}">${x[1]}</div><div class="kpi-sub">echte Datenquelle</div></div>`).join('');
+  document.getElementById('premium-enrichment-badge').textContent = rows.length;
+  document.getElementById('premium-enrichment-table').innerHTML = rows.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Firma / Entscheider</th><th>Website</th><th>E-Mail</th><th>Status</th><th>Fehlend</th></tr></thead><tbody>${
+    rows.slice(0,80).map(l => `<tr onclick="openPremiumDrawer(${JSON.stringify(l).replace(/"/g,'&quot;')},'lead')"><td><div class="lead-cell"><div class="lead-avatar">${E(initials(l.company))}</div><div><div class="lead-name">${E(l.company||'-')}</div><div class="lead-sub">${E(l.name||'kein Entscheider')}</div></div></div></td><td class="mono">${E(l.website||'-')}</td><td class="mono">${E(l.email||'-')}</td><td>${statusPill(l.status||l.next_action, l.verified?'ok':'warn')}</td><td>${(l.missing||[]).length ? (l.missing||[]).map(m=>statusPill(m,'warn')).join(' ') : statusPill('vollständig','ok')}</td></tr>`).join('')
+  }</tbody></table></div>` : '<div class="empty">Keine Enrichment-Daten vorhanden.</div>';
+}
+function renderPremiumReview(d) {
+  const items = d.email_review || [];
+  const pending = items.filter(i => (i.review_status||'pending') === 'pending').length;
+  const box = document.getElementById('premium-review-table');
+  if (!box) return;
+  document.getElementById('premium-review-badge').textContent = `${pending} pending`;
+  box.innerHTML = items.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Firma</th><th>Entscheider</th><th>E-Mail Kandidat</th><th>Status</th><th style="text-align:right">Aktionen</th></tr></thead><tbody>${
+    items.map(it => {
+      const rid = E(it.review_id||'');
+      const verified = it.personal_email_verified === true;
+      const pattern = !verified && (it.personal_email_candidate||'');
+      return `<tr><td class="cell-company">${E(it.company_name||'-')}<small>${E(it.website||'')}</small></td><td>${E(it.decision_maker_name||'-')}<br><small>${E(it.decision_maker_role||'')}</small></td><td class="mono">${E(it.personal_email_candidate||it.generic_email||'-')}<br>${pattern?statusPill('Pattern · manuell prüfen','warn'):statusPill('verified','ok')}</td><td>${emailReviewStatusPill(it.review_status)}</td><td class="cell-actions"><button class="btn success sm" onclick="decideIntentEmailReview('${rid}','verified')" ${it.review_status==='verified'?'disabled':''}>Verified</button><button class="btn danger sm" onclick="decideIntentEmailReview('${rid}','rejected')" ${it.review_status==='rejected'?'disabled':''}>Verwerfen</button></td></tr>`;
+    }).join('')
+  }</tbody></table></div>` : '<div class="empty">Keine Review Items vorhanden.</div>';
+  const dmMount = document.getElementById('premium-manual-dm-mount');
+  if (dmMount) dmMount.innerHTML = document.getElementById('intent-manual-dm-content')?.innerHTML || '<div class="empty">Manual Decision Maker Queue lädt über bestehende Funktion.</div>';
+}
+function renderPremiumPipeline(d) {
+  const items = (d.pipeline||{}).items || [], sent = d.sent_events || [], c = d.counts || {};
+  const k = document.getElementById('premium-pipeline-kpis');
+  if (!k) return;
+  const ready = Math.max(0, c.auto_candidates_not_sent || 0);
+  k.innerHTML = [['Review-ready',ready,'acc'],['Verified',c.verified||0,'ok'],['Pipeline',items.length,'acc'],['Gesendet',sent.length,'ok']].map(x=>`<div class="kpi-card"><div class="kpi-lbl">${x[0]}</div><div class="kpi-val ${x[2]}">${x[1]}</div><div class="kpi-sub">${x[0]==='Review-ready'?'nicht sent-ready':''}</div></div>`).join('');
+  document.getElementById('premium-pipeline-table').innerHTML = items.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Firma</th><th>Status</th><th>Bucket</th><th>Kontakt</th></tr></thead><tbody>${items.slice(0,80).map(it=>`<tr><td>${E(it.company_name||it.company||'-')}</td><td>${statusPill(it.status||'-','acc')}</td><td>${statusPill(it.pipeline_bucket||'-',String(it.pipeline_bucket||'').includes('sent')?'ok':'acc')}</td><td class="mono">${E(it.email||it.to||'-')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Keine Pipeline-Daten vorhanden.</div>';
+}
+function renderPremiumReplies(d) {
+  const replies = d.replies || [];
+  const box = document.getElementById('premium-reply-list');
+  if (!box) return;
+  document.getElementById('premium-reply-badge').textContent = replies.length;
+  box.innerHTML = replies.length ? replies.slice(0,50).map(r => `<div class="premium-card" style="padding:14px;margin-bottom:10px"><div style="display:flex;gap:12px"><div class="lead-avatar">${E(initials(r.company||r.from||'?'))}</div><div style="flex:1"><div class="lead-name">${E(r.subject||'(kein Betreff)')}</div><div class="lead-sub">${E(r.from||'')} · ${E(r.company||'')}</div><div style="color:var(--text-dim);font-size:12px;margin-top:8px">${E(r.preview||r.body_preview||'').slice(0,260)}</div></div>${statusPill(r.class||r.group||'review','violet')}</div></div>`).join('') : '<div class="empty">Keine Replies vorhanden.</div>';
+}
+function openPremiumDrawer(item, kind) {
+  document.getElementById('drawer-title').textContent = item.company || item.title || 'Detail';
+  document.getElementById('drawer-body').innerHTML = `<div class="drawer-section"><h5>${E(kind)}</h5>${Object.entries(item).slice(0,18).map(([k,v])=>`<div class="row"><span>${E(k)}</span><strong>${E(Array.isArray(v)?v.join(', '):v)}</strong></div>`).join('')}</div>`;
+  document.getElementById('drawer-actions').innerHTML = '<button class="btn ghost" onclick="closeDrawer()">Schliessen</button>';
+  openDrawer();
+}
+
 function renderDashboard() {
   const s = state.stats;
   document.getElementById('d-sent').textContent = s.sent||0;
@@ -2955,6 +5228,9 @@ function renderDashboard() {
 
   renderIntentPreview();
   renderIntentLeadProduction();
+  renderIntentEmailReviewQueue();
+  renderIntentManualDecisionMakerReview();
+  renderIntentOperatorQueue();
 }
 
 function renderIntentPreview() {
@@ -3170,6 +5446,318 @@ function renderIntentLeadProduction() {
     </div>`;
 }
 
+function emailReviewStatusPill(status) {
+  const cls = status === 'verified' ? 'ok' : status === 'rejected' ? 'err' : 'warn';
+  return `<span class="pill ${cls}">${E(status||'pending')}</span>`;
+}
+
+function emailReviewDecisionPill(decision) {
+  const cls = decision === 'verify_manually' ? 'warn' : decision === 'use_generic_context' ? 'acc' : decision === 'verified' ? 'ok' : 'err';
+  return `<span class="pill ${cls}">${E(decision||'')}</span>`;
+}
+
+async function decideIntentEmailReview(reviewId, decision) {
+  if (!reviewId || !decision) return;
+  const msg = decision === 'verified'
+    ? 'Diese Adresse manuell als verified markieren? Es wird keine Mail gesendet.'
+    : 'Diesen E-Mail-Kandidaten verwerfen? Es wird keine Mail gesendet.';
+  if (!confirm(msg)) return;
+  try {
+    const r = await fetch('/api/intent-email-review/decision', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({review_id: reviewId, decision}),
+    });
+    const j = await r.json();
+    if (!r.ok || j.error) {
+      toast('err', 'Review-Entscheidung fehlgeschlagen', j.error || r.statusText);
+      return;
+    }
+    state.intentEmailReviewQueue = j.queue || state.intentEmailReviewQueue;
+    await loadIntentOperatorQueue();
+    renderIntentEmailReviewQueue();
+    renderIntentOperatorQueue();
+    toast('ok', decision === 'verified' ? 'Als verified markiert' : 'Verworfen', 'Nur Review-Dateien aktualisiert. Kein Versand.');
+  } catch(e) {
+    toast('err', 'Netzwerkfehler', String(e));
+  }
+}
+
+function renderIntentEmailReviewQueue() {
+  const box = document.getElementById('intent-email-review-content');
+  const summary = document.getElementById('intent-email-review-summary');
+  const badge = document.getElementById('intent-email-review-badge');
+  const d = state.intentEmailReviewQueue;
+  if (!box || !summary) return;
+  if (!d || !d.available) {
+    summary.innerHTML = '';
+    if (badge) badge.textContent = 'Review';
+    box.innerHTML = '<div class="empty"><span class="big">📬</span>Intent Email Review Queue noch nicht erzeugt.</div>';
+    return;
+  }
+  const items = d.review_items || [];
+  if (badge) badge.textContent = `${d.pending||0} pending`;
+  const pill = (label, count, cls) => `<span class="pill ${cls}" style="font-size:13px;padding:6px 12px">${label}: <strong>${count||0}</strong></span>`;
+  summary.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${pill('Review Items', d.review_items_created, '')}
+      ${pill('Pending', d.pending, 'warn')}
+      ${pill('Verified', d.verified_existing, 'ok')}
+      ${pill('Rejected', d.rejected, 'err')}
+      ${d.generated_at ? `<span style="color:var(--muted);font-size:10px;margin-left:8px">Stand: ${E(d.generated_at)}</span>` : ''}
+    </div>`;
+  if (!items.length) {
+    box.innerHTML = '<div class="empty"><span class="big">📬</span>Keine E-Mail-Kandidaten zur Review.</div>';
+    return;
+  }
+  const rows = items.map((it) => {
+    const reviewId = E(it.review_id || '');
+    const bodyEncoded = encodeURIComponent(it.email_body || '');
+    return `<tr>
+      <td class="cell-company">
+        <strong>${E(it.company_name||'-')}</strong>
+        ${it.website ? `<br><small><a class="intent-link" href="${E(it.website)}" target="_blank" rel="noopener">Website</a></small>` : ''}
+        ${it.intent_signal_title ? `<br><small style="color:var(--accent)">📡 ${E(it.intent_signal_title)}</small>` : ''}
+      </td>
+      <td>
+        <strong>${E(it.decision_maker_name||'-')}</strong>
+        ${it.decision_maker_role ? `<br><small>${E(it.decision_maker_role)}</small>` : ''}
+        ${it.phone ? `<br><small>☎ ${E(it.phone)}</small>` : ''}
+      </td>
+      <td>
+        ${it.personal_email_candidate ? `<div><strong>${E(it.personal_email_candidate)}</strong></div>` : '<span style="color:var(--muted)">-</span>'}
+        ${it.generic_email ? `<small>Generic: ${E(it.generic_email)}</small>` : ''}
+      </td>
+      <td>
+        ${emailReviewStatusPill(it.review_status)}
+        <br>${emailReviewDecisionPill(it.recommended_decision)}
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        ${it.email_body ? `<button class="btn ghost sm" onclick="event.stopPropagation();navigator.clipboard.writeText(decodeURIComponent('${bodyEncoded}'));toast('ok','Kopiert','Mailtext kopiert')">Mailtext kopieren</button>` : ''}
+        ${it.intent_signal_source_url ? `<a class="btn ghost sm" href="${E(it.intent_signal_source_url)}" target="_blank" rel="noopener">Signal öffnen</a>` : ''}
+        ${it.website ? `<a class="btn ghost sm" href="${E(it.website)}" target="_blank" rel="noopener">Website öffnen</a>` : ''}
+        <button class="btn success sm" onclick="decideIntentEmailReview('${reviewId}','verified')" ${it.review_status==='verified'?'disabled':''}>Als verified markieren</button>
+        <button class="btn danger sm" onclick="decideIntentEmailReview('${reviewId}','rejected')" ${it.review_status==='rejected'?'disabled':''}>Verwerfen</button>
+      </td>
+    </tr>
+    <tr class="email-preview-row" style="background:var(--surface2);font-size:12px">
+      <td colspan="5" style="padding:8px 16px">
+        ${it.email_subject ? '<div style="margin-bottom:4px"><strong>Betreff:</strong> ' + E(it.email_subject) + '</div>' : ''}
+        <div style="color:var(--muted);white-space:pre-wrap;max-height:150px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px">${E((it.email_body || '').substring(0, 900))}${(it.email_body||'').length > 900 ? '…' : ''}</div>
+      </td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div style="color:var(--muted);font-size:12px;margin-bottom:10px">Review only: keine SMTP-Prüfung, keine Pipeline-Integration, kein Versand.</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Firma / Signal</th><th>Entscheider</th><th>E-Mail</th><th>Status</th><th style="text-align:right">Aktionen</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function verifiedEmailPill(verified) {
+  return verified
+    ? '<span class="pill ok">Manuell verified</span>'
+    : '<span class="pill warn">Pattern-Kandidat - manuelle Prüfung nötig</span>';
+}
+
+async function saveManualDecisionMakerReview(idx) {
+  const item = (state.intentManualDecisionMakerReview?.items || [])[idx];
+  if (!item) return;
+  const payload = {
+    company_name: item.company_name || '',
+    website: item.website || '',
+    decision_maker_name: (document.getElementById(`manual-dm-name-${idx}`)?.value || '').trim(),
+    decision_maker_role: (document.getElementById(`manual-dm-role-${idx}`)?.value || '').trim(),
+    decision_maker_source_url: (document.getElementById(`manual-dm-source-${idx}`)?.value || '').trim(),
+    decision_maker_confidence: parseFloat(document.getElementById(`manual-dm-confidence-${idx}`)?.value || '0'),
+    note: (document.getElementById(`manual-dm-note-${idx}`)?.value || '').trim(),
+  };
+  try {
+    const r = await fetch('/api/intent-manual-decision-maker-review/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json();
+    if (!j.ok) { toast('err', 'Nicht gespeichert', j.error || 'Validierung fehlgeschlagen'); return; }
+    state.intentManualDecisionMakerReview = j.queue || state.intentManualDecisionMakerReview;
+    renderIntentManualDecisionMakerReview();
+    toast('ok', 'Entscheider gespeichert', payload.decision_maker_name);
+  } catch(e) { toast('err', 'Netzwerkfehler', String(e)); }
+}
+
+function renderIntentManualDecisionMakerReview() {
+  const box = document.getElementById('intent-manual-dm-content');
+  const summary = document.getElementById('intent-manual-dm-summary');
+  const badge = document.getElementById('intent-manual-dm-badge');
+  const d = state.intentManualDecisionMakerReview;
+  if (!box || !summary) return;
+  if (!d || d.available === false) {
+    summary.innerHTML = '';
+    box.innerHTML = '<div class="empty"><span class="big">Manual Review nicht verfuegbar.</span></div>';
+    return;
+  }
+  const items = d.items || [];
+  if (badge) badge.textContent = `${items.length} offen`;
+  summary.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <span class="pill warn">Needs Review: <strong>${items.length}</strong></span>
+    <span class="pill ok">Gespeichert: <strong>${d.completed_count||0}</strong></span>
+    <span style="color:var(--muted);font-size:11px">Kein Send, keine Pipeline-Integration.</span>
+  </div>`;
+  if (!items.length) {
+    box.innerHTML = '<div class="empty"><span class="big">Keine Leads fuer manuelle Entscheider-Review.</span></div>';
+    return;
+  }
+  const rows = items.map((it, idx) => {
+    const completed = it.manual_review || null;
+    const cand = (it.existing_candidates || [])[0] || {};
+    return `<tr>
+      <td class="cell-company">
+        <strong>${E(it.company_name||'-')}</strong>
+        ${it.website ? `<br><a class="intent-link" href="${E(it.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+        ${it.signal_title ? `<br><small style="color:var(--accent)">${E(it.signal_title)}</small>` : ''}
+        ${it.signal_url ? `<br><a class="intent-link" href="${E(it.signal_url)}" target="_blank" rel="noopener">Signal</a>` : ''}
+      </td>
+      <td>
+        <span class="pill warn">${E(it.final_status||it.lead_quality_status||'needs_review')}</span>
+        <br><small>${E(it.debug_reason||'-')}</small>
+        <br><small>Queries: ${E(it.queries_tried_count||0)} · Pages: ${E(it.pages_checked_count||0)}</small>
+        ${cand.name ? `<br><small>Kandidat: ${E(cand.name)} (${E(cand.role||'')}, ${E(cand.confidence||0)})</small>` : ''}
+        ${completed ? `<br><span class="pill ok">gespeichert: ${E(completed.decision_maker_name||'')}</span>` : ''}
+      </td>
+      <td>
+        <input id="manual-dm-name-${idx}" class="tb-input" placeholder="Name" value="${E(completed?.decision_maker_name||'')}" style="width:100%;margin-bottom:6px">
+        <input id="manual-dm-role-${idx}" class="tb-input" placeholder="Rolle" value="${E(completed?.decision_maker_role||'')}" style="width:100%;margin-bottom:6px">
+        <input id="manual-dm-source-${idx}" class="tb-input" placeholder="Quelle/URL" value="${E(completed?.decision_maker_source_url||'')}" style="width:100%;margin-bottom:6px">
+        <input id="manual-dm-confidence-${idx}" class="tb-input" type="number" min="0" max="1" step="0.05" value="${E(completed?.decision_maker_confidence||'0.9')}" style="width:100%;margin-bottom:6px">
+        <input id="manual-dm-note-${idx}" class="tb-input" placeholder="Notiz optional" value="${E(completed?.note||'')}" style="width:100%">
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn success sm" onclick="saveManualDecisionMakerReview(${idx})">Entscheider speichern</button>
+      </td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Firma / Signal</th><th>Status / Debug</th><th>Manuelle Eingabe</th><th style="text-align:right">Aktion</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function renderIntentOperatorQueue() {
+  const healthBox = document.getElementById('intent-operator-health');
+  const box = document.getElementById('intent-operator-content');
+  const badge = document.getElementById('intent-operator-badge');
+  const d = state.intentOperatorQueue;
+  if (!healthBox || !box) return;
+  if (!d || !d.available) {
+    healthBox.innerHTML = '';
+    box.innerHTML = '<div class="empty"><span class="big">Operator Queue nicht verfügbar.</span></div>';
+    return;
+  }
+  const h = d.health || {};
+  const c = d.counts || {};
+  if (badge) badge.textContent = `${c.pending_review||0} review`;
+  const warn = (h.warnings||[]).length
+    ? `<div class="pill err">Warnung: ${E((h.warnings||[]).join(', '))}</div>`
+    : '<div class="pill ok">Safety OK</div>';
+  const pill = (label, val, cls='') => `<span class="pill ${cls}" style="font-size:12px;padding:6px 10px">${label}: <strong>${E(val)}</strong></span>`;
+  healthBox.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      ${warn}
+      ${pill('Search', h.search_status||'unknown', String(h.search_status||'').includes('blocked')?'err':'ok')}
+      ${pill('Pipeline Sync', h.pipeline_sync_status||'unknown', (h.pipeline_sync_status==='synced'||h.pipeline_sync_status==='dry_run_no_write')?'ok':'warn')}
+      ${pill('Pending Review', h.pending_review_count||0, 'warn')}
+      ${pill('Verified', h.verified_count||0, 'ok')}
+      ${pill('Auto Eligible', h.auto_eligible_count||0, 'acc')}
+      ${pill('Approved Pending Send', h.approved_pending_send_count||0, 'warn')}
+      ${pill('Sent', h.sent_count||0, 'ok')}
+      ${pill('Sent Today', h.sent_today_total||0, '')}
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Canonical Pipeline: <code>${E(h.canonical_pipeline_file||'')}</code></div>`;
+
+  const reviewRows = (d.needs_email_review||[]).map(it => {
+    const reviewId = E(it.review_id||'');
+    const verified = it.personal_email_verified === true;
+    return `<tr>
+      <td class="cell-company"><strong>${E(it.company_name||'-')}</strong>
+        ${it.website ? `<br><a class="intent-link" href="${E(it.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+        ${it.intent_signal_source_url ? `<br><a class="intent-link" href="${E(it.intent_signal_source_url)}" target="_blank" rel="noopener">Signal</a>` : ''}
+      </td>
+      <td>${E(it.decision_maker_name||'-')}<br><small>${E(it.decision_maker_role||'')}</small></td>
+      <td><strong>${E(it.personal_email_candidate||it.generic_email||'-')}</strong><br>${verifiedEmailPill(verified)}</td>
+      <td>${emailReviewStatusPill(it.review_status)}<br>${emailReviewDecisionPill(it.recommended_decision)}</td>
+      <td>
+        ${it.rejected_email_reason ? `<div class="pill err">E-Mail blockiert: ${E(it.rejected_email_reason)}</div><small>${E(it.rejected_email||'')}</small>` : ''}
+        ${it.rejected_phone_reason ? `<div class="pill err">Telefon blockiert: ${E(it.rejected_phone_reason)}</div><small>${E(it.rejected_phone||'')}</small>` : ''}
+        ${(it.risk_flags||[]).length ? `<br><small>${E((it.risk_flags||[]).join(', '))}</small>` : ''}
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn success sm" onclick="decideIntentEmailReview('${reviewId}','verified')" ${it.review_status==='verified'?'disabled':''}>Als verified markieren</button>
+        <button class="btn danger sm" onclick="decideIntentEmailReview('${reviewId}','rejected')" ${it.review_status==='rejected'?'disabled':''}>Verwerfen</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const verifiedRows = (d.manually_verified||[]).map(it => `<tr>
+    <td class="cell-company"><strong>${E(it.company_name||'-')}</strong>${it.website?`<br><a class="intent-link" href="${E(it.website)}" target="_blank" rel="noopener">Website</a>`:''}</td>
+    <td>${E(it.decision_maker_name||'-')}<br><small>${E(it.decision_maker_role||'')}</small></td>
+    <td><strong>${E(it.personal_email||it.personal_email_candidate||'-')}</strong><br>${verifiedEmailPill(it.personal_email_verified===true)}</td>
+    <td>${E(it.verified_at||'-')}<br><small>${E(it.verification_method||'-')}</small></td>
+    <td>${E(it.next_action||'-')}</td>
+    <td>${it.ready_for_approval ? '<span class="pill ok">ready_for_approval</span>' : '<span class="pill warn">not ready</span>'}</td>
+  </tr>`).join('');
+
+  const autoRows = (d.auto_send_candidates||[]).map(it => {
+    const ok = String(it.auto_send_status||'') === 'auto_eligible';
+    return `<tr>
+      <td class="cell-company"><strong>${E(it.company_name||'-')}</strong></td>
+      <td>${E(it.decision_maker_name||'-')}<br><small>${E(it.decision_maker_role||'')}</small></td>
+      <td>${E(it.personal_email||'-')}</td>
+      <td><span class="pill ${ok?'ok':'err'}">${E(it.auto_send_status||'-')}</span><br><small>${E(it.next_action||'')}</small></td>
+      <td>${(it.block_reasons||[]).length ? E((it.block_reasons||[]).join(', ')) : '<span style="color:var(--muted)">Noch nicht gesendet</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const pipeRows = ((d.outreach_pipeline||{}).items||[]).slice(0, 20).map(it => {
+    const bucket = it.pipeline_bucket || '';
+    const cls = bucket === 'sent' ? 'ok' : bucket === 'approved_pending_send' ? 'warn' : bucket === 'replied' ? 'acc' : '';
+    return `<tr>
+      <td class="cell-company"><strong>${E(it.company_name||'-')}</strong>${it.website?`<br><a class="intent-link" href="${E(it.website)}" target="_blank" rel="noopener">Website</a>`:''}</td>
+      <td>${E(it.email||'-')}</td>
+      <td><span class="pill ${cls}">${E(bucket)}</span><br><small>${E(it.outreach_stage||'')}</small></td>
+      <td>${it.approved_for_send ? '<span class="pill ok">approved</span>' : '<span class="pill warn">not approved</span>'}</td>
+      <td>${E(it.source||'-')}</td>
+      <td>${E(it.sent_at||it.first_sent_at||'-')}</td>
+    </tr>`;
+  }).join('');
+
+  const blockedRows = (d.blocked_rejected_already_contacted||[]).map(it => `<tr>
+    <td class="cell-company"><strong>${E(it.company_name||'-')}</strong></td>
+    <td><span class="pill err">${E(it.status||'blocked')}</span></td>
+    <td>${E(it.reason||'-')}</td>
+    <td>${E(it.source||'-')}</td>
+    <td>${it.rejected_email ? `rejected_email: ${E(it.rejected_email)}` : ''}${it.rejected_phone ? `rejected_phone: ${E(it.rejected_phone)}` : ''}</td>
+  </tr>`).join('');
+
+  const table = (title, rows, head) => `
+    <div style="margin-top:18px"><strong>${title}</strong></div>
+    <div class="tbl-wrap" style="margin-top:8px"><table class="tbl">
+      <thead>${head}</thead>
+      <tbody>${rows || `<tr><td colspan="6" class="empty">Keine Einträge.</td></tr>`}</tbody>
+    </table></div>`;
+
+  box.innerHTML = `
+    ${table('Needs Email Review', reviewRows, '<tr><th>Firma / Links</th><th>Entscheider</th><th>E-Mail</th><th>Review</th><th>Hygiene</th><th style="text-align:right">Aktionen</th></tr>')}
+    ${table('Manually Verified', verifiedRows, '<tr><th>Firma</th><th>Entscheider</th><th>E-Mail</th><th>Verified</th><th>Next Action</th><th>Ready</th></tr>')}
+    ${table('Auto Send Candidates', autoRows, '<tr><th>Firma</th><th>Entscheider</th><th>E-Mail</th><th>Status</th><th>Hinweis</th></tr>')}
+    ${table('Outreach Pipeline (canonical)', pipeRows, '<tr><th>Firma</th><th>E-Mail</th><th>Status</th><th>Approved</th><th>Source</th><th>Sent At</th></tr>')}
+    ${table('Blocked / Rejected / Already Contacted', blockedRows, '<tr><th>Firma</th><th>Status</th><th>Grund</th><th>Quelle</th><th>Details</th></tr>')}
+  `;
+}
+
 function leadFilter(l) {
   const q = (document.getElementById('leads-search')?.value||'').toLowerCase().trim();
   if (q) {
@@ -3347,7 +5935,7 @@ function renderLinkedin() {
                   || r.li_company || r.li_person || l.linkedin_person_url || r.g_person_li || '');
     return typeof cand === 'string' && cand.toLowerCase().indexOf('linkedin.com') >= 0;
   }
-  let rows = state.leads.filter(l => l.company && l.source === 'linkedin' && _hasLinkedinLink(l));
+  let rows = state.leads.filter(l => l.company && _hasLinkedinLink(l));
   // User-Sort hat Vorrang vor liScore, fällt auf liScore zurück wenn keine Auswahl.
   const liSort = state.sorts.linkedin || 'newest';
   if (liSort === 'newest')      rows.sort((a,b)=>(b.added_at||'').localeCompare(a.added_at||''));
@@ -3457,6 +6045,73 @@ async function liCopyText(key, kind) {
     const lbl = kind==='connect'?'Connection-Request':kind==='dm'?'1st-DM':'Follow-up';
     toast('ok', '📋 Kopiert', `${lbl} (${text.length} Zeichen) — bereit zum Einfügen.`);
   } catch(e) { toast('err', 'Clipboard-Fehler', String(e)); }
+}
+
+function renderReplyOperatorQueue() {
+  const safety = document.getElementById('reply-operator-safety');
+  const list = document.getElementById('reply-operator-list');
+  const d = state.replyOperatorQueue;
+  if (!safety || !list) return;
+  if (!d || !d.available) {
+    safety.innerHTML = '';
+    list.innerHTML = '<div class="empty"><span class="big">Reply Queue nicht verfuegbar.</span></div>';
+    return;
+  }
+  const c = d.counts || {};
+  const s = d.safety || {};
+  const pill = (label, val, cls='') => `<span class="pill ${cls}" style="font-size:12px;padding:6px 10px">${label}: <strong>${E(val)}</strong></span>`;
+  safety.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      ${pill('REPLY_AUTO_SEND', s.reply_auto_send || 'false', (s.reply_auto_send === 'false') ? 'ok' : 'err')}
+      ${pill('auto_sent', s.auto_sent ?? 0, (s.auto_sent||0) === 0 ? 'ok' : 'err')}
+      ${pill('reply_queue_pending', c.reply_queue_pending||0, 'warn')}
+      ${pill('positive', c.positive_count||0, 'ok')}
+      ${pill('auto_reply', c.auto_reply_count||0, 'acc')}
+      ${pill('appointment_ready', c.appointment_ready_count||0, 'ok')}
+      ${pill('sent_log_only', c.sent_log_only_count||0, 'warn')}
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Read-only Operator View. Kein SMTP, kein Send, keine automatische Antwort.</div>`;
+  const groups = d.groups || {};
+  const titles = [
+    ['positive_appointment_ready', 'Positive / Appointment Ready'],
+    ['human_review', 'Human Review'],
+    ['auto_replies', 'Auto-Replies'],
+    ['negative_do_not_contact', 'Negative / Do-Not-Contact'],
+    ['unmatched_unclear', 'Unmatched / Unclear'],
+  ];
+  const classPill = (it) => {
+    if (it.is_auto_reply) return '<span class="pill acc">auto_reply neutral</span>';
+    if (it.appointment_ready) return '<span class="pill ok">appointment_ready</span>';
+    if (/positive|interested/i.test(it.inbound_class||'')) return '<span class="pill ok">positive</span>';
+    if (/negative/i.test(it.inbound_class||'')) return '<span class="pill err">negative</span>';
+    return `<span class="pill warn">${E(it.inbound_class||'unclear')}</span>`;
+  };
+  const renderRows = (arr) => (arr||[]).map(it => {
+    const sourceCls = it.matched_entry_source === 'pipeline' ? 'ok' : it.matched_entry_source === 'sent_log' ? 'warn' : 'err';
+    const action = it.can_classify
+      ? `<button class="btn ghost sm" onclick="event.stopPropagation();openReply('${E(it.key)}')">Detail</button>`
+      : '<span class="pill warn">sent_log-only</span>';
+    return `<tr class="clickable" onclick="openReply('${E(it.key)}')">
+      <td class="cell-company"><strong>${E(it.from_email_actual||it.from_email||'-')}</strong><small>${E(it.received_account||'-')} - ${E((it.date||'').substring(0,19))}</small></td>
+      <td>${E(it.matched_company||it.original_company||'-')}<br><span class="pill ${sourceCls}">${E(it.matched_entry_source||'unmatched')}</span></td>
+      <td><strong>${E(it.subject||'(kein Betreff)')}</strong><br><small>${E(it.original_sent_email||'')}</small></td>
+      <td>${classPill(it)}<br><small>${E(it.sentiment||'')} - ${E(it.route||'')}</small></td>
+      <td>${it.needs_approval ? '<span class="pill warn">needs_approval</span>' : '<span class="pill dim">no approval</span>'}${it.is_auto_reply ? '<br><span class="pill acc">nicht hot</span>' : ''}</td>
+      <td>${E(it.reason||'-')}<br><small>${E(it.suggested_action||'')}</small></td>
+      <td style="max-width:360px;color:var(--muted);font-size:12px">${E(it.body_preview||'').substring(0,260)}</td>
+      <td class="cell-actions">${action}</td>
+    </tr>`;
+  }).join('');
+  list.innerHTML = titles.map(([key, title]) => {
+    const arr = groups[key] || [];
+    return `<div class="section">
+      <div class="section-head"><h2>${title}</h2><span class="badge">${arr.length}</span></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>From / Account</th><th>Match</th><th>Subject</th><th>Class</th><th>Review</th><th>Reason</th><th>Preview</th><th></th></tr></thead>
+        <tbody>${renderRows(arr) || '<tr><td colspan="8" class="empty">Keine Eintraege.</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
 }
 
 function renderReplies() {
@@ -3622,7 +6277,7 @@ async function openReply(key) {
     </div>`:''}
     ${r.meeting_angle ? `<div class="drawer-section"><h5>🎯 Sales-Angle</h5><div style="color:var(--muted);font-size:13px;line-height:1.6">${E(r.meeting_angle)}</div></div>`:''}
   `;
-  const k = lead.entry_key || r.entry_key || key;
+  const k = lead.entry_key || r.entry_key || '';
   document.getElementById('drawer-actions').innerHTML = `
     <button class="btn success sm" onclick="replyClassify('${E(k)}','positive')">✓ Positive</button>
     <button class="btn primary sm" onclick="replyClassify('${E(k)}','interested')">★ Interested</button>
@@ -3638,7 +6293,10 @@ async function openReply(key) {
 // ═════════════════════════════════════════════════════════
 function leadApprove(k) { closeDrawer(); api('/api/lead/approve', {key:k}, 'Approve'); }
 function leadSend(k) { closeDrawer(); api('/api/lead/send', {key:k}, 'Senden'); }
-function replyClassify(k, status) { closeDrawer(); api('/api/reply/classify', {key:k, status}, `Reply: ${status}`); }
+function replyClassify(k, status) {
+  if (!k) { toast('warn', 'sent_log-only Reply', 'Keine Pipeline-Statusaenderung verfuegbar.'); return; }
+  closeDrawer(); api('/api/reply/classify', {key:k, status}, `Reply: ${status}`);
+}
 
 // ═════════════════════════════════════════════════════════
 // SEARCH
@@ -3670,6 +6328,41 @@ console.log('🚀 B2B Cockpit Premium aktiv');
 """
 
 
+CLAUDE_DASHBOARD_HTML = r"""<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>B2B Cockpit · Claude Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/dr/styles.css" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="/dr/tweaks-panel.jsx"></script>
+<script type="text/babel" src="/api/data-live.jsx"></script>
+<script type="text/babel" src="/dr/ui.jsx"></script>
+<script type="text/babel" src="/dr/sidebar.jsx"></script>
+<script type="text/babel" src="/dr/drawer.jsx"></script>
+<script type="text/babel" src="/dr/view-overview.jsx"></script>
+<script type="text/babel" src="/dr/view-signals.jsx"></script>
+<script type="text/babel" src="/dr/view-enrichment.jsx"></script>
+<script type="text/babel" src="/dr/view-review.jsx"></script>
+<script type="text/babel" src="/dr/view-pipeline.jsx"></script>
+<script type="text/babel" src="/dr/view-replies.jsx"></script>
+<script type="text/babel" src="/dr/app.jsx"></script>
+</body>
+</html>
+"""
+
+
 # ── Server-Start ─────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -3688,7 +6381,7 @@ def main() -> None:
         print(f"[ERROR] Port {PORT} belegt: {e}")
         return
     print(f"[OK] Server aktiv. Browser oeffnet sich...")
-    threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}/")).start()
+    threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}/relay")).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
