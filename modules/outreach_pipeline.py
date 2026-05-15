@@ -1457,6 +1457,25 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             preview_rts_block = enriched.get("ready_to_send_block_reason", "")
             final_review_status = gate["review_status"]
             final_review_reason = gate["review_reason"]
+        # Contact-Safety: offensichtlich unplausible/prominente Ansprechpartner → review
+        _suspicious_contact_names: frozenset[str] = frozenset({
+            "pep guardiola",
+        })
+        _contact_raw = (
+            _crr("contact_name")
+            or enriched.get("contact_name", "")
+            or enriched.get("contact_full_name", "")
+            or enriched.get("managing_director", "")
+        )
+        _contact_norm = _contact_raw.strip().lower()
+        if _contact_norm in _suspicious_contact_names:
+            preview_rts = "review"
+            preview_rts_reason = "Preview-Safety: Ansprechpartner wirkt unplausibel/prominent; manuelle Prüfung erforderlich."
+            preview_rts_block = "suspicious_contact_name"
+            if final_review_status != "reject":
+                final_review_status = "review"
+            if final_review_status != "reject":
+                final_review_reason = "suspicious_contact_name"
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
             "company_name": _crr("company_name") or company_display,
