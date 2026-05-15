@@ -41,7 +41,7 @@ from config import (
     SEND_EMAIL_SCRIPT_DEFAULT,
     get_industry_profile,
 )
-from modules.revenue_fit import classify_pipeline_ingest, pipeline_entry_as_lead
+from modules.revenue_fit import classify_pipeline_ingest, pipeline_entry_as_lead, evaluate_email_quality_gate
 import modules.reply_intelligence as reply_intel
 import modules.reply_processor as reply_proc
 from modules import expose_generator
@@ -1416,6 +1416,47 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             score_val = int(crr.get("score") or 0) if crr and crr.get("score") else int(enriched.get("score") or 0)
         except (TypeError, ValueError):
             score_val = int(enriched.get("score") or 0)
+        # Email-Quality Safety Gate: alte ready_to_send=yes-Werte aus Pipeline dürfen nicht
+        # in Preview gelangen wenn aktuelle E-Mail-Qualität nur C/D ist.
+        # gate_lead mit aktuellen CSV-Feldern befüllen damit persönliche Firmenmails (r.schmitt@)
+        # nicht wegen fehlender Kontextfelder fälschlich abgewertet werden.
+        gate_lead = dict(enriched)
+        gate_lead["email"] = _crr("email") or gate_lead.get("email", "")
+        gate_lead["company_name"] = _crr("company_name") or gate_lead.get("company_name", "")
+        gate_lead["contact_full_name"] = (
+            _crr("contact_name")
+            or gate_lead.get("contact_full_name", "")
+            or gate_lead.get("managing_director", "")
+            or gate_lead.get("decision_maker_name", "")
+        )
+        gate_lead["phone"] = _crr("phone") or gate_lead.get("phone", "")
+        gate_lead["website"] = _crr("website") or gate_lead.get("website", "")
+        # email_domain_match ableiten wenn noch nicht gesetzt: E-Mail-Domain == Website-Domain?
+        if not gate_lead.get("email_domain_match"):
+            _gl_em_d = gate_lead["email"].rsplit("@", 1)[1].strip().lower() if "@" in gate_lead["email"] else ""
+            _gl_site = gate_lead["website"].lower().replace("https://", "").replace("http://", "")
+            if _gl_site.startswith("www."):
+                _gl_site = _gl_site[4:]
+            _gl_site = _gl_site.split("/")[0]
+            if _gl_em_d and _gl_site:
+                gate_lead["email_domain_match"] = _gl_em_d == _gl_site or _gl_site.endswith("." + _gl_em_d)
+        eq_result = evaluate_email_quality_gate(gate_lead)
+        eq_rank = eq_result.get("email_quality_rank", "")
+        eq_block = eq_result.get("ready_to_send_block_reason") or "email_quality_review_required"
+        eq_reason = eq_result.get("email_quality_reason") or eq_rank or "unbekannt"
+        eq_downgrade = eq_rank not in {"A", "B+"}
+        if eq_downgrade:
+            preview_rts = "review"
+            preview_rts_reason = f"Preview-Safety: E-Mail nicht premium-sendfähig ({eq_reason}); manuelle Prüfung erforderlich."
+            preview_rts_block = eq_block
+            final_review_status = gate["review_status"] if gate["review_status"] in {"review", "reject"} else "review"
+            final_review_reason = gate["review_reason"] or "email_quality_review_required"
+        else:
+            preview_rts = enriched.get("ready_to_send", "")
+            preview_rts_reason = enriched.get("ready_to_send_reason", "")
+            preview_rts_block = enriched.get("ready_to_send_block_reason", "")
+            final_review_status = gate["review_status"]
+            final_review_reason = gate["review_reason"]
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
             "company_name": _crr("company_name") or company_display,
@@ -1424,8 +1465,9 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             "phone": _crr("phone") or enriched.get("phone", ""),
             "website": _crr("website") or enriched.get("website", ""),
             "score": score_val,
-            "ready_to_send": enriched.get("ready_to_send", ""),
-            "ready_to_send_reason": enriched.get("ready_to_send_reason", ""),
+            "ready_to_send": preview_rts,
+            "ready_to_send_reason": preview_rts_reason,
+            "ready_to_send_block_reason": preview_rts_block,
             "first_email_subject": _crr("first_email_subject") or (e.get("first_email_subject") or "").strip(),
             "first_email_body": _crr("first_email_body") or (e.get("first_email_body") or "").strip(),
             "followup_1": (e.get("followup_1_text") or "").strip(),
@@ -1437,8 +1479,8 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             "approved_at": enriched.get("approved_at", ""),
             "approval_campaign_id": (enriched.get("approval_campaign_id") or "").strip(),
             "outreach_stage": enriched.get("outreach_stage", ""),
-            "review_status": gate["review_status"],
-            "review_reason": gate["review_reason"],
+            "review_status": final_review_status,
+            "review_reason": final_review_reason,
             "campaign_approval_status": gate["campaign_approval_status"],
             "text_quality_status": gate["text_quality_status"],
             "salutation_quality_status": gate["salutation_quality_status"],
