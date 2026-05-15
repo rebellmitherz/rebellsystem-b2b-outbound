@@ -1355,6 +1355,24 @@ def _load_current_run_emails() -> set[str]:
         return set()
 
 
+def _load_current_run_map() -> dict[str, dict]:
+    """Laedt ready_to_send.csv als email->row-Mapping (aktueller Mine-Lauf).
+    Gibt leere Map zurueck wenn Datei nicht existiert — dann kein Mapping aktiv."""
+    rts_csv = Path(OUTPUT_DIR) / "latest" / "ready_to_send.csv"
+    if not rts_csv.is_file():
+        return {}
+    try:
+        result: dict[str, dict] = {}
+        with open(rts_csv, newline="", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                em = _norm_email(row.get("email") or "")
+                if em:
+                    result[em] = dict(row)
+        return result
+    except Exception:
+        return {}
+
+
 def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
     by_lead = _leads_by_email_norm()
     rows: list[dict[str, Any]] = []
@@ -1363,14 +1381,15 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
     current_cid = get_state_campaign_id(state)
     review_counts = {"send_ready": 0, "review": 0, "reject": 0}
 
-    # Current-run filter: wenn ready_to_send.csv vorhanden, nur aktuelle Leads zeigen.
+    # Current-run filter + Mapping: wenn ready_to_send.csv vorhanden, nur aktuelle Leads zeigen
+    # und deren Firma/Kontakt-Felder aus CSV erzwingen (Pipeline kann veraltete Daten enthalten).
     # Historische Pipeline-Eintraege werden NICHT geloescht — nur aus der Preview ausgefiltert.
-    current_run_emails = _load_current_run_emails()
-    use_current_run_filter = bool(current_run_emails)
+    current_run_map = _load_current_run_map()
+    use_current_run_filter = bool(current_run_map)
 
     for e in state.get("entries") or []:
         em_check = _norm_email(e.get("email", ""))
-        if use_current_run_filter and em_check not in current_run_emails:
+        if use_current_run_filter and em_check not in current_run_map:
             exclusion_counts["historical_not_current_run"] = (
                 exclusion_counts.get("historical_not_current_run", 0) + 1
             )
@@ -1380,6 +1399,7 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             exclusion_counts[reason] = exclusion_counts.get(reason, 0) + 1
             continue
         em = _norm_email(e.get("email", ""))
+        crr = current_run_map.get(em) if use_current_run_filter else None  # CSV-Zeile aktueller Lauf
         lead = by_lead.get(em)
         e.update(_enrich_entry_from_lead(dict(e), lead))
         company_display = _apply_hardened_outreach_copy(e, lead)
@@ -1388,21 +1408,30 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
         enriched = _enrich_entry_from_lead(dict(e), lead)
         gate = compute_review_gate(enriched, lead, current_cid)
         review_counts[gate["review_status"]] = review_counts.get(gate["review_status"], 0) + 1
+        # Firma/Kontakt aus ready_to_send.csv erzwingen — Pipeline-Eintrag kann veraltete Daten tragen.
+        # Pipeline-Felder (outreach_stage, added_at, status) bleiben erhalten.
+        def _crr(k: str) -> str:
+            return (crr.get(k) or "").strip() if crr else ""
+        try:
+            score_val = int(crr.get("score") or 0) if crr and crr.get("score") else int(enriched.get("score") or 0)
+        except (TypeError, ValueError):
+            score_val = int(enriched.get("score") or 0)
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
-            "company_name": company_display,
-            "contact_name": enriched.get("contact_name", ""),
-            "email": enriched.get("email", ""),
-            "phone": enriched.get("phone", ""),
-            "website": enriched.get("website", ""),
+            "company_name": _crr("company_name") or company_display,
+            "contact_name": _crr("contact_name") or enriched.get("contact_name", ""),
+            "email": _crr("email") or enriched.get("email", ""),
+            "phone": _crr("phone") or enriched.get("phone", ""),
+            "website": _crr("website") or enriched.get("website", ""),
+            "score": score_val,
             "ready_to_send": enriched.get("ready_to_send", ""),
             "ready_to_send_reason": enriched.get("ready_to_send_reason", ""),
-            "first_email_subject": (e.get("first_email_subject") or "").strip(),
-            "first_email_body": (e.get("first_email_body") or "").strip(),
+            "first_email_subject": _crr("first_email_subject") or (e.get("first_email_subject") or "").strip(),
+            "first_email_body": _crr("first_email_body") or (e.get("first_email_body") or "").strip(),
             "followup_1": (e.get("followup_1_text") or "").strip(),
             "followup_2": (e.get("followup_2_text") or "").strip(),
             "estimated_close_potential": enriched.get("estimated_close_potential", ""),
-            "recommended_sales_angle": enriched.get("recommended_sales_angle", ""),
+            "recommended_sales_angle": _crr("recommended_sales_angle") or enriched.get("recommended_sales_angle", ""),
             "money_reason": enriched.get("money_reason", ""),
             "approved_for_send": bool(enriched.get("approved_for_send")),
             "approved_at": enriched.get("approved_at", ""),
@@ -1415,7 +1444,7 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             "salutation_quality_status": gate["salutation_quality_status"],
             "suggested_action": _suggested_action_for_preview(enriched, gate),
             "added_at": (e.get("added_at") or "")[:10],
-            "is_current_run": True,  # alle Eintraege hier sind per Filter bereits aktueller Run
+            "is_current_run": True,
         })
     for e in state.get("entries") or []:
         if not _outreach_copy_is_legacy(

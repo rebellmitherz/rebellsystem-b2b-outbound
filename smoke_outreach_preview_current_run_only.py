@@ -183,7 +183,7 @@ else:
         else:
             fail("exact_count_2", f"expected 2, got {len(result)}")
 
-        # Test missing file → empty set
+        # Test missing file â†’ empty set
         rts.unlink()
         result_empty = fn()
         if result_empty == set():
@@ -199,7 +199,7 @@ print("\n[3] run_preview() source structure checks")
 
 checks = {
     "current_run_emails_loaded": "_load_current_run_emails()" in src,
-    "use_current_run_filter_set": "use_current_run_filter = bool(current_run_emails)" in src,
+    "use_current_run_filter_set": "use_current_run_filter = bool(current_run_map)" in src,
     "historical_skip_counted": "historical_not_current_run" in src,
     "filter_before_exclusion_check": (lambda b: b.index("use_current_run_filter") < b.index("_preview_exclusion_reason(e"))(src[src.index("def run_preview("):src.index("\ndef ", src.index("def run_preview(") + 1)]),
     "is_current_run_field_added": '"is_current_run": True' in src,
