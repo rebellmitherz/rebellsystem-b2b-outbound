@@ -1476,6 +1476,22 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
                 final_review_status = "review"
             if final_review_status != "reject":
                 final_review_reason = "suspicious_contact_name"
+        # Phone-Safety: Platzhalter-/Fake-Telefonnummern → review
+        _phone_raw = _crr("phone") or enriched.get("phone", "")
+        _phone_digits = "".join(c for c in _phone_raw if c.isdigit())
+        _suspicious_phone = (
+            "0000" in _phone_digits
+            or "12345" in _phone_digits
+            or len(_phone_digits) < 7
+        )
+        if _suspicious_phone:
+            preview_rts = "review"
+            preview_rts_reason = "Preview-Safety: Telefonnummer wirkt unplausibel/Platzhalter; manuelle Prüfung erforderlich."
+            preview_rts_block = "suspicious_phone"
+            if final_review_status != "reject":
+                final_review_status = "review"
+            if final_review_status != "reject":
+                final_review_reason = "suspicious_phone"
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
             "company_name": _crr("company_name") or company_display,
