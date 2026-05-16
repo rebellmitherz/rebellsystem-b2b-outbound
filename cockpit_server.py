@@ -497,6 +497,11 @@ def _premium_lead_vm(row: dict) -> dict:
         "signal_url": str(row.get("intent_signal_source_url") or ""),
         "missing": list(row.get("missing_fields") or []),
         "risk_flags": list(row.get("risk_flags") or []),
+        "ready_to_send": str(row.get("ready_to_send") or ""),
+        "ready_to_send_reason": str(row.get("ready_to_send_reason") or ""),
+        "review_status": str(row.get("review_status") or ""),
+        "review_reason": str(row.get("review_reason") or ""),
+        "ready_to_send_block_reason": str(row.get("ready_to_send_block_reason") or ""),
     }
 
 
@@ -555,6 +560,42 @@ def _premium_dashboard_payload() -> dict:
     review_leads     = _safe_read_csv(REVIEW_BEFORE_SEND_CSV_FILE)
     preview_raw      = _safe_read_json(OUTREACH_PREVIEW_JSON_FILE)
     preview_rows     = list(preview_raw.get("rows") or []) if preview_raw else []
+
+    # Enrich leads_found with quality/review fields from outreach preview rows.
+    # leads.csv has no ready_to_send_reason / review_reason etc. — pull from preview by email,
+    # with company+website fallback. Only fills fields that are absent/empty in the lead row.
+    if leads_found and preview_rows:
+        _QA_FIELDS = (
+            "ready_to_send", "ready_to_send_reason",
+            "review_status", "review_reason", "ready_to_send_block_reason",
+        )
+        _pv_by_email: dict[str, dict] = {}
+        _pv_by_cw:    dict[str, dict] = {}
+        for _pv in preview_rows:
+            _em = (_pv.get("email") or "").strip().lower()
+            if _em:
+                _pv_by_email[_em] = _pv
+            _co = (_pv.get("company_name") or "").strip().lower()
+            _ws = (_pv.get("website") or "").strip().lower().rstrip("/")
+            if _co and _ws:
+                _pv_by_cw[(_co, _ws)] = _pv
+        _enriched: list[dict] = []
+        for _row in leads_found:
+            _row = dict(_row)
+            _em = (_row.get("email") or "").strip().lower()
+            _pv_match = _pv_by_email.get(_em)
+            if _pv_match is None:
+                _co = (_row.get("company_name") or _row.get("company") or "").strip().lower()
+                _ws = (_row.get("website") or _row.get("website_domain") or "").strip().lower().rstrip("/")
+                if _co and _ws:
+                    _pv_match = _pv_by_cw.get((_co, _ws))
+            if _pv_match:
+                for _f in _QA_FIELDS:
+                    if not _row.get(_f):
+                        _row[_f] = _pv_match.get(_f) or ""
+            _enriched.append(_row)
+        leads_found = _enriched
+
     reply_queue_latest = _safe_read_json(REPLY_QUEUE_LATEST_FILE)
     # LinkedIn CSV (optional – only if bot has been run)
     linkedin_rows    = _safe_read_csv(LINKEDIN_CSV_FILE, max_rows=50)
@@ -722,6 +763,33 @@ def _claude_data_live_js() -> str:
     if not mapped_sources:
         mapped_sources = [{"name": "Quellen", "abbr": "QU", "harvested": n_signals, "conv": 15.0, "color": "av-5"}]
 
+    # QA field lookup: leads_found first, outreach_preview_rows as fallback.
+    # Used when the lead row from enriched_leads/verified_leads lacks QA fields.
+    _qa_fields = ("ready_to_send", "ready_to_send_reason", "review_status",
+                  "review_reason", "ready_to_send_block_reason")
+    _qa_by_email: dict = {}
+    _qa_by_cw:    dict = {}
+    for _qa_src in (list(d.get("leads_found") or []) + list(d.get("outreach_preview_rows") or [])):
+        _em = str(_qa_src.get("email") or "").strip().lower()
+        if _em and _em not in _qa_by_email:
+            _qa_by_email[_em] = _qa_src
+        _co = str(_qa_src.get("company_name") or _qa_src.get("company") or "").strip().lower()
+        _ws = str(_qa_src.get("website") or _qa_src.get("website_domain") or "").strip().lower().rstrip("/")
+        if _co and _ws:
+            _cw_key = _co + "|" + _ws
+            if _cw_key not in _qa_by_cw:
+                _qa_by_cw[_cw_key] = _qa_src
+
+    def _qa_lookup(lead_row: dict) -> dict:
+        em = str(lead_row.get("email") or "").strip().lower()
+        if em and em in _qa_by_email:
+            return _qa_by_email[em]
+        co = str(lead_row.get("company") or "").strip().lower()
+        ws = str(lead_row.get("website") or "").strip().lower().rstrip("/")
+        if co and ws:
+            return _qa_by_cw.get(co + "|" + ws) or {}
+        return {}
+
     seen_leads: set = set()
     mapped_leads = []
     status_map = {
@@ -742,6 +810,7 @@ def _claude_data_live_js() -> str:
         company = str(l.get("company") or "")
         inits   = "".join(p[0] for p in name.split()[:2]) if name else (company[:2].upper() if company else "??")
         status  = str(l.get("status") or "needs-review")
+        _qm = _qa_lookup(l)
         mapped_leads.append({
             "id": f"l-{i}", "company": company,
             "website":  str(l.get("website") or ""),
@@ -757,6 +826,11 @@ def _claude_data_live_js() -> str:
             "avatar":   f"av-{(i % 8) + 1}",
             "signal":   str(l.get("signal") or ""),
             "city": "", "phone": "—",
+            "ready_to_send":              str(l.get("ready_to_send")              or _qm.get("ready_to_send")              or ""),
+            "ready_to_send_reason":       str(l.get("ready_to_send_reason")       or _qm.get("ready_to_send_reason")       or ""),
+            "review_status":              str(l.get("review_status")              or _qm.get("review_status")              or ""),
+            "review_reason":              str(l.get("review_reason")              or _qm.get("review_reason")              or ""),
+            "ready_to_send_block_reason": str(l.get("ready_to_send_block_reason") or _qm.get("ready_to_send_block_reason") or ""),
         })
     if not mapped_leads:
         mapped_leads = [{"id": "l-0", "company": "Keine Leads", "website": "—", "name": "—", "role": "—",
@@ -2247,7 +2321,24 @@ class Handler(BaseHTTPRequestHandler):
                         _rd = json.loads(_rf.read_text(encoding="utf-8"))
                     except Exception:
                         pass
-                return self._json({"pipeline": _pd, "replies": _rd})
+                _lf_rows: list = []
+                _pv_rows: list = []
+                try:
+                    _lf_path = ROOT / "output" / "latest" / "leads.csv"
+                    if _lf_path.exists():
+                        _lf_rows = _safe_read_csv(_lf_path)
+                except Exception:
+                    pass
+                try:
+                    _pv_path = ROOT / "output" / "latest" / "outreach_preview.json"
+                    if _pv_path.exists():
+                        _pv_raw = json.loads(_pv_path.read_text(encoding="utf-8"))
+                        _pv_rows = list(_pv_raw.get("rows") or [])
+                except Exception:
+                    pass
+                return self._json({"pipeline": _pd, "replies": _rd,
+                                   "leads_found": _lf_rows,
+                                   "outreach_preview_rows": _pv_rows})
             if p == "/api/stats":
                 stats = _stats()
                 stats["last_search_started_at"] = _get_last_search_started_at()
@@ -5232,8 +5323,43 @@ function renderPremiumReplies(d) {
   box.innerHTML = replies.length ? replies.slice(0,50).map(r => `<div class="premium-card" style="padding:14px;margin-bottom:10px"><div style="display:flex;gap:12px"><div class="lead-avatar">${E(initials(r.company||r.from||'?'))}</div><div style="flex:1"><div class="lead-name">${E(r.subject||'(kein Betreff)')}</div><div class="lead-sub">${E(r.from||'')} · ${E(r.company||'')}</div><div style="color:var(--text-dim);font-size:12px;margin-top:8px">${E(r.preview||r.body_preview||'').slice(0,260)}</div></div>${statusPill(r.class||r.group||'review','violet')}</div></div>`).join('') : '<div class="empty">Keine Replies vorhanden.</div>';
 }
 function openPremiumDrawer(item, kind) {
+  const _qaKeys = ['ready_to_send','ready_to_send_reason','review_status','review_reason','ready_to_send_block_reason'];
+  // Enrich item with QA fields from already-loaded premiumDashboard when item lacks them.
+  if (_qaKeys.some(k => !item[k]) && state.premiumDashboard) {
+    const _pd = state.premiumDashboard;
+    const _srcs = [_pd.leads_found || [], _pd.outreach_preview_rows || []];
+    const _iEm = String(item.email || item.to || '').trim().toLowerCase();
+    const _iCo = String(item.company || item.company_name || '').trim().toLowerCase();
+    const _iWs = String(item.website || item.website_domain || '').trim().toLowerCase().replace(/\/+$/, '');
+    let _hit = null;
+    // primary: email match
+    for (const arr of _srcs) {
+      if (_hit) break;
+      for (const row of arr) {
+        if (_iEm && String(row.email || '').trim().toLowerCase() === _iEm) { _hit = row; break; }
+      }
+    }
+    // fallback: company + website match
+    if (!_hit && _iCo && _iWs) {
+      for (const arr of _srcs) {
+        if (_hit) break;
+        for (const row of arr) {
+          const _rCo = String(row.company_name || row.company || '').trim().toLowerCase();
+          const _rWs = String(row.website || row.website_domain || '').trim().toLowerCase().replace(/\/+$/, '');
+          if (_rCo === _iCo && _rWs === _iWs) { _hit = row; break; }
+        }
+      }
+    }
+    if (_hit) {
+      item = Object.assign({}, item);
+      _qaKeys.forEach(k => { if (!item[k] && _hit[k]) item[k] = _hit[k]; });
+    }
+  }
   document.getElementById('drawer-title').textContent = item.company || item.title || 'Detail';
-  document.getElementById('drawer-body').innerHTML = `<div class="drawer-section"><h5>${E(kind)}</h5>${Object.entries(item).slice(0,18).map(([k,v])=>`<div class="row"><span>${E(k)}</span><strong>${E(Array.isArray(v)?v.join(', '):v)}</strong></div>`).join('')}</div>`;
+  const _qaLabels = {'ready_to_send':'Ready','ready_to_send_reason':'Ready Grund','review_status':'Review Status','review_reason':'Review Grund','ready_to_send_block_reason':'Block Grund'};
+  const _qaHtml = _qaKeys.filter(k => item[k]).map(k => `<div class="row"><span>${_qaLabels[k]}</span><strong>${E(item[k])}</strong></div>`).join('');
+  const _restHtml = Object.entries(item).filter(([k])=>!_qaKeys.includes(k)).slice(0,18).map(([k,v])=>`<div class="row"><span>${E(k)}</span><strong>${E(Array.isArray(v)?v.join(', '):String(v))}</strong></div>`).join('');
+  document.getElementById('drawer-body').innerHTML = `<div class="drawer-section"><h5>${E(kind)}</h5>${_qaHtml}${_restHtml}</div>`;
   document.getElementById('drawer-actions').innerHTML = '<button class="btn ghost" onclick="closeDrawer()">Schliessen</button>';
   openDrawer();
 }
@@ -6234,6 +6360,11 @@ async function openLead(key) {
     ['Email', e.email], ['Telefon', e.phone], ['Website', e.website ? `<a href="${E(e.website)}" target="_blank" style="color:var(--accent)">${E(e.website)}</a>`:'—'],
     ['Kontakt', e.contact_full_name || e.contact_name || '—'], ['Stadt', e.city||e.city_detected||'—'], ['Branche', e.industry||'—'],
     ['Stage', `<span class="pill ${e.outreach_stage==='sent'?'ok':'acc'}">${E(e.outreach_stage||'new')}</span>`],
+    ['Ready', e.ready_to_send || '—'],
+    ['Ready Grund', e.ready_to_send_reason || '—'],
+    ['Review Status', e.review_status || '—'],
+    ['Review Grund', e.review_reason || '—'],
+    ['Block Grund', e.ready_to_send_block_reason || '—'],
     ['Reply Status', e.reply_status || 'none'], ['Sent At', (e.first_sent_at||'').substring(0,16) || '—'],
     ['Next Follow-up', (e.next_followup_at||'').substring(0,10) || '—'],
     ['LinkedIn', e.linkedin_company_url_clean ? `<a href="${E(e.linkedin_company_url_clean)}" target="_blank" style="color:var(--accent)">Company →</a>` : '—'],

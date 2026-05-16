@@ -46,6 +46,32 @@
       ? live.replies.items
       : [];
 
+  // ── QA field lookup: leads_found first, outreach_preview_rows as fallback ──
+  // Match by email (primary) then company+website (fallback). Source arrays not mutated.
+  var _qaByEmail = {};
+  var _qaByCW    = {};
+  var _qaSources = [
+    Array.isArray(live.leads_found)            ? live.leads_found            : [],
+    Array.isArray(live.outreach_preview_rows)  ? live.outreach_preview_rows  : [],
+  ];
+  _qaSources.forEach(function(arr) {
+    arr.forEach(function(row) {
+      var em = String(row.email || '').trim().toLowerCase();
+      if (em && !_qaByEmail[em]) _qaByEmail[em] = row;
+      var co = String(row.company_name || row.company || '').trim().toLowerCase();
+      var ws = String(row.website || row.website_domain || '').trim().toLowerCase().replace(/\/+$/, '');
+      if (co && ws && !_qaByCW[co + '|' + ws]) _qaByCW[co + '|' + ws] = row;
+    });
+  });
+  function _qaLookup(e) {
+    var em = String(e.email || '').trim().toLowerCase();
+    if (em && _qaByEmail[em]) return _qaByEmail[em];
+    var co = String(e.company_name || '').trim().toLowerCase();
+    var ws = String(e.website_domain || e.website || '').trim().toLowerCase().replace(/\/+$/, '');
+    if (co && ws && _qaByCW[co + '|' + ws]) return _qaByCW[co + '|' + ws];
+    return null;
+  }
+
   // ── Map pipeline → leads ───────────────────────────────────────────────────
   var leads = [];
   try {
@@ -53,6 +79,7 @@
     var tierMap    = { high: 'A', medium: 'B', low: 'C' };
 
     leads = pipelineEntries.map(function(e, i) {
+      var qa      = _qaLookup(e);
       var company = String(e.outreach_display_company || e.company_name_clean || e.company_name || '?');
       var name    = String(e.contact_name || '?');
       var stage   = String(e.outreach_stage || 'new');
@@ -101,7 +128,12 @@
         signal:   signal,
         city:     '—',
         phone:    String(e.phone || '—'),
-        _key:     String(e.entry_key || '')
+        _key:     String(e.entry_key || ''),
+        ready_to_send:              String((qa && qa.ready_to_send)              || e.ready_to_send              || ''),
+        ready_to_send_reason:       String((qa && qa.ready_to_send_reason)       || e.ready_to_send_reason       || ''),
+        review_status:              String((qa && qa.review_status)              || e.review_status              || ''),
+        review_reason:              String((qa && qa.review_reason)              || e.review_reason              || ''),
+        ready_to_send_block_reason: String((qa && qa.ready_to_send_block_reason) || e.ready_to_send_block_reason || '')
       };
     });
   } catch(e) {
