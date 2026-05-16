@@ -1492,6 +1492,14 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
                 final_review_status = "review"
             if final_review_status != "reject":
                 final_review_reason = "suspicious_phone"
+        # Preview-Safety: ready_to_send must not be "yes" when review_status != "send_ready"
+        if final_review_status != "send_ready" and preview_rts == "yes":
+            _block = final_review_reason or "review_required"
+            preview_rts = "review"
+            preview_rts_reason = (
+                f"Preview-Safety: Review-Gate aktiv ({_block}); manuelle Prüfung erforderlich."
+            )
+            preview_rts_block = _block
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
             "company_name": _crr("company_name") or company_display,
