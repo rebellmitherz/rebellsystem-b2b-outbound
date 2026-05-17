@@ -1409,7 +1409,6 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             continue
         enriched = _enrich_entry_from_lead(dict(e), lead)
         gate = compute_review_gate(enriched, lead, current_cid)
-        review_counts[gate["review_status"]] = review_counts.get(gate["review_status"], 0) + 1
         # Firma/Kontakt aus ready_to_send.csv erzwingen — Pipeline-Eintrag kann veraltete Daten tragen.
         # Pipeline-Felder (outreach_stage, added_at, status) bleiben erhalten.
         def _crr(k: str) -> str:
@@ -1502,6 +1501,8 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
                 f"Preview-Safety: Review-Gate aktiv ({_block}); manuelle Prüfung erforderlich."
             )
             preview_rts_block = _block
+        # Count after all safety gates so review_counts reflects final state
+        review_counts[final_review_status] = review_counts.get(final_review_status, 0) + 1
         rows.append({
             "entry_key": enriched.get("entry_key", ""),
             "company_name": _crr("company_name") or company_display,
