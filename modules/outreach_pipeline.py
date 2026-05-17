@@ -1236,6 +1236,10 @@ def _salutation_quality_status(entry: dict) -> str:
         if sal.startswith("Guten Tag Herr ") or sal.startswith("Guten Tag Frau "):
             return "ok"
         return "neutralized"
+    last = parts[-1]
+    if (f"Guten Tag Herr {last}" in body or f"Guten Tag Frau {last}" in body
+            or f"Guten Tag Herr {last}" in sal or f"Guten Tag Frau {last}" in sal):
+        return "ok"
     if "Herr " in body or "Frau " in body:
         return "review"
     return "neutralized"
@@ -1286,8 +1290,6 @@ def compute_review_gate(entry: dict, lead: dict | None, current_campaign_id: str
     sq = _salutation_quality_status(entry)
     if sq == "review":
         reasons.append("salutation_review")
-    elif sq == "neutralized":
-        reasons.append("salutation_neutralized")
 
     person_quality = (entry.get("person_quality") or "").strip().lower()
     bad_flags = (entry.get("bad_contact_flags") or "").strip()
