@@ -620,6 +620,7 @@ def build_hardened_outreach_messages(merged: dict, lead: dict | None) -> dict[st
     """
     Erstmail + Follow-ups: modulare, safety-first Outreach-Texte.
     """
+    from modules import outreach_personalization as opersonal
     from modules import outreach_safety as osafe
     from modules.contact_quality import classify_contact_quality
 
@@ -636,6 +637,12 @@ def build_hardened_outreach_messages(merged: dict, lead: dict | None) -> dict[st
     if mode == osafe.MESSAGE_MODE_COMPANY and not company_safe:
         mode = osafe.MESSAGE_MODE_GENERIC
 
+    personalization_source = {**(merged or {}), **(lead or {})}
+    personalization_source["company_safe"] = company_safe
+    personalization_source["contact_safe"] = contact_safe
+    personalization_source["mode"] = mode
+    personalization_hook = opersonal.build_personalization_hook(personalization_source)
+
     sal_line = osafe.salutation_line_for_mode(mode, contact_safe, company_safe)
     industry_block = osafe.build_industry_context_paragraph(source)
     body = osafe.compose_hardened_email_body(
@@ -643,6 +650,7 @@ def build_hardened_outreach_messages(merged: dict, lead: dict | None) -> dict[st
         salutation=sal_line,
         industry_block=industry_block,
         company_safe=company_safe,
+        personalization_hook=personalization_hook,
     )
 
     if mode == osafe.MESSAGE_MODE_PERSON:
@@ -1404,7 +1412,10 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
         crr = current_run_map.get(em) if use_current_run_filter else None  # CSV-Zeile aktueller Lauf
         lead = by_lead.get(em)
         e.update(_enrich_entry_from_lead(dict(e), lead))
-        company_display = _apply_hardened_outreach_copy(e, lead)
+        lead_for_copy = dict(lead or {})
+        if crr:
+            lead_for_copy.update(crr)
+        company_display = _apply_hardened_outreach_copy(e, lead_for_copy)
         if len(rows) >= cap:
             continue
         enriched = _enrich_entry_from_lead(dict(e), lead)
@@ -1515,7 +1526,7 @@ def run_preview(state: dict[str, Any], limit: int) -> dict[str, Any]:
             "ready_to_send_reason": preview_rts_reason,
             "ready_to_send_block_reason": preview_rts_block,
             "first_email_subject": _crr("first_email_subject") or (e.get("first_email_subject") or "").strip(),
-            "first_email_body": _crr("first_email_body") or (e.get("first_email_body") or "").strip(),
+            "first_email_body": (e.get("first_email_body") or "").strip() or _crr("first_email_body"),
             "followup_1": (e.get("followup_1_text") or "").strip(),
             "followup_2": (e.get("followup_2_text") or "").strip(),
             "estimated_close_potential": enriched.get("estimated_close_potential", ""),
