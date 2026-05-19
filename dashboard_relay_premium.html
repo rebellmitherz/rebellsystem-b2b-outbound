@@ -86,7 +86,7 @@ const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const pct=(a,b)=>!b?0:Math.min(100,Math.round((a/b)*100));
 async function api(path,opts){const r=await fetch(path,opts);if(!r.ok&&r.status>=500){const txt=await r.text().catch(()=>"");try{return JSON.parse(txt)}catch(_){throw new Error("HTTP "+r.status)}}return r.json();}
-function _dbg(msg){const el=$("debug-bar");if(!el)return;el.style.display="block";el.textContent="["+new Date().toLocaleTimeString()+"] "+msg}
+function _dbg(msg){}
 function badge(label,color="blue"){return `<span class="badge ${color}">${esc(label||"-")}</span>`}
 function tier(t){return `<span class="tier ${esc(t||"C")}">${esc(t||"C")}</span>`}
 function statusColor(v){v=String(v||"").toLowerCase();if(v.includes("ready")||v.includes("verified")||v.includes("positive"))return"green";if(v.includes("review")||v.includes("pending")||v.includes("manual"))return"yellow";if(v.includes("block")||v.includes("reject")||v.includes("discard"))return"red";if(v.includes("reply")||v.includes("appointment"))return"violet";return"blue"}
