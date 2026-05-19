@@ -1703,11 +1703,20 @@ def apply_reply_to_entry(e: dict, reply_status: str) -> None:
         return
     e["reply_status"] = r
     e["reply_needs_human_approval"] = False
-    if r == "positive":
+    # Appointment-Bridge: explizite Terminbereitschaft promotet "interested" auf den
+    # gleichen Hot-Handoff-Pfad wie "positive". reply_status bleibt "interested" — die
+    # Klassifikation selbst wird nicht umgedeutet. negative/later/unclear werden nicht
+    # promotet (Sicherheits-/Eskalationsregeln greifen über die elif-Zweige).
+    promote_via_appointment = r == "interested" and bool(e.get("appointment_ready"))
+    if r == "positive" or promote_via_appointment:
         e["outreach_stage"] = "hot"
         e["lead_temperature"] = "hot"
-        e["inbound_class"] = e.get("inbound_class") or "positive"
-        e["why_hot"] = (e.get("why_hot") or "").strip() or "Positive Antwort — Interesse oder Termin offen."
+        e["inbound_class"] = e.get("inbound_class") or ("positive" if r == "positive" else "interested")
+        e["why_hot"] = (e.get("why_hot") or "").strip() or (
+            "Positive Antwort — Interesse oder Termin offen."
+            if r == "positive"
+            else "Terminbereitschaft erkannt (interested + appointment_ready)."
+        )
         e["handoff_next_action"] = (e.get("handoff_next_action") or "").strip() or (
             "Kurz vorqualifizieren (Passt ein Partner-Setup?); dann Termin oder Übergabe vorbereiten."
         )
@@ -2297,6 +2306,12 @@ def run_process_replies(
                 "route": route,
                 "dry_run": dry,
             })
+            # Appointment-Bridge auch im Queue-Pfad (Auto-Reply aus / dry-run / route blockiert):
+            # Wenn das aktuelle Inbound positive/interested ist und appointment_ready=True,
+            # wird der Lead auf den Hot-Handoff-Pfad promotet (Stage/Felder via
+            # apply_reply_to_entry). Negative/human/unclear sind oben schon abgebogen.
+            if entry.get("appointment_ready") and cls in ("positive", "interested"):
+                apply_reply_to_entry(entry, cls)
             queued += 1
             if mid:
                 seen.append(mid)
