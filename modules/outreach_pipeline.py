@@ -2396,9 +2396,20 @@ def run_process_replies(
         processed += 1
 
     save_pipeline_state(state)
+    # Auto-Refresh Hot-Handoff-Export: nutzt die bestehende Funktion
+    # export_hot_handoffs_files (Filter unverändert), damit Operator nach jedem
+    # process-replies aktuelle hot_handoffs.json/.csv sieht — ohne den
+    # zusätzlichen manuellen `--outreach handoffs`-Schritt. Failsafe gekapselt:
+    # eine fehlgeschlagene Export-Datei-Operation darf den process-replies-Return
+    # nicht brechen.
+    try:
+        export_hot_handoffs_files(state)
+    except Exception:  # noqa: BLE001
+        logger.exception("[outreach] auto-refresh hot_handoffs nach process-replies fehlgeschlagen")
     latest = Path(OUTPUT_DIR) / "latest"
     latest.mkdir(parents=True, exist_ok=True)
-    for name in ("reply_events.json", "reply_queue.json"):
+    for name in ("reply_events.json", "reply_queue.json",
+                 "hot_handoffs.json", "hot_handoffs.csv"):
         src = Path(OUTPUT_DIR) / name
         if src.is_file():
             shutil.copy2(src, latest / name)
