@@ -2062,6 +2062,20 @@ def _sent_log_contacted_emails() -> dict[str, dict[str, Any]]:
     return out
 
 
+_REPLY_AUTO_SEND_TRUTHY = frozenset({"true", "1", "yes", "on"})
+
+
+def _reply_auto_send_confirmed() -> bool:
+    """
+    Zusaetzliches hartes Sicherheits-Gate fuer SMTP-Auto-Reply aus process-replies.
+    Nur True, wenn REPLY_AUTO_SEND_CONFIRMED explizit auf einen Truthy-Wert gesetzt
+    ist. Wirkt zusaetzlich zu auto_send_clear_replies, REPLY_AUTO_SEND_ROUTES,
+    ACTION_SEND und REPLY_DRY_RUN. Aendert weder Klassifikation noch Queue-
+    /Handoff-/Pipeline-Schreiben — nur den letzten SMTP-Send-Trigger.
+    """
+    return (os.environ.get("REPLY_AUTO_SEND_CONFIRMED") or "").strip().lower() in _REPLY_AUTO_SEND_TRUTHY
+
+
 def process_replies(
     state: dict[str, Any] | None = None,
     script: Path | None = None,
@@ -2293,7 +2307,8 @@ def run_process_replies(
         entry["last_suggested_outbound_reply"] = draft_body[:4000]
         allow_auto = bool(cfg.get("auto_send_clear_replies")) and reply_intel.auto_send_allowed(route)
         reply_may_auto_send = gen.get("action") == reply_proc.ACTION_SEND
-        smtp_ok = bool(allow_auto and reply_may_auto_send and not dry)
+        auto_send_confirmed = _reply_auto_send_confirmed()
+        smtp_ok = bool(allow_auto and reply_may_auto_send and not dry and auto_send_confirmed)
 
         if human_reason or route == "human":
             _append_reply_queue_item({
@@ -2349,6 +2364,8 @@ def run_process_replies(
                 qreason = "reply_action_review_recommended"
             elif not allow_auto:
                 qreason = "auto_send_disabled_for_route"
+            elif not auto_send_confirmed:
+                qreason = "reply_auto_send_blocked_missing_confirmation"
             else:
                 qreason = "no_auto_smtp"
             _append_reply_queue_item({
