@@ -105,38 +105,53 @@ def _run_dashboard_composite_outreach(mode: str, args: argparse.Namespace) -> No
     keys = (args.approve_keys or "").strip()
     bypass = bool(args.outreach_bypass_filters)
 
-    for act in ("sync", "preview", "approve", "approve-templates", "send"):
-        run_outreach_action(
-            act,
-            limit=lim,
-            send_email_script=script,
-            approve_keys=keys,
-            reply_entry_key="",
-            reply_status="",
-            bypass_filters=bypass if act == "approve" else False,
-        )
-
-    prev_reply = os.environ.get("REPLY_AUTO_SEND")
+    # Composite-Pfad ist durch OUTREACH_FULL_AUTO_CONFIRMED bereits explizit
+    # bestaetigt. Damit innerhalb dieses bewusst aktivierten Composite-Flows
+    # run_first_sends / run_followups nicht zusaetzlich am OUTREACH_SEND_CONFIRMED-
+    # Gate blockieren, setzen wir die Variable nur fuer die Dauer dieses
+    # Composite-Aufrufs und stellen den vorherigen Wert im finally wieder her.
+    # Direkte --outreach send / --outreach followups bleiben weiterhin
+    # ohne diese Variable gesperrt.
+    prev_send_confirmed = os.environ.get("OUTREACH_SEND_CONFIRMED")
+    os.environ["OUTREACH_SEND_CONFIRMED"] = "true"
     try:
-        os.environ["REPLY_AUTO_SEND"] = "true" if mode == "full-auto" else "false"
-        run_outreach_action(
-            "process-replies",
-            limit=lim,
-            send_email_script=script,
-            approve_keys="",
-            reply_entry_key="",
-            reply_status="",
-            bypass_filters=False,
-        )
-    finally:
-        if prev_reply is None:
-            os.environ.pop("REPLY_AUTO_SEND", None)
-        else:
-            os.environ["REPLY_AUTO_SEND"] = prev_reply
+        for act in ("sync", "preview", "approve", "approve-templates", "send"):
+            run_outreach_action(
+                act,
+                limit=lim,
+                send_email_script=script,
+                approve_keys=keys,
+                reply_entry_key="",
+                reply_status="",
+                bypass_filters=bypass if act == "approve" else False,
+            )
 
-    if mode == "send-reply-drafts":
-        dr = create_drafts_from_reply_queue()
-        print(_json.dumps({"reply_drafts_report": dr}, ensure_ascii=False, indent=2))
+        prev_reply = os.environ.get("REPLY_AUTO_SEND")
+        try:
+            os.environ["REPLY_AUTO_SEND"] = "true" if mode == "full-auto" else "false"
+            run_outreach_action(
+                "process-replies",
+                limit=lim,
+                send_email_script=script,
+                approve_keys="",
+                reply_entry_key="",
+                reply_status="",
+                bypass_filters=False,
+            )
+        finally:
+            if prev_reply is None:
+                os.environ.pop("REPLY_AUTO_SEND", None)
+            else:
+                os.environ["REPLY_AUTO_SEND"] = prev_reply
+
+        if mode == "send-reply-drafts":
+            dr = create_drafts_from_reply_queue()
+            print(_json.dumps({"reply_drafts_report": dr}, ensure_ascii=False, indent=2))
+    finally:
+        if prev_send_confirmed is None:
+            os.environ.pop("OUTREACH_SEND_CONFIRMED", None)
+        else:
+            os.environ["OUTREACH_SEND_CONFIRMED"] = prev_send_confirmed
 
 
 def main() -> None:

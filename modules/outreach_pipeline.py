@@ -2122,6 +2122,20 @@ def _sent_log_contacted_emails() -> dict[str, dict[str, Any]]:
 
 
 _REPLY_AUTO_SEND_TRUTHY = frozenset({"true", "1", "yes", "on"})
+_OUTREACH_SEND_TRUTHY = frozenset({"true", "1", "yes", "on"})
+
+
+def _outreach_send_confirmed() -> bool:
+    """
+    Sicherheits-Gate fuer direkten Erstmail-/Follow-up-Live-Versand
+    (run_first_sends + run_followups). Nur True, wenn OUTREACH_SEND_CONFIRMED
+    explizit auf einen Truthy-Wert gesetzt ist. Aendert die Auto-Send-/Auto-
+    Reply-Faehigkeit NICHT: Bestehende Gates (approved_for_send, ready_to_send,
+    Daily-Caps, Domain-MX, REPLY_AUTO_SEND_CONFIRMED) bleiben unveraendert
+    wirksam. Composite full-auto / send-reply-drafts setzen die Variable
+    bewusst nach OUTREACH_FULL_AUTO_CONFIRMED-Check (cae/cli/app.py).
+    """
+    return (os.environ.get("OUTREACH_SEND_CONFIRMED") or "").strip().lower() in _OUTREACH_SEND_TRUTHY
 
 
 def _reply_auto_send_confirmed() -> bool:
@@ -3032,6 +3046,25 @@ def run_first_sends(
     script: Path,
     limit: int,
 ) -> dict[str, Any]:
+    # Sicherheits-Gate: direkter Erstmail-Live-Versand erfordert eine bewusste
+    # Bestaetigung via OUTREACH_SEND_CONFIRMED. Composite full-auto setzt die
+    # Variable nach OUTREACH_FULL_AUTO_CONFIRMED-Check selbst. Ohne Confirmation
+    # wird hier sofort beendet — kein SMTP, kein sent_log-Event, kein State-Write.
+    if not _outreach_send_confirmed():
+        return {
+            "ok": True,
+            "sent": 0,
+            "errors": 0,
+            "skipped_unapproved": 0,
+            "skipped_enterprise": 0,
+            "skipped_invalid_domain": 0,
+            "skipped_empty_recipient": 0,
+            "skipped_duplicate_recipient": 0,
+            "skipped_no_sender": 0,
+            "send_cap": 0,
+            "outreach_mailbox_mode": False,
+            "blocked_reason": "outreach_send_blocked_missing_confirmation",
+        }
     cap = _effective_outreach_send_cap(limit)
     sent_n = 0
     err_n = 0
@@ -3231,6 +3264,22 @@ def run_followups(
     script: Path,
     limit: int,
 ) -> dict[str, Any]:
+    # Sicherheits-Gate: Follow-up-Live-Versand erfordert ebenfalls die bewusste
+    # Bestaetigung OUTREACH_SEND_CONFIRMED. Ohne Confirmation kein SMTP, kein
+    # sent_log-Event, kein State-Write.
+    if not _outreach_send_confirmed():
+        return {
+            "ok": True,
+            "sent": 0,
+            "errors": 0,
+            "skipped_enterprise": 0,
+            "skipped_invalid_domain": 0,
+            "skipped_empty_recipient": 0,
+            "skipped_followup_cap": 0,
+            "send_cap": 0,
+            "outreach_mailbox_mode": False,
+            "blocked_reason": "outreach_send_blocked_missing_confirmation",
+        }
     cap = _effective_outreach_send_cap(limit)
     sent_n = 0
     err_n = 0
