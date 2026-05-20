@@ -304,6 +304,38 @@ def decide_route(inbound_class: str, confidence: float, text: str) -> str:
 
 
 def _slots_hint() -> str:
+    """Slot-Vorschlag fuer Auto-Replies bei Termin-Bereitschaft.
+
+    Reihenfolge:
+      1. ``output/autopilot_reply_config.json`` -> ``"slots": [ ... ]``
+         (Liste nicht-leerer Strings). Wenn vorhanden + mind. 1 brauchbarer
+         Eintrag: deutsch formatiert (``"A"`` / ``"A oder B"`` / ``"A, B oder C"``).
+      2. ENV ``REPLY_SUGGESTED_SLOTS``.
+      3. Default-Hinweis (unveraenderter Fallback).
+
+    Failsafe: jeder Lese-/Parse-/Typfehler -> stiller Fallback auf 2/3.
+    Kein SMTP, kein IMAP, kein Netz.
+    """
+    try:
+        from pathlib import Path as _Path
+
+        from config import AUTOPILOT_REPLY_CONFIG_JSON
+
+        _cfg = _Path(AUTOPILOT_REPLY_CONFIG_JSON)
+        if _cfg.is_file():
+            _data = json.loads(_cfg.read_text(encoding="utf-8"))
+            _raw = _data.get("slots") if isinstance(_data, dict) else None
+            if isinstance(_raw, list):
+                _cleaned = [s.strip() for s in _raw if isinstance(s, str) and s.strip()]
+                if _cleaned:
+                    if len(_cleaned) == 1:
+                        return _cleaned[0]
+                    if len(_cleaned) == 2:
+                        return f"{_cleaned[0]} oder {_cleaned[1]}"
+                    return ", ".join(_cleaned[:-1]) + f" oder {_cleaned[-1]}"
+    except Exception:
+        # bewusst still: Slot-Hint ist nie kritisch -> Fallback genuegt
+        pass
     return (os.environ.get("REPLY_SUGGESTED_SLOTS", "Di oder Mi vormittags, alternativ kurz per Zoom")).strip()
 
 
