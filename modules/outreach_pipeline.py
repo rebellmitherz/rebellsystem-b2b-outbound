@@ -1772,6 +1772,7 @@ def run_reply_update(state: dict[str, Any], entry_key: str, reply_status: str) -
 
 def export_hot_handoffs_files(state: dict[str, Any]) -> None:
     rows: list[dict[str, Any]] = []
+    handoff_emails: set[str] = set()
     for e in state.get("entries") or []:
         st = (e.get("outreach_stage") or "").strip()
         rpl = (e.get("reply_status") or "").strip()
@@ -1817,7 +1818,80 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
             ),
             "entry_key": e.get("entry_key", ""),
             "expose": exp,
+            "source": "pipeline_entry",
+            "reason": "",
+            "appointment_ready": bool(e.get("appointment_ready")),
         })
+        em_norm = _norm_email(e.get("email", ""))
+        if em_norm:
+            handoff_emails.add(em_norm)
+
+    # sent_log-only Replies: read-only Pass über reply_queue.json. Erzeugt
+    # Zusatz-Rows fuer positive/interested(>=0.52)/appointment_ready Items
+    # ohne Pipeline-Match. Kein State-Write, keine Klassifikation, kein
+    # Versand. Dedup gegen Entry-Rows via normalisierter Email.
+    try:
+        queue_data = _load_json(REPLY_QUEUE_JSON, {"items": []}) or {}
+    except Exception:  # noqa: BLE001
+        queue_data = {"items": []}
+    seen_queue_emails: set[str] = set()
+    for item in (queue_data.get("items") or []):
+        if not isinstance(item, dict):
+            continue
+        reason_q = (item.get("reason") or "").strip()
+        if reason_q not in (
+            "sent_log_match_without_pipeline_entry",
+            "sent_log_auto_reply_without_pipeline_entry",
+        ):
+            continue
+        em_raw = (item.get("from_email") or item.get("email") or "").strip()
+        em_norm = _norm_email(em_raw)
+        if not em_norm:
+            continue
+        if em_norm in handoff_emails or em_norm in seen_queue_emails:
+            continue
+        cls_q = (item.get("inbound_class") or "").strip()
+        try:
+            conf_q = float(item.get("confidence") or 0)
+        except (TypeError, ValueError):
+            conf_q = 0.0
+        appt_q = bool(item.get("appointment_ready"))
+        qualifies = (
+            cls_q == "positive"
+            or (cls_q == "interested" and conf_q >= 0.52)
+            or appt_q
+        )
+        if not qualifies:
+            continue
+        snippet = (item.get("inbound_snippet") or item.get("body") or "")[:800]
+        rows.append({
+            "company_name": "",
+            "contact_name": "",
+            "email": em_raw,
+            "phone": "",
+            "website": "",
+            "reply_status": "",
+            "outreach_stage": "",
+            "conversation_status": "",
+            "inbound_class": cls_q,
+            "inbound_confidence": conf_q,
+            "why_hot": "",
+            "last_inbound_snippet": snippet,
+            "recommended_outbound_reply": "",
+            "handoff_summary": "Sent-Log-only Antwort — bitte manuell zuordnen.",
+            "recommended_next_action": "Lead manuell zuordnen, Termin vorschlagen.",
+            "termin_suggestion": reply_intel._slots_hint(),
+            "termin_next_step": (
+                "Termin vorschlagen (2–3 konkrete Slots); Outlook/Kalender prüfen; Kurz-Agenda senden."
+            ),
+            "entry_key": "",
+            "expose": {},
+            "source": "sent_log_only",
+            "reason": reason_q,
+            "appointment_ready": appt_q,
+        })
+        seen_queue_emails.add(em_norm)
+
     payload = {"generated_at": _now_iso(), "count": len(rows), "handoffs": rows}
     hj = Path(OUTPUT_DIR) / "hot_handoffs.json"
     _save_json(hj, payload)
@@ -1828,6 +1902,7 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
         "why_hot", "last_inbound_snippet", "recommended_outbound_reply",
         "handoff_summary",
         "recommended_next_action", "termin_suggestion", "termin_next_step", "entry_key", "expose",
+        "source", "reason", "appointment_ready",
     ]
     with open(hc, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fn, extrasaction="ignore")
