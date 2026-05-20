@@ -199,6 +199,7 @@ def main() -> None:
             "preview-templates", "approve-templates", "process-replies",
             "reply-drafts",
             "full-auto", "send-reply-drafts",
+            "readiness",
         ],
         help="Outreach: Einzelaktion oder full-auto / send-reply-drafts (Ketten, siehe Doku)",
     )

@@ -3519,6 +3519,211 @@ def run_pipeline_cleanup_only() -> dict[str, Any]:
     }
 
 
+def outreach_readiness_report() -> dict[str, Any]:
+    """
+    Read-only Betriebsampel fuer Livebetrieb-Vorbereitung.
+
+    Liest ausschliesslich: os.environ-Praesenz (NIEMALS Werte), bestehende
+    JSON-Dateien (read-only) und Datei-Mtimes. Kein SMTP, kein IMAP, kein
+    Pipeline-State-Write, kein sent_log-Event, kein Reply-Queue-Write. Aendert
+    weder Composite-Guard noch Reply-Auto-Send-Guard noch Send-/Followup-Guard.
+    """
+    def _truthy(name: str) -> bool:
+        return (os.environ.get(name) or "").strip().lower() in ("true", "1", "yes", "on")
+
+    # 1) Confirmation-Gates
+    full_auto = _truthy("OUTREACH_FULL_AUTO_CONFIRMED")
+    direct_send = _outreach_send_confirmed()
+    reply_auto = _reply_auto_send_confirmed()
+    dry_run = _truthy("REPLY_DRY_RUN")
+    try:
+        ap_cfg = load_autopilot_reply_config() or {}
+    except Exception:  # noqa: BLE001
+        ap_cfg = {}
+    auto_send_clear = bool(ap_cfg.get("auto_send_clear_replies"))
+    reply_templates_approved = bool(ap_cfg.get("reply_templates_approved"))
+    routes = (os.environ.get("REPLY_AUTO_SEND_ROUTES", "template") or "template").strip()
+    gates = {
+        "OUTREACH_FULL_AUTO_CONFIRMED": full_auto,
+        "OUTREACH_SEND_CONFIRMED": direct_send,
+        "REPLY_AUTO_SEND_CONFIRMED": reply_auto,
+        "REPLY_DRY_RUN": dry_run,
+        "auto_send_clear_replies": auto_send_clear,
+        "reply_templates_approved": reply_templates_approved,
+        "REPLY_AUTO_SEND_ROUTES": routes,
+    }
+
+    # 2) Credentials-Presence — nur Booleans/Counts, NIEMALS Werte
+    try:
+        slots = _outreach_sender_slots_from_env() or []
+    except Exception:  # noqa: BLE001
+        slots = []
+    sender_slot_count = len(slots)
+    ionos_smtp = bool((os.environ.get("IONOS_SMTP_USER") or "").strip()) and \
+                 bool((os.environ.get("IONOS_SMTP_PASS") or "").strip())
+    ionos_imap = bool((os.environ.get("IONOS_IMAP_USER") or "").strip()) and \
+                 bool((os.environ.get("IONOS_IMAP_PASS") or os.environ.get("IONOS_SMTP_PASS") or "").strip())
+    drafts_folder = bool((os.environ.get("IONOS_DRAFTS_FOLDER") or "").strip())
+    slot_imap_present = any(bool((s.get("imap_host") or "").strip()) for s in slots)
+    creds = {
+        "outreach_sender_slots_configured": sender_slot_count,
+        "single_sender_fallback_configured": bool(ionos_smtp),
+        "smtp_config_present": bool(sender_slot_count > 0 or ionos_smtp),
+        "imap_config_present": bool(slot_imap_present or ionos_imap),
+        "drafts_folder_config_present": drafts_folder,
+    }
+
+    # 3) Pipeline-Counts (defensiv, kein Crash bei fehlenden Files)
+    try:
+        st = _load_json(OUTREACH_PIPELINE_JSON, {}) or {}
+    except Exception:  # noqa: BLE001
+        st = {}
+    entries = st.get("entries") or []
+    if not isinstance(entries, list):
+        entries = []
+    counts = {
+        "total_entries": len(entries),
+        "ready_to_send": 0,
+        "approved_for_send": 0,
+        "review": 0,
+        "reject": 0,
+        "sent": 0,
+        "followup_due": 0,
+        "do_not_resend": 0,
+        "hot_handoffs_count": 0,
+        "reply_queue_count": 0,
+    }
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        if (e.get("ready_to_send") or "").strip().lower() == "yes":
+            counts["ready_to_send"] += 1
+        if e.get("approved_for_send"):
+            counts["approved_for_send"] += 1
+        rs = (e.get("review_status") or "").strip()
+        if rs == "review":
+            counts["review"] += 1
+        elif rs == "reject":
+            counts["reject"] += 1
+        if (e.get("outreach_stage") or "").strip() == "sent":
+            counts["sent"] += 1
+        if e.get("do_not_resend"):
+            counts["do_not_resend"] += 1
+        try:
+            if _followup_due_1(e) or _followup_due_2(e):
+                counts["followup_due"] += 1
+        except Exception:  # noqa: BLE001
+            pass
+
+    hh_path = Path(OUTPUT_DIR) / "hot_handoffs.json"
+    try:
+        if hh_path.is_file():
+            hh = json.loads(hh_path.read_text(encoding="utf-8"))
+            counts["hot_handoffs_count"] = int(hh.get("count") or 0)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        rq = _load_json(REPLY_QUEUE_JSON, {"items": []}) or {}
+        items = rq.get("items") or []
+        if isinstance(items, list):
+            counts["reply_queue_count"] = len(items)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 4) Reports-Presence
+    reports_presence = {
+        "outreach_pipeline_exists": OUTREACH_PIPELINE_JSON.is_file(),
+        "sent_log_exists": OUTREACH_SENT_LOG_JSON.is_file(),
+        "reply_queue_exists": REPLY_QUEUE_JSON.is_file(),
+        "hot_handoffs_exists": hh_path.is_file(),
+        "reply_drafts_report_exists": (Path(OUTPUT_DIR) / "reply_drafts_report.json").is_file(),
+        "output_latest_exists": (Path(OUTPUT_DIR) / "latest").is_dir(),
+    }
+
+    # 5) Freshness
+    def _mtime_iso(p: Path) -> str:
+        try:
+            if p.is_file():
+                return datetime.fromtimestamp(p.stat().st_mtime).replace(microsecond=0).isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+        return ""
+
+    freshness: dict[str, Any] = {
+        "outreach_pipeline_mtime": _mtime_iso(OUTREACH_PIPELINE_JSON),
+        "sent_log_mtime": _mtime_iso(OUTREACH_SENT_LOG_JSON),
+        "reply_queue_mtime": _mtime_iso(REPLY_QUEUE_JSON),
+        "hot_handoffs_mtime": _mtime_iso(hh_path),
+        "hot_handoffs_stale_vs_reply_queue": False,
+    }
+    try:
+        if REPLY_QUEUE_JSON.is_file() and hh_path.is_file():
+            freshness["hot_handoffs_stale_vs_reply_queue"] = (
+                REPLY_QUEUE_JSON.stat().st_mtime > hh_path.stat().st_mtime
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 6) Live-Readiness + Empfehlungen
+    would_full_auto_block = not full_auto
+    would_direct_send_block = not direct_send
+    would_reply_auto_send_block = (
+        (not reply_auto) or dry_run or (not auto_send_clear) or (not reply_templates_approved)
+    )
+    missing: list[str] = []
+    if not full_auto:
+        missing.append("OUTREACH_FULL_AUTO_CONFIRMED")
+    if not direct_send:
+        missing.append("OUTREACH_SEND_CONFIRMED")
+    if not reply_auto:
+        missing.append("REPLY_AUTO_SEND_CONFIRMED")
+    if dry_run:
+        missing.append("REPLY_DRY_RUN_active_blocks_auto_reply")
+    warnings: list[str] = []
+    if not reply_templates_approved:
+        warnings.append("autopilot_reply_config.reply_templates_approved is false")
+    if not auto_send_clear:
+        warnings.append("autopilot_reply_config.auto_send_clear_replies is false")
+    if not creds["smtp_config_present"]:
+        warnings.append("no SMTP credentials configured (sender slots empty and no IONOS fallback)")
+    if not creds["imap_config_present"]:
+        warnings.append("no IMAP credentials configured")
+    if freshness["hot_handoffs_stale_vs_reply_queue"]:
+        warnings.append("hot_handoffs.json older than reply_queue.json — run process-replies to refresh")
+
+    live_ready = bool(
+        full_auto and direct_send and reply_auto and not dry_run
+        and auto_send_clear and reply_templates_approved
+        and creds["smtp_config_present"] and creds["imap_config_present"]
+    )
+
+    if not creds["smtp_config_present"]:
+        next_step = "Configure SMTP credentials (OUTREACH_SENDER_i_* or IONOS_SMTP_*) and re-run --outreach readiness."
+    elif missing:
+        next_step = "Set missing confirmation envs (truthy: true/1/yes/on): " + ", ".join(missing)
+    elif warnings:
+        next_step = "Resolve warnings: " + "; ".join(warnings)
+    else:
+        next_step = "Live-ready. Composite full-auto would run when invoked."
+
+    return {
+        "ok": True,
+        "mode": "readiness",
+        "live_ready": live_ready,
+        "confirmation_gates": gates,
+        "credentials_presence": creds,
+        "pipeline_counts": counts,
+        "reports_presence": reports_presence,
+        "freshness": freshness,
+        "would_full_auto_block_now": would_full_auto_block,
+        "would_direct_send_block_now": would_direct_send_block,
+        "would_reply_auto_send_block_now": would_reply_auto_send_block,
+        "missing_required_confirmations": missing,
+        "warnings": warnings,
+        "next_safe_step": next_step,
+    }
+
+
 def run_outreach_action(
     action: str,
     *,
@@ -3530,6 +3735,10 @@ def run_outreach_action(
     bypass_filters: bool = False,
 ) -> None:
     script = Path(send_email_script.strip()) if (send_email_script or "").strip() else SEND_EMAIL_SCRIPT_DEFAULT
+    if action == "readiness":
+        report = outreach_readiness_report()
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return
     if action == "sync":
         r = sync_from_latest_run()
         print(json.dumps(r, ensure_ascii=False, indent=2))
