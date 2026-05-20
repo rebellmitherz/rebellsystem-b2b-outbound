@@ -1770,6 +1770,53 @@ def run_reply_update(state: dict[str, Any], entry_key: str, reply_status: str) -
     return {"ok": True, "entry_key": ek, "reply_status": reply_status}
 
 
+_OP_REPLY_APPT = (
+    "Passt, danke für die Rückmeldung. Dann würde ich kurz prüfen, welches "
+    "Setup bei Ihnen sinnvoll wäre. Wann haben Sie in den nächsten Tagen "
+    "10 Minuten für einen kurzen Abgleich?"
+)
+_OP_REPLY_POSITIVE = (
+    "Danke für die Rückmeldung. Klingt so, als könnte ein kurzer Abgleich "
+    "sinnvoll sein. Wann haben Sie diese oder nächste Woche 10 Minuten, "
+    "damit wir prüfen, ob das für Sie passt?"
+)
+_OP_REPLY_REVIEW_NEUTRAL = (
+    "Bitte vor Antwort kurz prüfen, welche nächste Aktion am besten passt. "
+    "Vorschlag: kurze Termin-Nachfrage (10 Minuten), sobald Kontext geklärt ist."
+)
+_OP_REPLY_SENT_LOG_PREFIX = (
+    "Manuell prüfen: Diese Antwort wurde nur über sent_log/reply_queue "
+    "zugeordnet. Bitte Firma/Kontakt kurz verifizieren. Wenn passend: "
+)
+
+
+def _build_operator_reply_suggestion(
+    *,
+    source: str,
+    inbound_class: str,
+    reply_status: str,
+    appointment_ready: bool,
+) -> str:
+    """
+    Liefert einen deterministischen, deutschen Operator-Antwortvorschlag fuer
+    Hot-Handoff-Rows. Reiner Text-Builder ohne Versand, ohne IMAP, ohne SMTP,
+    ohne LLM. Aendert NICHT die Auto-Send-/Auto-Reply-Faehigkeit aus
+    run_process_replies — diese bleibt durch REPLY_AUTO_SEND_CONFIRMED und
+    OUTREACH_FULL_AUTO_CONFIRMED unveraendert nutzbar.
+    """
+    icl = (inbound_class or "").strip().lower()
+    rpl = (reply_status or "").strip().lower()
+    if appointment_ready:
+        body = _OP_REPLY_APPT
+    elif rpl == "positive" or icl == "positive" or rpl == "interested" or icl == "interested":
+        body = _OP_REPLY_POSITIVE
+    else:
+        body = _OP_REPLY_REVIEW_NEUTRAL
+    if source == "sent_log_only":
+        return _OP_REPLY_SENT_LOG_PREFIX + body
+    return body
+
+
 def export_hot_handoffs_files(state: dict[str, Any]) -> None:
     rows: list[dict[str, Any]] = []
     handoff_emails: set[str] = set()
@@ -1821,6 +1868,12 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
             "source": "pipeline_entry",
             "reason": "",
             "appointment_ready": bool(e.get("appointment_ready")),
+            "operator_reply_suggestion": _build_operator_reply_suggestion(
+                source="pipeline_entry",
+                inbound_class=icl,
+                reply_status=rpl,
+                appointment_ready=bool(e.get("appointment_ready")),
+            ),
         })
         em_norm = _norm_email(e.get("email", ""))
         if em_norm:
@@ -1889,6 +1942,12 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
             "source": "sent_log_only",
             "reason": reason_q,
             "appointment_ready": appt_q,
+            "operator_reply_suggestion": _build_operator_reply_suggestion(
+                source="sent_log_only",
+                inbound_class=cls_q,
+                reply_status="",
+                appointment_ready=appt_q,
+            ),
         })
         seen_queue_emails.add(em_norm)
 
@@ -1902,7 +1961,7 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
         "why_hot", "last_inbound_snippet", "recommended_outbound_reply",
         "handoff_summary",
         "recommended_next_action", "termin_suggestion", "termin_next_step", "entry_key", "expose",
-        "source", "reason", "appointment_ready",
+        "source", "reason", "appointment_ready", "operator_reply_suggestion",
     ]
     with open(hc, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=fn, extrasaction="ignore")
