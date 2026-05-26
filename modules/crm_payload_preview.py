@@ -25,6 +25,22 @@ _STAGE_MAP = {
 
 _NEGATIVE_CLASSES = frozenset({"negative", "not_interested", "no_need", "spam"})
 
+# Conservative rejection phrases — if any appears in the reply snippet the
+# stage must never be appointment_ready or hot_lead, regardless of flags.
+REJECTION_PHRASES = (
+    "kein bedarf",
+    "keinen bedarf",
+    "aktuell keinen bedarf",
+    "nicht interessiert",
+    "kein interesse",
+    "behalten sie gerne im hinterkopf",
+)
+
+
+def _has_rejection_phrase(snippet: str) -> bool:
+    low = snippet.strip().lower()
+    return any(p in low for p in REJECTION_PHRASES)
+
 
 def _load_json(path: Path) -> Any:
     if not path.is_file():
@@ -107,12 +123,37 @@ def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[st
     next_step = str(hh.get("recommended_next_action") or hh.get("termin_next_step") or
                     "Manuelle Pruefung. Termin vorschlagen.").strip()
 
+    # ── Quality guards ────────────────────────────────────────────────────────
+    guard_warnings: list[str] = []
+    snippet_text = _reply_snippet(hh, max_chars=2000)
+
+    if _has_rejection_phrase(snippet_text):
+        if stage in ("appointment_ready", "hot_lead", "qualified_interest"):
+            guard_warnings.append(
+                f"Ablehnung im Reply-Snippet erkannt fuer {email!r} "
+                f"(war: {stage}) — herabgestuft auf review_required"
+            )
+        stage = "review_required"
+        value = 0
+
+    if source == "sent_log_only" and not company_name:
+        if stage != "review_required":
+            guard_warnings.append(
+                f"sent_log_only ohne company_name fuer {email!r} "
+                f"(war: {stage}) — herabgestuft auf review_required"
+            )
+        stage = "review_required"
+        value = 0
+        owner_note_suffix = " | Firma nicht aufloesbar — manueller Check erforderlich"
+    else:
+        owner_note_suffix = ""
+
     # Map stage to a concrete proposed action
     action_map = {
         "appointment_ready": "Termin bestaetigen und Kalender-Einladung senden",
         "hot_lead":          "Termin-Slot vorschlagen (2-3 Optionen, 15 Min Zoom)",
         "qualified_interest": "Nachfass-E-Mail mit konkretem Angebot senden",
-        "review_required":   "Manuell pruefen bevor CRM-Eintrag angelegt wird",
+        "review_required":   "Manuell pruefen, nicht automatisch ins CRM pushen",
     }
 
     return {
@@ -125,7 +166,7 @@ def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[st
         "phone":            phone,
         "website":          website,
         "subject":          subject,
-        "reply_snippet":    _reply_snippet(hh),
+        "reply_snippet":    snippet_text[:300].rstrip() + ("…" if len(snippet_text) > 300 else ""),
         "source":           source,
         "reply_class":      inbound_class,
         "confidence":       confidence,
@@ -133,7 +174,8 @@ def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[st
         "proposed_action":  action_map.get(stage, "Manuell pruefen"),
         "estimated_value_eur": value,
         "next_step":        next_step,
-        "owner_note":       _owner_note(hh),
+        "owner_note":       _owner_note(hh) + owner_note_suffix,
+        "guard_warnings":   guard_warnings,
         "created_at":       datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
 
@@ -186,7 +228,9 @@ def build_crm_preview(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
     payloads: list[dict] = []
     for hh in handoffs:
         try:
-            payloads.append(_build_single_payload(hh, pipeline_lookup))
+            payload = _build_single_payload(hh, pipeline_lookup)
+            warnings.extend(payload.pop("guard_warnings", []))
+            payloads.append(payload)
         except Exception as exc:
             warnings.append(f"Payload-Fehler fuer {hh.get('email','?')}: {exc}")
 

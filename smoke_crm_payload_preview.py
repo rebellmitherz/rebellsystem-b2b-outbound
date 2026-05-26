@@ -111,6 +111,111 @@ check("negative -> 0",       crm._estimated_value({"inbound_class": "negative"})
 check("leer -> 5000",        crm._estimated_value({}) == 5000)
 
 
+# ── Test 4b: _has_rejection_phrase ───────────────────────────────────────────
+print("\n[4b] _has_rejection_phrase")
+check("'aktuell keinen Bedarf' erkannt", crm._has_rejection_phrase("Wir haben aktuell keinen Bedarf daran."))
+check("'kein bedarf' erkannt",           crm._has_rejection_phrase("Es besteht kein Bedarf."))
+check("'nicht interessiert' erkannt",    crm._has_rejection_phrase("Wir sind nicht interessiert."))
+check("'kein interesse' erkannt",        crm._has_rejection_phrase("Kein Interesse, danke."))
+check("'behalten Sie gerne im Hinterkopf' erkannt",
+      crm._has_rejection_phrase("Behalten Sie gerne im Hinterkopf fuer spaeter."))
+check("Leerer Text -> False",            not crm._has_rejection_phrase(""))
+check("Positiver Text -> False",         not crm._has_rejection_phrase("Ich bin sehr interessiert!"))
+check("case-insensitiv: 'Kein Bedarf'",  crm._has_rejection_phrase("Kein Bedarf"))
+
+
+# ── Test 4c: Quality-Guard in build_crm_preview ───────────────────────────────
+print("\n[4c] Quality-Guard — Ablehnung + sent_log_only")
+
+import json as _json
+
+# Rejection phrase guard: appointment_ready=True but snippet says "keinen Bedarf"
+rejection_hh = {
+    "email": "test@rejection.de",
+    "company_name": "Firma GmbH",
+    "contact_name": "Max Muster",
+    "appointment_ready": True,
+    "inbound_class": "positive",
+    "last_inbound_snippet": "Vielen Dank, aber wir haben aktuell keinen Bedarf an Ihrer Leistung.",
+    "source": "outreach_pipeline",
+}
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    (tmp_path / "latest").mkdir()
+    hh_file = tmp_path / "latest" / "hot_handoffs.json"
+    hh_file.write_text(_json.dumps([rejection_hh]), encoding="utf-8")
+    result_rej = crm.build_crm_preview(output_dir=tmp_path)
+
+check("Ablehnung -> count == 1",         result_rej.get("count") == 1)
+rej_payload = result_rej["payloads"][0] if result_rej.get("payloads") else {}
+check("Ablehnung -> proposed_stage == 'review_required'",
+      rej_payload.get("proposed_stage") == "review_required",
+      f"bekam '{rej_payload.get('proposed_stage')}'")
+check("Ablehnung -> estimated_value_eur == 0",
+      rej_payload.get("estimated_value_eur") == 0,
+      f"bekam {rej_payload.get('estimated_value_eur')}")
+check("Ablehnung -> dry_run == True",    rej_payload.get("dry_run") is True)
+check("Ablehnung -> Warnung vorhanden",  len(result_rej.get("warnings", [])) > 0)
+
+# sent_log_only without company_name guard
+sentlog_hh = {
+    "email": "test@sentlog.de",
+    "company_name": "",
+    "contact_name": "",
+    "appointment_ready": True,
+    "inbound_class": "positive",
+    "source": "sent_log_only",
+    "last_inbound_snippet": "Danke fuer Ihre Nachricht.",
+}
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    (tmp_path / "latest").mkdir()
+    hh_file = tmp_path / "latest" / "hot_handoffs.json"
+    hh_file.write_text(_json.dumps([sentlog_hh]), encoding="utf-8")
+    result_sl = crm.build_crm_preview(output_dir=tmp_path)
+
+check("sent_log_only no company -> count == 1", result_sl.get("count") == 1)
+sl_payload = result_sl["payloads"][0] if result_sl.get("payloads") else {}
+check("sent_log_only no company -> proposed_stage == 'review_required'",
+      sl_payload.get("proposed_stage") == "review_required",
+      f"bekam '{sl_payload.get('proposed_stage')}'")
+check("sent_log_only no company -> estimated_value_eur == 0",
+      sl_payload.get("estimated_value_eur") == 0,
+      f"bekam {sl_payload.get('estimated_value_eur')}")
+check("sent_log_only no company -> owner_note enthaelt 'manueller Check'",
+      "manueller Check" in sl_payload.get("owner_note", ""),
+      f"owner_note: {sl_payload.get('owner_note', '')[:80]}")
+
+# Clean lead — must keep its stage
+clean_hh = {
+    "email": "test@clean.de",
+    "company_name": "Saubere GmbH",
+    "contact_name": "Anna Rein",
+    "appointment_ready": True,
+    "inbound_class": "positive",
+    "source": "outreach_pipeline",
+    "last_inbound_snippet": "Ja, wann haben Sie Zeit fuer ein kurzes Gespraech?",
+}
+
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    (tmp_path / "latest").mkdir()
+    hh_file = tmp_path / "latest" / "hot_handoffs.json"
+    hh_file.write_text(_json.dumps([clean_hh]), encoding="utf-8")
+    result_clean = crm.build_crm_preview(output_dir=tmp_path)
+
+check("Sauberer Lead -> count == 1",     result_clean.get("count") == 1)
+clean_payload = result_clean["payloads"][0] if result_clean.get("payloads") else {}
+check("Sauberer Lead -> proposed_stage == 'appointment_ready'",
+      clean_payload.get("proposed_stage") == "appointment_ready",
+      f"bekam '{clean_payload.get('proposed_stage')}'")
+check("Sauberer Lead -> estimated_value_eur == 5000",
+      clean_payload.get("estimated_value_eur") == 5000)
+check("Sauberer Lead -> dry_run == True", clean_payload.get("dry_run") is True)
+
+
 # ── Test 5: echter Output (falls hot_handoffs.json vorhanden) ─────────────────
 print("\n[5] Echter Output")
 real_output = ROOT / "output"
