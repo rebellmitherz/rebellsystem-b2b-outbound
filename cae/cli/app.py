@@ -238,8 +238,23 @@ def main() -> None:
         default="",
         help="Pfad zu leads.json fuer --messaging-export (Default: output/latest/leads.json)",
     )
+    p.add_argument(
+        "--monthly-report",
+        action="store_true",
+        help="Read-only Monatsreport: aggregiert alle Runs + Pipeline-Daten. Kein Send, kein SMTP.",
+    )
+    p.add_argument(
+        "--report-days",
+        type=int,
+        default=30,
+        help="Zeitfenster fuer --monthly-report in Tagen (Standard: 30)",
+    )
 
     args = p.parse_args()
+    if getattr(args, "monthly_report", False):
+        from modules.monthly_report import run_monthly_report_cli
+        run_monthly_report_cli(days=getattr(args, "report_days", 30))
+        return
     if getattr(args, "messaging_export", False):
         run_messaging_export_cli(getattr(args, "messaging_input", "") or "")
         return
