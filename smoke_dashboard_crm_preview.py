@@ -146,6 +146,70 @@ if relay_file.is_file():
         check(f"'{f}' nicht in crmPreviewHtml()", f not in fn_src)
 
 
+# ── Test 7: HTTP-Handler-Pfad (statische Code-Analyse) ───────────────────────
+print("\n[7] HTTP-Handler-Pfad — statische Analyse")
+import inspect
+
+handler_src = inspect.getsource(cs.Handler.do_GET)
+check(
+    "/api/premium-dashboard Handler ruft _premium_dashboard_payload() auf",
+    "_premium_dashboard_payload()" in handler_src
+    and '"/api/premium-dashboard"' in handler_src,
+)
+# Verify there is no filtering between the call and _json()
+# The pattern must be: _json(_premium_dashboard_payload()) with nothing in between
+check(
+    "Handler gibt _premium_dashboard_payload() ungefiltert an _json weiter",
+    "_json(_premium_dashboard_payload())" in handler_src,
+)
+# _json must not filter keys
+json_src = inspect.getsource(cs.Handler._json)
+check("_json() filtert keine Keys (kein dict comprehension)", "{k:" not in json_src and "keys()" not in json_src)
+check("_json() nutzt json.dumps direkt", "json.dumps" in json_src)
+
+check("CRM_PREVIEW_FILE Konstante in cockpit_server", hasattr(cs, "CRM_PREVIEW_FILE"))
+check(
+    "crm_preview Variable in _premium_dashboard_payload Quellcode",
+    "crm_preview" in inspect.getsource(cs._premium_dashboard_payload),
+)
+check(
+    "'crm_preview' im Return-Dict von _premium_dashboard_payload",
+    '"crm_preview"' in inspect.getsource(cs._premium_dashboard_payload)
+    or "'crm_preview'" in inspect.getsource(cs._premium_dashboard_payload),
+)
+
+
+# ── Test 8: Live-HTTP (optional — nur wenn Server laeuft) ────────────────────
+print("\n[8] Live-HTTP /api/premium-dashboard (SKIP wenn Server nicht laeuft)")
+import urllib.request
+import urllib.error
+
+SERVER_URL = "http://127.0.0.1:8765/api/premium-dashboard"
+try:
+    with urllib.request.urlopen(SERVER_URL, timeout=3) as resp:
+        raw = resp.read().decode("utf-8")
+    live_data = json.loads(raw)
+    check("HTTP 200 von /api/premium-dashboard", True)
+    check(
+        "HTTP-Antwort enthaelt 'crm_preview'",
+        "crm_preview" in live_data,
+        "Server laeuft mit alter Code-Version — bitte neu starten: python cockpit_server.py"
+        if "crm_preview" not in live_data else "",
+    )
+    check(
+        "HTTP crm_preview ist dict",
+        isinstance(live_data.get("crm_preview"), dict),
+    )
+    check(
+        "HTTP monthly_report und crm_preview beide vorhanden",
+        "monthly_report" in live_data and "crm_preview" in live_data,
+    )
+except urllib.error.URLError:
+    print("  SKIP — Server nicht erreichbar (starte: python cockpit_server.py)")
+except Exception as e:
+    check("HTTP-Antwort lesbar", False, str(e))
+
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 print(f"\n{'=' * 50}")
 if failures:
@@ -158,3 +222,4 @@ else:
     print("       API liefert crm_preview Block. Dashboard zeigt CRM-Preview.")
     print("       Fallback bei fehlender Datei. review_required sichtbar. dry_run=True sichtbar.")
     print("       Kein CRM-Push. Kein Send. Kein SMTP. Kein IMAP. Kein Approve.")
+    print("       WICHTIG: Server neu starten damit HTTP-Aenderungen aktiv werden: python cockpit_server.py")
