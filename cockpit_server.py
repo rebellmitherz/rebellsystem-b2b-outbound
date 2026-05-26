@@ -64,6 +64,7 @@ OUTREACH_PREVIEW_JSON_FILE  = LATEST / "outreach_preview.json"
 PIPELINE_LATEST_JSON_FILE   = LATEST / "outreach_pipeline.json"
 LINKEDIN_CSV_FILE       = ROOT / "linkedin_bot" / "output" / "linkedin_outreach.csv"
 REPLY_QUEUE_LATEST_FILE = LATEST / "reply_queue.json"
+MONTHLY_REPORT_FILE     = LATEST / "monthly_report.json"
 INTENT_LP_ALLOWED_SIGNALS = ("sales_hiring", "growth_expansion", "demand_generation_gap")
 INTENT_LP_ALLOWED_MODES = ("preview", "approval", "auto")
 INTENT_LP_HARD_MAX_LIMIT = 10
@@ -597,6 +598,7 @@ def _premium_dashboard_payload() -> dict:
         leads_found = _enriched
 
     reply_queue_latest = _safe_read_json(REPLY_QUEUE_LATEST_FILE)
+    monthly_report     = _safe_read_json(MONTHLY_REPORT_FILE) or {}
     # LinkedIn CSV (optional – only if bot has been run)
     linkedin_rows    = _safe_read_csv(LINKEDIN_CSV_FILE, max_rows=50)
 
@@ -674,6 +676,7 @@ def _premium_dashboard_payload() -> dict:
         "review_leads":     review_leads,
         "outreach_preview_rows": preview_rows[:50],
         "linkedin_results": linkedin_rows,
+        "monthly_report": monthly_report,
         "safety": {
             "read_only": True,
             "no_smtp": True,
