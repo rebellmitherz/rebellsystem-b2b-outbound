@@ -40,9 +40,13 @@ PAYLOAD_REQUIRED_FIELDS = [
     "subject", "reply_snippet", "source", "reply_class", "confidence",
     "proposed_stage", "proposed_action", "estimated_value_eur",
     "next_step", "owner_note", "created_at",
+    "crm_push_ready", "crm_push_block_reason", "crm_push_mode",
 ]
 
-RESULT_REQUIRED_FIELDS = ["dry_run", "provider", "generated_at", "count", "payloads", "warnings"]
+RESULT_REQUIRED_FIELDS = [
+    "dry_run", "provider", "generated_at", "count", "payloads", "warnings",
+    "push_ready_count", "blocked_count", "blocked_reasons",
+]
 
 
 # ── Test 1: Import ohne Netzwerk/SMTP/IMAP ────────────────────────────────────
@@ -216,6 +220,74 @@ check("Sauberer Lead -> estimated_value_eur == 5000",
 check("Sauberer Lead -> dry_run == True", clean_payload.get("dry_run") is True)
 
 
+# ── Test 4d: crm_push_readiness ──────────────────────────────────────────────
+print("\n[4d] crm_push_readiness — _crm_push_readiness()")
+
+ready, reason = crm._crm_push_readiness("appointment_ready", 5000, "Firma GmbH", "a@b.de", "Ja bitte!", "outreach_pipeline")
+check("Sauberer Lead -> push_ready True",  ready is True)
+check("Sauberer Lead -> block_reason leer", reason == "")
+
+ready, reason = crm._crm_push_readiness("review_required", 5000, "Firma GmbH", "a@b.de", "Ja bitte!", "outreach_pipeline")
+check("review_required -> push_ready False", ready is False)
+check("review_required -> block_reason 'review_required'", reason == "review_required")
+
+ready, reason = crm._crm_push_readiness("appointment_ready", 0, "Firma GmbH", "a@b.de", "Ja bitte!", "outreach_pipeline")
+check("value 0 -> push_ready False", ready is False)
+check("value 0 -> block_reason 'estimated_value_zero'", reason == "estimated_value_zero")
+
+ready, reason = crm._crm_push_readiness("appointment_ready", 5000, "", "a@b.de", "Ja bitte!", "outreach_pipeline")
+check("company_name leer -> push_ready False", ready is False)
+check("company_name leer -> block_reason 'company_name_missing'", reason == "company_name_missing")
+
+ready, reason = crm._crm_push_readiness("appointment_ready", 5000, "Firma GmbH", "a@b.de", "kein Bedarf leider", "outreach_pipeline")
+check("Ablehnung im Snippet -> push_ready False", ready is False)
+check("Ablehnung im Snippet -> block_reason 'rejection_phrase_detected'", reason == "rejection_phrase_detected")
+
+ready, reason = crm._crm_push_readiness("hot_lead", 5000, "Firma GmbH", "a@b.de", "Sehr interessiert!", "sent_log_only")
+check("sent_log_only -> push_ready False", ready is False)
+check("sent_log_only -> block_reason 'sent_log_only_unresolved'", reason == "sent_log_only_unresolved")
+
+ready, reason = crm._crm_push_readiness("hot_lead", 5000, "Firma GmbH", "a@b.de", "Ja sehr gerne!", "outreach_pipeline")
+check("hot_lead mit Daten -> push_ready True", ready is True)
+
+
+# ── Test 4e: Push-Readiness im build_crm_preview Ergebnis ────────────────────
+print("\n[4e] Push-Readiness Top-Level Summary")
+
+# Rejection lead -> blocked
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    (tmp_path / "latest").mkdir()
+    (tmp_path / "latest" / "hot_handoffs.json").write_text(
+        _json.dumps([rejection_hh]), encoding="utf-8"
+    )
+    r_rej = crm.build_crm_preview(output_dir=tmp_path)
+
+check("Ablehnung -> push_ready_count == 0", r_rej.get("push_ready_count") == 0)
+check("Ablehnung -> blocked_count == 1",    r_rej.get("blocked_count") == 1)
+check("Ablehnung -> blocked_reasons nicht leer", len(r_rej.get("blocked_reasons", [])) > 0)
+rej_p = r_rej["payloads"][0] if r_rej.get("payloads") else {}
+check("Ablehnung Payload -> crm_push_ready False", rej_p.get("crm_push_ready") is False)
+check("Ablehnung Payload -> crm_push_mode == 'dry_run_only'", rej_p.get("crm_push_mode") == "dry_run_only")
+
+# Clean lead -> push_ready
+with tempfile.TemporaryDirectory() as tmp:
+    tmp_path = Path(tmp)
+    (tmp_path / "latest").mkdir()
+    (tmp_path / "latest" / "hot_handoffs.json").write_text(
+        _json.dumps([clean_hh]), encoding="utf-8"
+    )
+    r_clean = crm.build_crm_preview(output_dir=tmp_path)
+
+check("Sauberer Lead -> push_ready_count == 1", r_clean.get("push_ready_count") == 1)
+check("Sauberer Lead -> blocked_count == 0",    r_clean.get("blocked_count") == 0)
+check("Sauberer Lead -> blocked_reasons leer",  r_clean.get("blocked_reasons") == [])
+clean_p = r_clean["payloads"][0] if r_clean.get("payloads") else {}
+check("Sauberer Lead Payload -> crm_push_ready True",  clean_p.get("crm_push_ready") is True)
+check("Sauberer Lead Payload -> crm_push_block_reason leer", clean_p.get("crm_push_block_reason") == "")
+check("Sauberer Lead Payload -> crm_push_mode == 'dry_run_only'", clean_p.get("crm_push_mode") == "dry_run_only")
+
+
 # ── Test 5: echter Output (falls hot_handoffs.json vorhanden) ─────────────────
 print("\n[5] Echter Output")
 real_output = ROOT / "output"
@@ -246,6 +318,13 @@ if (real_output / "latest" / "hot_handoffs.json").is_file():
             "  estimated_value_eur ist int",
             isinstance(payload.get("estimated_value_eur"), int),
         )
+        check("  crm_push_ready ist bool", isinstance(payload.get("crm_push_ready"), bool))
+        check("  crm_push_mode == 'dry_run_only'", payload.get("crm_push_mode") == "dry_run_only")
+        if not payload.get("crm_push_ready"):
+            check("  blocked -> crm_push_block_reason nicht leer", bool(payload.get("crm_push_block_reason")))
+
+    check("push_ready_count + blocked_count == count",
+          result.get("push_ready_count", -1) + result.get("blocked_count", -1) == result.get("count", -2))
 else:
     print("  SKIP — output/latest/hot_handoffs.json fehlt")
 

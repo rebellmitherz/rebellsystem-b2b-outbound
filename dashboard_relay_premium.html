@@ -171,13 +171,17 @@ function crmPreviewHtml(){
   const payloads=cp.payloads||[];
   const stageColor=s=>s==='appointment_ready'?'green':s==='hot_lead'?'violet':s==='qualified_interest'?'blue':s==='review_required'?'yellow':'yellow';
   const valueStr=v=>typeof v==='number'?(v>0?'ca. '+v.toLocaleString('de-DE')+' EUR':'0 EUR — Review'):'—';
-  const rowsHtml=payloads.length?payloads.map(p=>`<tr><td>${badge(esc(p.proposed_stage||'—'),stageColor(p.proposed_stage))}</td><td>${esc(p.company_name||'(unbekannt)')}</td><td><span class="mono dim">${esc(p.email||'—')}</span></td><td>${valueStr(p.estimated_value_eur)}</td><td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.proposed_action||'—')}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty">Keine Payloads.</div></td></tr>';
+  const pushBadge=p=>p.crm_push_ready?`<span class="badge green">push_ready</span>`:`<span class="badge yellow">blocked</span>`;
+  const blockReason=p=>p.crm_push_block_reason?`<span style="font-size:10px;color:var(--text-mute)">${esc(p.crm_push_block_reason)}</span>`:'';
+  const rowsHtml=payloads.length?payloads.map(p=>`<tr><td>${badge(esc(p.proposed_stage||'—'),stageColor(p.proposed_stage))}</td><td>${esc(p.company_name||'(unbekannt)')}</td><td><span class="mono dim">${esc(p.email||'—')}</span></td><td>${valueStr(p.estimated_value_eur)}</td><td>${pushBadge(p)} ${blockReason(p)}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty">Keine Payloads.</div></td></tr>';
   const warnHtml=cp.warnings&&cp.warnings.length?`<div style="margin-top:8px;font-size:11px;color:var(--text-mute)">[!] ${esc(cp.warnings.slice(0,3).join(' | '))}</div>`:'';
   const ts=`<span class="badge blue">Erstellt: ${esc((cp.generated_at||'').slice(0,16).replace('T',' '))}</span>`;
   const dryBadge=`<span class="badge green">dry_run=true</span>`;
   const provBadge=`<span class="badge blue">provider: ${esc(cp.provider||'generic')}</span>`;
-  const countBadge=`<span class="badge violet">${cp.count||0} Payload(s)</span>`;
-  return `<div class="panel"><div class="panel-head"><div class="panel-title">CRM-Preview <span class="panel-sub">Kein API-Push. Kein Send. Read-only.</span></div><div class="panel-actions">${dryBadge}${provBadge}${countBadge}${ts}</div></div><div class="panel-body flush"><table class="table"><thead><tr><th>Stage</th><th>Firma</th><th>E-Mail</th><th>Wert</th><th>Aktion</th></tr></thead><tbody>${rowsHtml}</tbody></table>${warnHtml}</div></div>`;
+  const readyBadge=`<span class="badge green">Push ready: ${cp.push_ready_count||0}</span>`;
+  const blockedBadge=`<span class="badge yellow">Blocked: ${cp.blocked_count||0}</span>`;
+  const reasonsHtml=cp.blocked_reasons&&cp.blocked_reasons.length?`<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Block-Gruende: ${esc(cp.blocked_reasons.join(', '))}</div>`:'';
+  return `<div class="panel"><div class="panel-head"><div class="panel-title">CRM-Preview <span class="panel-sub">Kein API-Push. Kein Send. Read-only.</span></div><div class="panel-actions">${dryBadge}${provBadge}${readyBadge}${blockedBadge}${ts}</div></div><div class="panel-body flush"><table class="table"><thead><tr><th>Stage</th><th>Firma</th><th>E-Mail</th><th>Wert</th><th>Push-Status</th></tr></thead><tbody>${rowsHtml}</tbody></table>${reasonsHtml}${warnHtml}</div></div>`;
 }
 function stage(name,num,sub,active){return `<div class="stage ${active}"><div class="stage-name">${name}</div><div class="stage-num">${num||0}</div><div class="stage-sub">${sub}</div></div>`}
 function conv(a,b,p){return `<div class="stat-tile"><div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600">${a} -> ${b}</div><div style="font-size:18px;font-weight:700;margin-top:4px">${p}%</div><div class="progress" style="margin-top:8px"><div class="fill" style="width:${p}%"></div></div></div>`}

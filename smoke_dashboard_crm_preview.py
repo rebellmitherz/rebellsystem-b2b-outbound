@@ -128,6 +128,12 @@ if relay_file.is_file():
     check("proposed_stage wird angezeigt", "proposed_stage" in html)
     check("estimated_value_eur wird angezeigt", "estimated_value_eur" in html)
     check("'Kein API-Push' Hinweis vorhanden", "Kein API-Push" in html or "kein API-Push" in html or "kein CRM" in html.lower() or "Kein API-Push" in html)
+    check("push_ready Badge vorhanden", "push_ready" in html)
+    check("blocked Badge vorhanden", "blocked" in html)
+    check("crm_push_block_reason wird angezeigt", "crm_push_block_reason" in html)
+    check("push_ready_count wird angezeigt", "push_ready_count" in html)
+    check("blocked_count wird angezeigt", "blocked_count" in html)
+    check("blocked_reasons wird angezeigt", "blocked_reasons" in html)
 
 
 # ── Test 6: keine Send/SMTP/IMAP/CRM-Push-Logik in den geaenderten Stellen ───

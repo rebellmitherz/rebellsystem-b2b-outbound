@@ -97,6 +97,33 @@ def _owner_note(hh: dict) -> str:
     return " | ".join(parts) if parts else "Hot Handoff aus Outreach-Pipeline."
 
 
+_PUSH_READY_STAGES = frozenset({"appointment_ready", "hot_lead"})
+
+
+def _crm_push_readiness(
+    stage: str,
+    value: int,
+    company_name: str,
+    email: str,
+    snippet: str,
+    source: str,
+) -> tuple[bool, str]:
+    """Return (push_ready, block_reason). No network. No state change."""
+    if stage not in _PUSH_READY_STAGES:
+        return False, "review_required"
+    if not company_name:
+        return False, "company_name_missing"
+    if not email:
+        return False, "email_missing"
+    if value <= 0:
+        return False, "estimated_value_zero"
+    if _has_rejection_phrase(snippet):
+        return False, "rejection_phrase_detected"
+    if source == "sent_log_only":
+        return False, "sent_log_only_unresolved"
+    return True, ""
+
+
 def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[str, Any]:
     """Build one CRM preview payload from a single hot handoff dict."""
     email = str(hh.get("email") or "").strip().lower()
@@ -156,6 +183,10 @@ def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[st
         "review_required":   "Manuell pruefen, nicht automatisch ins CRM pushen",
     }
 
+    push_ready, block_reason = _crm_push_readiness(
+        stage, value, company_name, email, snippet_text, source
+    )
+
     return {
         "dry_run":          True,
         "provider":         "generic",
@@ -175,6 +206,9 @@ def _build_single_payload(hh: dict, pipeline_lookup: dict[str, dict]) -> dict[st
         "estimated_value_eur": value,
         "next_step":        next_step,
         "owner_note":       _owner_note(hh) + owner_note_suffix,
+        "crm_push_ready":   push_ready,
+        "crm_push_block_reason": block_reason,
+        "crm_push_mode":    "dry_run_only",
         "guard_warnings":   guard_warnings,
         "created_at":       datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
@@ -248,13 +282,26 @@ def build_crm_preview(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
             "(negative Klassifikation oder nicht bestimmbar)"
         )
 
+    push_ready_count = sum(1 for p in payloads if p.get("crm_push_ready"))
+    blocked_count    = len(payloads) - push_ready_count
+    blocked_reasons: list[str] = []
+    seen: set[str] = set()
+    for p in payloads:
+        r = p.get("crm_push_block_reason") or ""
+        if r and r not in seen:
+            blocked_reasons.append(r)
+            seen.add(r)
+
     return {
-        "dry_run":      True,
-        "provider":     "generic",
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "count":        len(payloads),
-        "payloads":     payloads,
-        "warnings":     warnings,
+        "dry_run":           True,
+        "provider":          "generic",
+        "generated_at":      datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "count":             len(payloads),
+        "push_ready_count":  push_ready_count,
+        "blocked_count":     blocked_count,
+        "blocked_reasons":   blocked_reasons,
+        "payloads":          payloads,
+        "warnings":          warnings,
     }
 
 
