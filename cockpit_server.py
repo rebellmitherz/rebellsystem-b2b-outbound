@@ -2376,7 +2376,9 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/intent-operator-queue":
                 return self._json(_intent_operator_queue_payload())
             if p == "/api/premium-dashboard":
-                return self._json(_premium_dashboard_payload())
+                _pd = _premium_dashboard_payload()
+                _pd["crm_preview"] = _safe_read_json(CRM_PREVIEW_FILE) or {}
+                return self._json(_pd)
             if p.startswith("/api/job/"):
                 jid = p.rsplit("/", 1)[-1]
                 with _jobs_lock:

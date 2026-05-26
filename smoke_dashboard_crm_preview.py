@@ -156,11 +156,14 @@ check(
     "_premium_dashboard_payload()" in handler_src
     and '"/api/premium-dashboard"' in handler_src,
 )
-# Verify there is no filtering between the call and _json()
-# The pattern must be: _json(_premium_dashboard_payload()) with nothing in between
+# Handler muss crm_preview explizit setzen (Defensiv-Fix: unabhaengig vom Payload-Dict)
 check(
-    "Handler gibt _premium_dashboard_payload() ungefiltert an _json weiter",
-    "_json(_premium_dashboard_payload())" in handler_src,
+    "Handler setzt crm_preview explizit vor _json (Defensiv-Fix)",
+    '_pd["crm_preview"]' in handler_src or "crm_preview" in handler_src,
+)
+check(
+    "Handler verwendet CRM_PREVIEW_FILE + _safe_read_json fuer crm_preview",
+    "CRM_PREVIEW_FILE" in handler_src and "_safe_read_json" in handler_src,
 )
 # _json must not filter keys
 json_src = inspect.getsource(cs.Handler._json)
@@ -169,18 +172,14 @@ check("_json() nutzt json.dumps direkt", "json.dumps" in json_src)
 
 check("CRM_PREVIEW_FILE Konstante in cockpit_server", hasattr(cs, "CRM_PREVIEW_FILE"))
 check(
-    "crm_preview Variable in _premium_dashboard_payload Quellcode",
-    "crm_preview" in inspect.getsource(cs._premium_dashboard_payload),
-)
-check(
-    "'crm_preview' im Return-Dict von _premium_dashboard_payload",
+    "crm_preview im Return-Dict von _premium_dashboard_payload",
     '"crm_preview"' in inspect.getsource(cs._premium_dashboard_payload)
     or "'crm_preview'" in inspect.getsource(cs._premium_dashboard_payload),
 )
 
 
-# ── Test 8: Live-HTTP (optional — nur wenn Server laeuft) ────────────────────
-print("\n[8] Live-HTTP /api/premium-dashboard (SKIP wenn Server nicht laeuft)")
+# ── Test 8: Live-HTTP — PFLICHT wenn Server laeuft, FAIL bei fehlendem crm_preview ──
+print("\n[8] Live-HTTP /api/premium-dashboard (FAIL wenn Server laeuft + crm_preview fehlt)")
 import urllib.request
 import urllib.error
 
@@ -193,8 +192,7 @@ try:
     check(
         "HTTP-Antwort enthaelt 'crm_preview'",
         "crm_preview" in live_data,
-        "Server laeuft mit alter Code-Version — bitte neu starten: python cockpit_server.py"
-        if "crm_preview" not in live_data else "",
+        "Server laeuft mit veraltetem Code — neu starten: python cockpit_server.py",
     )
     check(
         "HTTP crm_preview ist dict",
@@ -204,6 +202,10 @@ try:
         "HTTP monthly_report und crm_preview beide vorhanden",
         "monthly_report" in live_data and "crm_preview" in live_data,
     )
+    cp_live = live_data.get("crm_preview", {})
+    if cp_live:
+        check("HTTP crm_preview.dry_run == True", cp_live.get("dry_run") is True)
+        check("HTTP crm_preview.provider == 'generic'", cp_live.get("provider") == "generic")
 except urllib.error.URLError:
     print("  SKIP — Server nicht erreichbar (starte: python cockpit_server.py)")
 except Exception as e:
