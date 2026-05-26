@@ -249,8 +249,17 @@ def main() -> None:
         default=30,
         help="Zeitfenster fuer --monthly-report in Tagen (Standard: 30)",
     )
+    p.add_argument(
+        "--crm-preview",
+        action="store_true",
+        help="Read-only CRM-Payload-Preview aus Hot Handoffs. Kein API-Push, kein Send.",
+    )
 
     args = p.parse_args()
+    if getattr(args, "crm_preview", False):
+        from modules.crm_payload_preview import run_crm_preview_cli
+        run_crm_preview_cli()
+        return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
         run_monthly_report_cli(days=getattr(args, "report_days", 30))
