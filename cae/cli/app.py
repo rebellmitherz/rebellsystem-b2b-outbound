@@ -273,6 +273,16 @@ def main() -> None:
             "Kein Push, kein Netzwerk."
         ),
     )
+    p.add_argument(
+        "--operator-run",
+        action="store_true",
+        help=(
+            "Safe Operator-Run: read-only Statusaggregator ueber CRM, Outreach, "
+            "Reply-Queue und Hot Handoffs. "
+            "Schreibt output/latest/operator_run_report.json. "
+            "Kein Send, kein Push, kein Netzwerk."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -286,6 +296,10 @@ def main() -> None:
     if getattr(args, "crm_status", False):
         from modules.crm_status import run_crm_status_cli
         run_crm_status_cli()
+        return
+    if getattr(args, "operator_run", False):
+        from modules.operator_run import run_operator_run_cli
+        run_operator_run_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
