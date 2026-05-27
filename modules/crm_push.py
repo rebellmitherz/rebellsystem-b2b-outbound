@@ -125,8 +125,35 @@ def _pipedrive_post(endpoint: str, token: str, body: dict) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def _create_person(token: str, payload: dict) -> tuple[int | None, str]:
-    """Legt Person in Pipedrive an.
+def _create_organization(token: str, company_name: str) -> tuple[int | None, str]:
+    """Legt Organization in Pipedrive an.
+
+    Returns (org_id, error_message). org_id=None wenn kein company_name.
+    Nur aufgerufen wenn company_name vorhanden — sonst (None, '').
+    """
+    if not company_name:
+        return None, ""
+
+    body: dict[str, Any] = {"name": company_name}
+    try:
+        resp = _pipedrive_post("organizations", token, body)
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        return None, f"HTTP {exc.code}: {raw[:300]}"
+    except OSError as exc:
+        return None, f"Netzwerkfehler: {exc}"
+
+    if not resp.get("success"):
+        return None, f"Pipedrive error: {resp.get('error', 'unbekannt')}"
+
+    org_id: int = resp["data"]["id"]
+    return org_id, ""
+
+
+def _create_person(
+    token: str, payload: dict, org_id: int | None = None
+) -> tuple[int | None, str]:
+    """Legt Person in Pipedrive an (mit org_id wenn Organization angelegt wurde).
 
     Returns (person_id, error_message). person_id=None bei Fehler.
     """
@@ -137,6 +164,8 @@ def _create_person(token: str, payload: dict) -> tuple[int | None, str]:
         body["email"] = [{"value": payload["email"], "primary": True}]
     if payload.get("phone"):
         body["phone"] = [{"value": payload["phone"], "primary": True}]
+    if org_id is not None:
+        body["org_id"] = org_id
 
     try:
         resp = _pipedrive_post("persons", token, body)
@@ -153,8 +182,10 @@ def _create_person(token: str, payload: dict) -> tuple[int | None, str]:
     return person_id, ""
 
 
-def _create_deal(token: str, payload: dict, person_id: int | None) -> tuple[int | None, str]:
-    """Legt Deal in Pipedrive an.
+def _create_deal(
+    token: str, payload: dict, person_id: int | None, org_id: int | None = None
+) -> tuple[int | None, str]:
+    """Legt Deal in Pipedrive an (mit person_id und org_id).
 
     Returns (deal_id, error_message). deal_id=None bei Fehler.
     """
@@ -170,18 +201,18 @@ def _create_deal(token: str, payload: dict, person_id: int | None) -> tuple[int 
     }
     if person_id is not None:
         body["person_id"] = person_id
+    if org_id is not None:
+        body["org_id"] = org_id
 
-    # Stage-Mapping: Pipedrive-Stage-IDs müssen manuell konfiguriert sein.
+    # Stage-Mapping: Pipedrive-Stage-IDs muessen manuell konfiguriert sein.
     # Wir senden den Stage-Namen als note, nicht als stage_id, damit keine
     # Fehlkonfiguration entsteht.
     stage_note = payload.get("proposed_stage", "")
     owner_note = payload.get("owner_note", "")
-    next_step = payload.get("next_step", "")
-    note_parts = [p for p in [stage_note, owner_note, next_step] if p]
+    next_step  = payload.get("next_step", "")
+    note_parts = [x for x in [stage_note, owner_note, next_step] if x]
     if note_parts:
-        body["visible_to"] = "3"   # ganze Firma
-        # Pipedrive unterstützt kein direktes note-Feld im Deal-POST.
-        # Note wird als separater Schritt in _add_deal_note angelegt.
+        body["visible_to"] = "3"  # ganze Firma
 
     try:
         resp = _pipedrive_post("deals", token, body)
@@ -244,6 +275,7 @@ def _push_single_payload(token: str, payload: dict, dry_run: bool) -> dict:
         "company_name": payload.get("company_name", ""),
         "proposed_stage": payload.get("proposed_stage", ""),
         "dry_run": dry_run,
+        "org_id": None,
         "person_id": None,
         "deal_id": None,
         "note_error": "",
@@ -260,23 +292,34 @@ def _push_single_payload(token: str, payload: dict, dry_run: bool) -> dict:
         )
         return result
 
+    # ── Organization anlegen (falls company_name vorhanden) ──────────────────
+    company_name = payload.get("company_name", "").strip()
+    org_id: int | None = None
+    if company_name:
+        org_id, org_err = _create_organization(token, company_name)
+        if org_err:
+            result["errors"].append(f"Org-Fehler: {org_err}")
+            result["status"] = "failed"
+            return result
+    result["org_id"] = org_id
+
     # ── Person anlegen ────────────────────────────────────────────────────────
-    person_id, person_err = _create_person(token, payload)
+    person_id, person_err = _create_person(token, payload, org_id=org_id)
     if person_err:
         result["errors"].append(f"Person-Fehler: {person_err}")
-        result["status"] = "failed"
+        result["status"] = "partial"   # Org ggf. angelegt, Person nicht
         return result
     result["person_id"] = person_id
 
     # ── Deal anlegen ──────────────────────────────────────────────────────────
-    deal_id, deal_err = _create_deal(token, payload, person_id)
+    deal_id, deal_err = _create_deal(token, payload, person_id, org_id=org_id)
     if deal_err:
         result["errors"].append(f"Deal-Fehler: {deal_err}")
-        result["status"] = "partial"   # Person wurde angelegt, Deal nicht
+        result["status"] = "partial"   # Org + Person angelegt, Deal nicht
         return result
     result["deal_id"] = deal_id
 
-    # ── Note anhängen (nicht kritisch) ────────────────────────────────────────
+    # ── Note an Deal anhängen (nicht kritisch) ────────────────────────────────
     note_err = _add_deal_note(token, deal_id, payload)
     if note_err:
         result["note_error"] = note_err  # Warnung, kein Fehler
@@ -345,6 +388,7 @@ def run_crm_push(
             "company_name": p.get("company_name", ""),
             "proposed_stage": p.get("proposed_stage", ""),
             "dry_run": True,
+            "org_id": None,
             "person_id": None,
             "deal_id": None,
             "errors": [],

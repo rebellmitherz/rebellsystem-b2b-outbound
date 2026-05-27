@@ -254,11 +254,25 @@ def main() -> None:
         action="store_true",
         help="Read-only CRM-Payload-Preview aus Hot Handoffs. Kein API-Push, kein Send.",
     )
+    p.add_argument(
+        "--crm-push",
+        action="store_true",
+        help=(
+            "CRM Push v1 (Pipedrive). Liest output/latest/crm_payload_preview.json "
+            "und pusht Payloads mit crm_push_ready=true. "
+            "Echter Push NUR wenn CRM_PUSH_CONFIRMED=1 + PIPEDRIVE_API_TOKEN + "
+            "CRM_PROVIDER=pipedrive in .env gesetzt sind. Sonst immer Dry-Run."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
         from modules.crm_payload_preview import run_crm_preview_cli
         run_crm_preview_cli()
+        return
+    if getattr(args, "crm_push", False):
+        from modules.crm_push import run_crm_push_cli
+        run_crm_push_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
