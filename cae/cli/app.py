@@ -283,6 +283,16 @@ def main() -> None:
             "Kein Send, kein Push, kein Netzwerk."
         ),
     )
+    p.add_argument(
+        "--reply-quality",
+        action="store_true",
+        help=(
+            "Reply Quality Audit: analysiert warum Replies nicht zu "
+            "Hot Handoffs / CRM-Kandidaten werden. "
+            "Schreibt output/latest/reply_quality_report.json. "
+            "Kein Send, kein IMAP, kein CRM-Push."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -300,6 +310,10 @@ def main() -> None:
     if getattr(args, "operator_run", False):
         from modules.operator_run import run_operator_run_cli
         run_operator_run_cli()
+        return
+    if getattr(args, "reply_quality", False):
+        from modules.reply_quality import run_reply_quality_cli
+        run_reply_quality_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
