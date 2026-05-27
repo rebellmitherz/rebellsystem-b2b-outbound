@@ -135,6 +135,7 @@ $("view-overview").innerHTML=runStatusHtml()+`
   <div class="panel"><div class="panel-head"><div class="panel-title">Schnellaktionen <span class="panel-sub">Operator-Shortcuts</span></div></div><div class="panel-body"><div class="grid-4">${quick("Leads gefunden",totalLeads+" Leads","enrichment","blue")}${quick("Versandbereit",totalReady+" bereit","pipeline","green")}${quick("Pruefung offen",totalReview+" warten","review","yellow")}${quick("Antworten",totalReplies+" Queue","replies","violet")}</div></div></div>
   ${monthlyReportHtml()}
   ${crmPreviewHtml()}
+  ${operatorRunHtml()}
   <div class="panel"><div class="panel-head"><div class="panel-title">Bedienfelder <span class="panel-sub">Bot-Aktionen</span></div><div class="panel-actions">${badge("kein Send","red")}${badge("kein SMTP","yellow")}</div></div><div class="panel-body"><div id="job-status" class="job-status"></div><div class="operator-grid">
     <div class="operator-card"><h3>Lead-Suche starten</h3><p>Nutzt den bestehenden Endpunkt /api/search.</p><div class="form-row"><input class="field-input" id="lead-industry" placeholder="Branche, z.B. Marketingagentur"><input class="field-input" id="lead-city" placeholder="Stadt, z.B. Muenchen"></div><div class="form-row"><input class="field-input" id="lead-count" type="number" min="1" max="100" value="20"><button class="btn primary" onclick="startLeadSearch()">Lead-Suche</button></div></div>
     <div class="operator-card"><h3>Intent / Target Preview</h3><p>Preview-only. Keine Pipeline-Integration, kein Versand.</p><div class="form-row"><input class="field-input" id="intent-industry" placeholder="Branche"><input class="field-input" id="intent-city" placeholder="Stadt" value="Muenchen"></div><div class="form-row"><select class="field-select" id="intent-signal"><option value="sales_hiring">sales_hiring</option><option value="growth_expansion">growth_expansion</option><option value="demand_generation_gap">demand_generation_gap</option></select><button class="btn primary" onclick="startIntentLeadProduction()">Intent Preview</button></div><button class="btn" onclick="postAction('/api/intent-target-preview/run',{},'Intent Target Preview')">Target Preview starten</button></div>
@@ -182,6 +183,31 @@ function crmPreviewHtml(){
   const blockedBadge=`<span class="badge yellow">Blocked: ${cp.blocked_count||0}</span>`;
   const reasonsHtml=cp.blocked_reasons&&cp.blocked_reasons.length?`<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Block-Gruende: ${esc(cp.blocked_reasons.join(', '))}</div>`:'';
   return `<div class="panel"><div class="panel-head"><div class="panel-title">CRM-Preview <span class="panel-sub">Kein API-Push. Kein Send. Read-only.</span></div><div class="panel-actions">${dryBadge}${provBadge}${readyBadge}${blockedBadge}${ts}</div></div><div class="panel-body flush"><table class="table"><thead><tr><th>Stage</th><th>Firma</th><th>E-Mail</th><th>Wert</th><th>Push-Status</th></tr></thead><tbody>${rowsHtml}</tbody></table>${reasonsHtml}${warnHtml}</div></div>`;
+}
+function operatorRunHtml(){
+  const or_=state.data&&state.data.operator_run;
+  if(!or_||!or_.generated_at){return`<div class="panel"><div class="panel-head"><div class="panel-title">Operator-Status <span class="panel-sub">output/latest/operator_run_report.json</span></div></div><div class="panel-body"><div class="empty">Noch kein Operator-Run — starte: <code>python mine.py --operator-run</code></div></div></div>`;}
+  const fmt=v=>typeof v==='number'?v.toLocaleString('de-DE'):String(v??'—');
+  const actionColor=a=>a==='review_ready_outreach'||a==='no_action'?'green':a==='configure_crm_env_or_keep_dry_run'||a==='review_blocked_crm_payloads'?'yellow':a==='generate_more_hot_handoffs'?'red':a==='review_replies'?'violet':'blue';
+  const na=or_.operator_next_action||'no_action';
+  const crm_na=or_.crm_next_action||'—';
+  const livePush=or_.crm_live_push_possible;
+  const tiles=[
+    ['Leads gesamt',fmt(or_.leads_found_total),'gefunden','blue'],
+    ['Versandbereit',fmt(or_.ready_to_send_total),'bereit','green'],
+    ['Versendet',fmt(or_.sent_total),'Erstmails','green'],
+    ['Antworten',fmt(or_.replies_total),'klassifiziert','violet'],
+    ['Reply-Queue',fmt(or_.reply_queue_count),'offen',or_.reply_queue_count>0?'yellow':'blue'],
+    ['Hot Handoffs',fmt(or_.hot_handoffs_count),'qualifiziert',or_.hot_handoffs_count>0?'green':'yellow'],
+    ['CRM Push-ready',fmt(or_.crm_push_ready_count),'Payloads',or_.crm_push_ready_count>0?'green':'yellow'],
+    ['CRM Blockiert',fmt(or_.crm_blocked_count),'Payloads',or_.crm_blocked_count>0?'yellow':'blue'],
+  ];
+  const tileHtml=tiles.map(([lbl,val,sub,color])=>`<div class="kpi ${color}"><div class="kpi-label">${lbl}</div><div class="kpi-value" style="font-size:22px">${esc(val)}</div><div class="kpi-foot">${sub}</div></div>`).join('');
+  const ts=or_.generated_at?`<span class="badge blue">Erstellt: ${esc(or_.generated_at.slice(0,16).replace('T',' '))}</span>`:'';
+  const liveStr=livePush?`<span class="badge green">Live-Push moeglich</span>`:`<span class="badge yellow">Push gesperrt</span>`;
+  const nextHtml=`<div style="margin-top:14px;padding:12px 14px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--line-soft)"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-mute);font-weight:600;margin-bottom:6px">Operator-Aktion</div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${badge(esc(na),actionColor(na))}<span style="color:var(--text-mute);font-size:12px">CRM: ${esc(crm_na)}</span>${liveStr}</div></div>`;
+  const warnHtml=or_.warnings&&or_.warnings.length?`<div style="margin-top:8px;font-size:11px;color:var(--text-mute)">[!] ${esc(or_.warnings.slice(0,2).join(' | '))}</div>`:'';
+  return `<div class="panel"><div class="panel-head"><div class="panel-title">Operator-Status <span class="panel-sub">safe_operator_run | read-only</span></div><div class="panel-actions"><span class="badge green">read-only</span><span class="badge blue">kein Send</span>${ts}</div></div><div class="panel-body"><div class="kpi-row" style="grid-template-columns:repeat(4,minmax(0,1fr))">${tileHtml}</div>${nextHtml}${warnHtml}</div></div>`;
 }
 function stage(name,num,sub,active){return `<div class="stage ${active}"><div class="stage-name">${name}</div><div class="stage-num">${num||0}</div><div class="stage-sub">${sub}</div></div>`}
 function conv(a,b,p){return `<div class="stat-tile"><div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:600">${a} -> ${b}</div><div style="font-size:18px;font-weight:700;margin-top:4px">${p}%</div><div class="progress" style="margin-top:8px"><div class="fill" style="width:${p}%"></div></div></div>`}
