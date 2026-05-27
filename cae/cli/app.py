@@ -264,6 +264,15 @@ def main() -> None:
             "CRM_PROVIDER=pipedrive in .env gesetzt sind. Sonst immer Dry-Run."
         ),
     )
+    p.add_argument(
+        "--crm-status",
+        action="store_true",
+        help=(
+            "Read-only CRM Preflight: zeigt ENV-Stand, Preview-Stand und Push-Bereitschaft. "
+            "Schreibt output/latest/crm_status_report.json. "
+            "Kein Push, kein Netzwerk."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -273,6 +282,10 @@ def main() -> None:
     if getattr(args, "crm_push", False):
         from modules.crm_push import run_crm_push_cli
         run_crm_push_cli()
+        return
+    if getattr(args, "crm_status", False):
+        from modules.crm_status import run_crm_status_cli
+        run_crm_status_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
