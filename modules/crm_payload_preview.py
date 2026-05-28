@@ -105,6 +105,32 @@ def _owner_note(hh: dict) -> str:
 _PUSH_READY_STAGES = frozenset({"appointment_ready", "hot_lead"})
 
 
+def _is_hard_exclusion(payload: dict) -> tuple[bool, str]:
+    """Prueft ob ein Payload eine harte Ablehnung ist und ausgeschlossen werden soll.
+
+    Ausgeschlossene Payloads zaehlen NICHT als count/blocked_count und loesen
+    kein review_blocked_crm_payloads aus. Sie landen in excluded_payloads.
+
+    Kriterien (OR):
+      1. Ablehnungsphrase im Reply-Snippet erkannt
+      2. proposed_stage=review_required UND estimated_value_eur=0 UND source=sent_log_only
+      3. company_name leer UND source=sent_log_only UND estimated_value_eur=0
+    """
+    snippet = payload.get("reply_snippet", "")
+    source  = payload.get("source", "")
+    company = payload.get("company_name", "")
+    value   = payload.get("estimated_value_eur", 0)
+    stage   = payload.get("proposed_stage", "")
+
+    if _has_rejection_phrase(snippet):
+        return True, "rejection_phrase_detected"
+    if stage == "review_required" and value == 0 and source == "sent_log_only":
+        return True, "sent_log_only_review_required_zero_value"
+    if not company and source == "sent_log_only" and value == 0:
+        return True, "sent_log_only_no_company_zero_value"
+    return False, ""
+
+
 def _crm_push_readiness(
     stage: str,
     value: int,
@@ -264,16 +290,46 @@ def build_crm_preview(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
             break
 
     # ── Build payloads ───────────────────────────────────────────────────────
-    payloads: list[dict] = []
+    all_payloads: list[dict] = []
     for hh in handoffs:
         try:
             payload = _build_single_payload(hh, pipeline_lookup)
             warnings.extend(payload.pop("guard_warnings", []))
-            payloads.append(payload)
+            all_payloads.append(payload)
         except Exception as exc:
             warnings.append(f"Payload-Fehler fuer {hh.get('email','?')}: {exc}")
 
-    # Post-build warnings
+    # ── Separiere harte Ablehnungen (excluded) von aktiven Payloads ──────────
+    payloads:          list[dict] = []
+    excluded_payloads: list[dict] = []
+    excluded_reasons:  list[str]  = []
+    excl_reasons_seen: set[str]   = set()
+
+    for p in all_payloads:
+        is_excl, reason = _is_hard_exclusion(p)
+        if is_excl:
+            excluded_payloads.append({
+                "email":               p.get("email", ""),
+                "proposed_stage":      p.get("proposed_stage", ""),
+                "source":              p.get("source", ""),
+                "estimated_value_eur": p.get("estimated_value_eur", 0),
+                "company_name":        p.get("company_name", ""),
+                "exclusion_reason":    reason,
+            })
+            if reason not in excl_reasons_seen:
+                excluded_reasons.append(reason)
+                excl_reasons_seen.add(reason)
+        else:
+            payloads.append(p)
+
+    if excluded_payloads:
+        warnings.append(
+            f"{len(excluded_payloads)} Payload(s) als harte Ablehnung ausgeschlossen "
+            "(rejection_phrase oder sent_log_only ohne Firma/Wert) — "
+            "nicht in count/blocked_count gezaehlt."
+        )
+
+    # Post-build warnings (nur aktive Payloads)
     missing_company = sum(1 for p in payloads if not p["company_name"])
     if missing_company:
         warnings.append(
@@ -298,15 +354,18 @@ def build_crm_preview(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
             seen.add(r)
 
     return {
-        "dry_run":           True,
-        "provider":          "generic",
-        "generated_at":      datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "count":             len(payloads),
-        "push_ready_count":  push_ready_count,
-        "blocked_count":     blocked_count,
-        "blocked_reasons":   blocked_reasons,
-        "payloads":          payloads,
-        "warnings":          warnings,
+        "dry_run":            True,
+        "provider":           "generic",
+        "generated_at":       datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "count":              len(payloads),
+        "push_ready_count":   push_ready_count,
+        "blocked_count":      blocked_count,
+        "blocked_reasons":    blocked_reasons,
+        "excluded_count":     len(excluded_payloads),
+        "excluded_reasons":   excluded_reasons,
+        "excluded_payloads":  excluded_payloads,
+        "payloads":           payloads,
+        "warnings":           warnings,
     }
 
 

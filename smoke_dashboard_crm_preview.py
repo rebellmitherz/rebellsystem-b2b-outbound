@@ -134,6 +134,8 @@ if relay_file.is_file():
     check("push_ready_count wird angezeigt", "push_ready_count" in html)
     check("blocked_count wird angezeigt", "blocked_count" in html)
     check("blocked_reasons wird angezeigt", "blocked_reasons" in html)
+    check("excluded_count wird angezeigt", "excluded_count" in html)
+    check("excluded_payloads wird angezeigt", "excluded_payloads" in html)
 
 
 # ── Test 6: keine Send/SMTP/IMAP/CRM-Push-Logik in den geaenderten Stellen ───

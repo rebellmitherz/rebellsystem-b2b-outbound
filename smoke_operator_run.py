@@ -15,6 +15,7 @@ Prueft:
   12. ready_to_send.csv Fallback wird benutzt wenn monthly_report fehlt
   13. reply_queue_count bevorzugt len(items) gegenueber total
   14. python mine.py --help enthaelt --operator-run
+  15. Nur excluded payloads (count=0, blocked=0, excluded=1) -> kein review_blocked
 
 KEIN Netzwerk. KEIN API-Call. KEIN SMTP. KEIN IMAP. KEIN Token.
 """
@@ -37,6 +38,7 @@ REQUIRED_FIELDS = [
     "leads_found_total", "ready_to_send_total", "sent_total", "replies_total",
     "hot_handoffs_count", "reply_queue_count",
     "crm_preview_count", "crm_push_ready_count", "crm_blocked_count",
+    "crm_excluded_count",
     "crm_live_push_possible", "crm_next_action",
     "operator_next_action", "warnings",
 ]
@@ -72,10 +74,44 @@ def _make_preview(push_ready: int = 0, blocked: int = 0) -> dict:
         [{"crm_push_ready": False, "crm_push_block_reason": "review_required"} for _ in range(blocked)]
     )
     return {
-        "count": push_ready + blocked,
+        "count":          push_ready + blocked,
         "push_ready_count": push_ready,
-        "blocked_count": blocked,
-        "payloads": payloads,
+        "blocked_count":  blocked,
+        "excluded_count": 0,
+        "excluded_payloads": [],
+        "payloads":       payloads,
+    }
+
+
+def _make_preview_with_excluded(
+    excluded: int = 1,
+    push_ready: int = 0,
+    blocked: int = 0,
+) -> dict:
+    """CRM-Preview mit excluded_payloads (harte Ablehnungen)."""
+    payloads = (
+        [{"crm_push_ready": True,  "crm_push_block_reason": ""} for _ in range(push_ready)] +
+        [{"crm_push_ready": False, "crm_push_block_reason": "review_required"} for _ in range(blocked)]
+    )
+    excluded_payloads = [
+        {
+            "email":            f"ex{i}@test.de",
+            "proposed_stage":   "review_required",
+            "source":           "sent_log_only",
+            "estimated_value_eur": 0,
+            "company_name":     "",
+            "exclusion_reason": "rejection_phrase_detected",
+        }
+        for i in range(excluded)
+    ]
+    return {
+        "count":             push_ready + blocked,
+        "push_ready_count":  push_ready,
+        "blocked_count":     blocked,
+        "excluded_count":    excluded,
+        "excluded_reasons":  ["rejection_phrase_detected"] if excluded > 0 else [],
+        "excluded_payloads": excluded_payloads,
+        "payloads":          payloads,
     }
 
 
@@ -307,6 +343,34 @@ def test_13_reply_queue_prefers_items_len() -> None:
     _ok("reply_queue_count bevorzugt len(items) gegenueber total")
 
 
+def test_15_only_excluded_not_review_blocked() -> None:
+    """Nur excluded payloads (count=0, blocked=0, excluded=1) -> kein review_blocked.
+    Alle Hot Handoffs waren harte Ablehnungen -> generate_more_hot_handoffs."""
+    with tempfile.TemporaryDirectory() as t:
+        report = _run(
+            Path(t),
+            preview=_make_preview_with_excluded(excluded=1, push_ready=0, blocked=0),
+            crm_status=_make_crm_status(live_push=False),
+            hot_handoffs=_make_hot_handoffs(1),
+            reply_queue=_make_reply_queue(items=0),
+        )
+    if report.get("operator_next_action") == "review_blocked_crm_payloads":
+        _fail(
+            "Nur excluded: operator_next_action darf NICHT 'review_blocked_crm_payloads' sein",
+            f"got: {report.get('operator_next_action')}",
+        )
+    if report.get("crm_blocked_count") != 0:
+        _fail("crm_blocked_count sollte 0 sein bei nur excluded", str(report.get("crm_blocked_count")))
+    if report.get("crm_excluded_count") != 1:
+        _fail("crm_excluded_count sollte 1 sein", str(report.get("crm_excluded_count")))
+    if report.get("operator_next_action") != "generate_more_hot_handoffs":
+        _fail(
+            "Nur excluded + hot_handoffs>0 + count=0 + blocked=0 -> generate_more_hot_handoffs",
+            f"got: {report.get('operator_next_action')}",
+        )
+    _ok("Nur excluded: kein review_blocked, operator_next_action=generate_more_hot_handoffs")
+
+
 def test_14_mine_help_contains_operator_run() -> None:
     """python mine.py --help muss --operator-run enthalten."""
     result = subprocess.run(
@@ -341,6 +405,7 @@ TESTS = [
     test_12_ready_to_send_csv_fallback,
     test_13_reply_queue_prefers_items_len,
     test_14_mine_help_contains_operator_run,
+    test_15_only_excluded_not_review_blocked,
 ]
 
 

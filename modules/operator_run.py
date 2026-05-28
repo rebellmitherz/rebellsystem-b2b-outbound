@@ -113,6 +113,7 @@ def build_operator_run_report(
     crm_preview_count    = int((crm_preview or {}).get("count",           0))
     crm_push_ready_count = int((crm_preview or {}).get("push_ready_count", 0))
     crm_blocked_count    = int((crm_preview or {}).get("blocked_count",    0))
+    crm_excluded_count   = int((crm_preview or {}).get("excluded_count",   0))
 
     # ── 3. CRM Status Report ──────────────────────────────────────────────────
     crm_status = _load_json(latest / "crm_status_report.json")
@@ -171,6 +172,8 @@ def build_operator_run_report(
     if crm_push_ready_count > 0 and not crm_live_push_possible:
         operator_next_action = "configure_crm_env_or_keep_dry_run"
     elif crm_blocked_count > 0 and crm_push_ready_count == 0:
+        # Nur echte blocked-Payloads (keine hard-rejected/excluded) triggern dies.
+        # Excluded gehen nicht in blocked_count — kein falscher review_blocked.
         operator_next_action = "review_blocked_crm_payloads"
     elif hot_handoffs_count == 0:
         operator_next_action = "generate_more_hot_handoffs"
@@ -178,6 +181,9 @@ def build_operator_run_report(
         operator_next_action = "review_replies"
     elif ready_to_send_total > 0:
         operator_next_action = "review_ready_outreach"
+    elif hot_handoffs_count > 0 and crm_preview_count == 0 and crm_blocked_count == 0 and crm_excluded_count > 0:
+        # Alle Hot Handoffs waren harte Ablehnungen (excluded) — neue Leads generieren.
+        operator_next_action = "generate_more_hot_handoffs"
     else:
         operator_next_action = "no_action"
 
@@ -198,6 +204,7 @@ def build_operator_run_report(
         "crm_preview_count":      crm_preview_count,
         "crm_push_ready_count":   crm_push_ready_count,
         "crm_blocked_count":      crm_blocked_count,
+        "crm_excluded_count":     crm_excluded_count,
         "crm_live_push_possible": crm_live_push_possible,
         "crm_next_action":        crm_next_action,
         # Letzter Push-Log (Kontext)
@@ -241,6 +248,7 @@ def run_operator_run_cli(
     print(f"  CRM Payloads       : {report['crm_preview_count']}")
     print(f"  Push-ready         : {report['crm_push_ready_count']}")
     print(f"  Blockiert          : {report['crm_blocked_count']}")
+    print(f"  Ausgeschlossen     : {report['crm_excluded_count']}")
     live = "JA  <-- ACHTUNG: echter Push moeglich!" if report['crm_live_push_possible'] else "NEIN"
     print(f"  Live-Push moeglich : {live}")
     print(f"  CRM next_action    : {report['crm_next_action']}")

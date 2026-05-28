@@ -181,8 +181,10 @@ function crmPreviewHtml(){
   const provBadge=`<span class="badge blue">provider: ${esc(cp.provider||'generic')}</span>`;
   const readyBadge=`<span class="badge green">Push ready: ${cp.push_ready_count||0}</span>`;
   const blockedBadge=`<span class="badge yellow">Blocked: ${cp.blocked_count||0}</span>`;
+  const excludedBadge=(cp.excluded_count>0)?`<span class="badge yellow">Ausgeschlossen: ${cp.excluded_count}</span>`:'';
   const reasonsHtml=cp.blocked_reasons&&cp.blocked_reasons.length?`<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Block-Gruende: ${esc(cp.blocked_reasons.join(', '))}</div>`:'';
-  return `<div class="panel"><div class="panel-head"><div class="panel-title">CRM-Preview <span class="panel-sub">Kein API-Push. Kein Send. Read-only.</span></div><div class="panel-actions">${dryBadge}${provBadge}${readyBadge}${blockedBadge}${ts}</div></div><div class="panel-body flush"><table class="table"><thead><tr><th>Stage</th><th>Firma</th><th>E-Mail</th><th>Wert</th><th>Push-Status</th></tr></thead><tbody>${rowsHtml}</tbody></table>${reasonsHtml}${warnHtml}</div></div>`;
+  const excludedHtml=(cp.excluded_payloads&&cp.excluded_payloads.length)?`<div style="margin-top:6px;font-size:11px;color:var(--text-mute)">Ausgeschlossen (${cp.excluded_count}): ${esc(cp.excluded_payloads.map(e=>e.email+' ['+e.exclusion_reason+']').join(', '))}</div>`:'';
+  return `<div class="panel"><div class="panel-head"><div class="panel-title">CRM-Preview <span class="panel-sub">Kein API-Push. Kein Send. Read-only.</span></div><div class="panel-actions">${dryBadge}${provBadge}${readyBadge}${blockedBadge}${excludedBadge}${ts}</div></div><div class="panel-body flush"><table class="table"><thead><tr><th>Stage</th><th>Firma</th><th>E-Mail</th><th>Wert</th><th>Push-Status</th></tr></thead><tbody>${rowsHtml}</tbody></table>${reasonsHtml}${excludedHtml}${warnHtml}</div></div>`;
 }
 function operatorRunHtml(){
   const or_=state.data&&state.data.operator_run;

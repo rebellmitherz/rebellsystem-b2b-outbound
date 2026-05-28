@@ -46,6 +46,7 @@ PAYLOAD_REQUIRED_FIELDS = [
 RESULT_REQUIRED_FIELDS = [
     "dry_run", "provider", "generated_at", "count", "payloads", "warnings",
     "push_ready_count", "blocked_count", "blocked_reasons",
+    "excluded_count", "excluded_reasons", "excluded_payloads",
 ]
 
 
@@ -128,12 +129,12 @@ check("Positiver Text -> False",         not crm._has_rejection_phrase("Ich bin 
 check("case-insensitiv: 'Kein Bedarf'",  crm._has_rejection_phrase("Kein Bedarf"))
 
 
-# ── Test 4c: Quality-Guard in build_crm_preview ───────────────────────────────
-print("\n[4c] Quality-Guard — Ablehnung + sent_log_only")
+# ── Test 4c: Quality-Guard / Exclusion in build_crm_preview ──────────────────
+print("\n[4c] Quality-Guard — harte Ablehnungen in excluded_payloads")
 
 import json as _json
 
-# Rejection phrase guard: appointment_ready=True but snippet says "keinen Bedarf"
+# Rejection phrase: geht in excluded_payloads, NICHT in active payloads
 rejection_hh = {
     "email": "test@rejection.de",
     "company_name": "Firma GmbH",
@@ -151,18 +152,16 @@ with tempfile.TemporaryDirectory() as tmp:
     hh_file.write_text(_json.dumps([rejection_hh]), encoding="utf-8")
     result_rej = crm.build_crm_preview(output_dir=tmp_path)
 
-check("Ablehnung -> count == 1",         result_rej.get("count") == 1)
-rej_payload = result_rej["payloads"][0] if result_rej.get("payloads") else {}
-check("Ablehnung -> proposed_stage == 'review_required'",
-      rej_payload.get("proposed_stage") == "review_required",
-      f"bekam '{rej_payload.get('proposed_stage')}'")
-check("Ablehnung -> estimated_value_eur == 0",
-      rej_payload.get("estimated_value_eur") == 0,
-      f"bekam {rej_payload.get('estimated_value_eur')}")
-check("Ablehnung -> dry_run == True",    rej_payload.get("dry_run") is True)
-check("Ablehnung -> Warnung vorhanden",  len(result_rej.get("warnings", [])) > 0)
+check("Ablehnung -> active count == 0 (excluded)",  result_rej.get("count") == 0)
+check("Ablehnung -> excluded_count == 1",            result_rej.get("excluded_count") == 1)
+check("Ablehnung -> payloads leer",                  result_rej.get("payloads") == [])
+rej_excl = result_rej.get("excluded_payloads", [{}])[0]
+check("Ablehnung -> exclusion_reason == 'rejection_phrase_detected'",
+      rej_excl.get("exclusion_reason") == "rejection_phrase_detected",
+      f"bekam '{rej_excl.get('exclusion_reason')}'")
+check("Ablehnung -> Warnung vorhanden",              len(result_rej.get("warnings", [])) > 0)
 
-# sent_log_only without company_name guard
+# sent_log_only without company_name: ebenfalls excluded
 sentlog_hh = {
     "email": "test@sentlog.de",
     "company_name": "",
@@ -180,19 +179,20 @@ with tempfile.TemporaryDirectory() as tmp:
     hh_file.write_text(_json.dumps([sentlog_hh]), encoding="utf-8")
     result_sl = crm.build_crm_preview(output_dir=tmp_path)
 
-check("sent_log_only no company -> count == 1", result_sl.get("count") == 1)
-sl_payload = result_sl["payloads"][0] if result_sl.get("payloads") else {}
-check("sent_log_only no company -> proposed_stage == 'review_required'",
-      sl_payload.get("proposed_stage") == "review_required",
-      f"bekam '{sl_payload.get('proposed_stage')}'")
-check("sent_log_only no company -> estimated_value_eur == 0",
-      sl_payload.get("estimated_value_eur") == 0,
-      f"bekam {sl_payload.get('estimated_value_eur')}")
-check("sent_log_only no company -> owner_note enthaelt 'manueller Check'",
-      "manueller Check" in sl_payload.get("owner_note", ""),
-      f"owner_note: {sl_payload.get('owner_note', '')[:80]}")
+check("sent_log_only no company -> active count == 0",   result_sl.get("count") == 0)
+check("sent_log_only no company -> excluded_count == 1", result_sl.get("excluded_count") == 1)
+sl_excl = result_sl.get("excluded_payloads", [{}])[0]
+check("sent_log_only -> proposed_stage == 'review_required' in excluded",
+      sl_excl.get("proposed_stage") == "review_required",
+      f"bekam '{sl_excl.get('proposed_stage')}'")
+check("sent_log_only -> exclusion_reason korrekt",
+      sl_excl.get("exclusion_reason") in (
+          "sent_log_only_review_required_zero_value",
+          "sent_log_only_no_company_zero_value",
+      ),
+      f"bekam '{sl_excl.get('exclusion_reason')}'")
 
-# Clean lead — must keep its stage
+# Clean lead — bleibt in active payloads (nicht excluded)
 clean_hh = {
     "email": "test@clean.de",
     "company_name": "Saubere GmbH",
@@ -210,7 +210,8 @@ with tempfile.TemporaryDirectory() as tmp:
     hh_file.write_text(_json.dumps([clean_hh]), encoding="utf-8")
     result_clean = crm.build_crm_preview(output_dir=tmp_path)
 
-check("Sauberer Lead -> count == 1",     result_clean.get("count") == 1)
+check("Sauberer Lead -> active count == 1",    result_clean.get("count") == 1)
+check("Sauberer Lead -> excluded_count == 0",  result_clean.get("excluded_count") == 0)
 clean_payload = result_clean["payloads"][0] if result_clean.get("payloads") else {}
 check("Sauberer Lead -> proposed_stage == 'appointment_ready'",
       clean_payload.get("proposed_stage") == "appointment_ready",
@@ -254,7 +255,7 @@ check("hot_lead mit Daten -> push_ready True", ready is True)
 # ── Test 4e: Push-Readiness im build_crm_preview Ergebnis ────────────────────
 print("\n[4e] Push-Readiness Top-Level Summary")
 
-# Rejection lead -> blocked
+# Rejection lead -> EXCLUDED (kein blocked, kein active)
 with tempfile.TemporaryDirectory() as tmp:
     tmp_path = Path(tmp)
     (tmp_path / "latest").mkdir()
@@ -263,12 +264,11 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     r_rej = crm.build_crm_preview(output_dir=tmp_path)
 
-check("Ablehnung -> push_ready_count == 0", r_rej.get("push_ready_count") == 0)
-check("Ablehnung -> blocked_count == 1",    r_rej.get("blocked_count") == 1)
-check("Ablehnung -> blocked_reasons nicht leer", len(r_rej.get("blocked_reasons", [])) > 0)
-rej_p = r_rej["payloads"][0] if r_rej.get("payloads") else {}
-check("Ablehnung Payload -> crm_push_ready False", rej_p.get("crm_push_ready") is False)
-check("Ablehnung Payload -> crm_push_mode == 'dry_run_only'", rej_p.get("crm_push_mode") == "dry_run_only")
+check("Ablehnung -> push_ready_count == 0",                    r_rej.get("push_ready_count") == 0)
+check("Ablehnung -> blocked_count == 0 (excluded, nicht blocked)", r_rej.get("blocked_count") == 0)
+check("Ablehnung -> excluded_count == 1",                      r_rej.get("excluded_count") == 1)
+check("Ablehnung -> blocked_reasons leer",                     r_rej.get("blocked_reasons") == [])
+check("Ablehnung -> payloads leer (entry in excluded_payloads)", r_rej.get("payloads") == [])
 
 # Clean lead -> push_ready
 with tempfile.TemporaryDirectory() as tmp:
@@ -325,6 +325,10 @@ if (real_output / "latest" / "hot_handoffs.json").is_file():
 
     check("push_ready_count + blocked_count == count",
           result.get("push_ready_count", -1) + result.get("blocked_count", -1) == result.get("count", -2))
+    check("excluded_count >= 0",
+          isinstance(result.get("excluded_count"), int) and result.get("excluded_count", -1) >= 0)
+    check("excluded_payloads ist liste",
+          isinstance(result.get("excluded_payloads"), list))
 else:
     print("  SKIP — output/latest/hot_handoffs.json fehlt")
 
