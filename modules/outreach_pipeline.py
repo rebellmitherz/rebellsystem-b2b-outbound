@@ -1909,14 +1909,22 @@ def export_hot_handoffs_files(state: dict[str, Any]) -> None:
         except (TypeError, ValueError):
             conf_q = 0.0
         appt_q = bool(item.get("appointment_ready"))
+        is_auto_q = bool(item.get("is_auto_reply"))
+        # Snippet vorab fuer Veto-Check und spaetere Row-Befuellung
+        _snip_q = (item.get("inbound_snippet") or item.get("body") or "")[:800]
+        # Auto-Replies und Antworten mit Ablehnungsphrase niemals als Hot Handoff
         qualifies = (
-            cls_q == "positive"
-            or (cls_q == "interested" and conf_q >= 0.52)
-            or appt_q
+            not is_auto_q
+            and not reply_intel._has_rejection_phrase(_snip_q)
+            and (
+                cls_q == "positive"
+                or (cls_q == "interested" and conf_q >= 0.52)
+                or appt_q
+            )
         )
         if not qualifies:
             continue
-        snippet = (item.get("inbound_snippet") or item.get("body") or "")[:800]
+        snippet = _snip_q
         rows.append({
             "company_name": "",
             "contact_name": "",

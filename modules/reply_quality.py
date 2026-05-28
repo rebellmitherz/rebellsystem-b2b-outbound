@@ -35,7 +35,8 @@ PIPELINE_FILE     = LATEST / "outreach_pipeline.json"
 CRM_PREVIEW_FILE  = LATEST / "crm_payload_preview.json"
 REPORT_FILE       = LATEST / "reply_quality_report.json"
 
-# Ablehnungsphrasen (synchron mit crm_payload_preview.py)
+# Ablehnungsphrasen (synchron mit crm_payload_preview.py und
+# reply_intelligence._VETO_REJECTION_PHRASES)
 REJECTION_PHRASES = (
     "kein bedarf",
     "keinen bedarf",
@@ -43,7 +44,9 @@ REJECTION_PHRASES = (
     "nicht interessiert",
     "kein interesse",
     "behalten sie gerne im hinterkopf",
-    "kein interesse",
+    "gerne im hinterkopf",
+    "arbeiten inhouse",
+    "setzen intern auf",
     "no need",
     "not interested",
 )
@@ -442,7 +445,8 @@ def run_reply_quality_cli(report_file: Path = REPORT_FILE) -> None:
         if a["rejection_phrases"]:
             print(f"      Ablehnungsphrasen: {a['rejection_phrases']}")
         if a["snippet_preview"]:
-            print(f"      Snippet: {a['snippet_preview'][:100]}")
+            safe_snip = a["snippet_preview"][:100].replace("�", "?")
+            print(f"      Snippet: {safe_snip}")
 
     if report["warnings"]:
         print()
@@ -454,7 +458,8 @@ def run_reply_quality_cli(report_file: Path = REPORT_FILE) -> None:
     print(f"  Report gespeichert : {REPORT_FILE}")
     print("=" * 68)
     print()
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    # ensure_ascii=True: verhindert cp1252-Fehler bei Replacement-Zeichen im Snippet
+    print(json.dumps(report, ensure_ascii=True, indent=2))
 
 
 if __name__ == "__main__":

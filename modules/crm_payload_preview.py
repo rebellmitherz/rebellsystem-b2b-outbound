@@ -27,6 +27,8 @@ _NEGATIVE_CLASSES = frozenset({"negative", "not_interested", "no_need", "spam"})
 
 # Conservative rejection phrases — if any appears in the reply snippet the
 # stage must never be appointment_ready or hot_lead, regardless of flags.
+# Synchron halten mit reply_intelligence._VETO_REJECTION_PHRASES und
+# reply_quality.REJECTION_PHRASES.
 REJECTION_PHRASES = (
     "kein bedarf",
     "keinen bedarf",
@@ -34,6 +36,9 @@ REJECTION_PHRASES = (
     "nicht interessiert",
     "kein interesse",
     "behalten sie gerne im hinterkopf",
+    "gerne im hinterkopf",
+    "arbeiten inhouse",
+    "setzen intern auf",
 )
 
 

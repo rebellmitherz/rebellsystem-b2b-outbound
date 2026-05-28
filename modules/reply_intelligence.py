@@ -51,6 +51,42 @@ _SOFT_NO_RX = re.compile(
     re.I,
 )
 
+# ── Veto-Phrasen: Ablehnungen die Vorrang vor Keyword-Scoring haben ────────────
+# Jede dieser Phrasen im normalisierten Text → kein positive / kein appointment_ready.
+# Synchron halten mit crm_payload_preview.REJECTION_PHRASES und
+# reply_quality.REJECTION_PHRASES.
+_VETO_REJECTION_PHRASES: tuple[str, ...] = (
+    "kein bedarf",
+    "keinen bedarf",
+    "aktuell keinen bedarf",
+    "nicht interessiert",
+    "kein interesse",
+    "behalten sie gerne im hinterkopf",  # exakte Form aus User-Spec
+    "gerne im hinterkopf",               # deckt "aber gerne", "uns gerne" etc. ab
+    "arbeiten inhouse",
+    "setzen intern auf",
+)
+
+# Absolute-Veto-Phrasen: koennen NICHT durch _OBJECTION_POTENTIAL aufgehoben werden.
+# "aber" als Weichmacher ("behalten Sie aber gerne im Hinterkopf") ist KEIN echter
+# Einwand mit Zukunftspotenzial. Diese Phrasen sind IMMER eindeutige Absagen.
+_ABSOLUTE_VETO_PHRASES: tuple[str, ...] = (
+    "gerne im hinterkopf",       # alle "behalten Sie (aber/uns/…) gerne im Hinterkopf"-Varianten
+    "behalten sie im hinterkopf",  # ohne "gerne"
+)
+
+
+def _has_rejection_phrase(text: str) -> bool:
+    """True wenn eine konservative Veto-Phrase im normalisierten Text enthalten ist."""
+    low = (text or "").lower()
+    return any(p in low for p in _VETO_REJECTION_PHRASES)
+
+
+def _has_absolute_veto(text: str) -> bool:
+    """True wenn eine absolute Veto-Phrase vorhanden ist (nicht durch 'aber' aufhebbar)."""
+    low = (text or "").lower()
+    return any(p in low for p in _ABSOLUTE_VETO_PHRASES)
+
 # Heikel: immer an Mensch
 # Hinweis: "datenschutzbeauftrag" mit \w*-Suffix, damit deklinierte Formen
 # (Datenschutzbeauftragter / -te / -ten / -ten) ebenfalls matchen.
@@ -177,6 +213,17 @@ def classify_inbound(text: str) -> tuple[str, float]:
     if _NEUTRAL_INFO_RX.search(t):
         return "neutral", 0.86
 
+    # Absolute veto: eindeutige Absage-Phrasen koennen NICHT durch "aber" (= _OBJECTION_POTENTIAL)
+    # aufgehoben werden. Z.B. "behalten Sie aber gerne im Hinterkopf" ist keine Kaufabsicht.
+    if _has_absolute_veto(t):
+        return "negative", 0.88
+
+    # Conservative rejection-phrase veto: Ablehnungssignal hat Vorrang vor Keyword-Scoring.
+    # Echter Einwand mit Potenzial (_OBJECTION_POTENTIAL: "aber vielleicht spaeter", "Budget
+    # im Q4" etc.) hebt diesen Veto auf — absolute veto bleibt davon unberuehrt.
+    if _has_rejection_phrase(t) and not _OBJECTION_POTENTIAL.search(t):
+        return "negative", 0.88
+
     scores: dict[str, float] = {k: 0.0 for k in _KEYWORDS}
     for cls, words in _KEYWORDS.items():
         hit = 0
@@ -257,6 +304,12 @@ def detect_appointment_intent(text: str, cls: str, conf: float) -> dict[str, Any
     """
     c = (cls or "").strip().lower()
     has_meeting_signal = bool(_MEETING_INTENT_RE.search(text or ""))
+
+    # Rejection-phrase veto: klare Ablehnung blockiert appointment_ready
+    # unabhaengig von cls/conf — schutzt gegen Fehlklassifikation durch
+    # positive Keyword-Treffer in Ablehnungs-Antworten.
+    if _has_rejection_phrase(text or ""):
+        return {"appointment_ready": False, "appointment_reason": "rejection_phrase_veto"}
 
     # Harte Sperren: kein appointment_ready bei diesen Klassen
     if c in ("negative", "unclear") or must_escalate_human(text):
