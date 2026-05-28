@@ -315,6 +315,18 @@ def main() -> None:
             "Kein IMAP, kein Send, kein CRM-Push."
         ),
     )
+    p.add_argument(
+        "--reply-action-plan",
+        action="store_true",
+        help=(
+            "Reply Action Plan: liest reply_queue.json und gibt pro Reply eine "
+            "konkrete Handlungsempfehlung aus (ignore_auto_reply, wait_until_back, "
+            "mark_negative_no_followup, deduplicate_reply, create_followup_draft, "
+            "promote_to_hot_handoff, manual_review). "
+            "Speichert output/latest/reply_action_plan.json. "
+            "Kein IMAP, kein Send, kein CRM-Push, read-only."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -344,6 +356,10 @@ def main() -> None:
     if getattr(args, "reply_reclassify_apply", False):
         from modules.reply_reclassify_apply import run_reclassify_apply_cli
         run_reclassify_apply_cli()
+        return
+    if getattr(args, "reply_action_plan", False):
+        from modules.reply_action_plan import run_reply_action_plan_cli
+        run_reply_action_plan_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
