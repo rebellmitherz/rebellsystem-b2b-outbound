@@ -293,6 +293,16 @@ def main() -> None:
             "Kein Send, kein IMAP, kein CRM-Push."
         ),
     )
+    p.add_argument(
+        "--reply-reclassify-preview",
+        action="store_true",
+        help=(
+            "Reclassification Preview: vergleicht gespeicherte Klassifikationen "
+            "in reply_queue.json mit der aktuellen reply_intelligence (read-only). "
+            "Schreibt output/latest/reply_reclassify_preview.json. "
+            "Kein IMAP, kein Send, kein CRM-Push, keine Zustandsaenderung."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -314,6 +324,10 @@ def main() -> None:
     if getattr(args, "reply_quality", False):
         from modules.reply_quality import run_reply_quality_cli
         run_reply_quality_cli()
+        return
+    if getattr(args, "reply_reclassify_preview", False):
+        from modules.reply_reclassify_preview import run_reclassify_preview_cli
+        run_reclassify_preview_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
