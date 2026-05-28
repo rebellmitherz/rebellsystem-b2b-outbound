@@ -303,6 +303,18 @@ def main() -> None:
             "Kein IMAP, kein Send, kein CRM-Push, keine Zustandsaenderung."
         ),
     )
+    p.add_argument(
+        "--reply-reclassify-apply",
+        action="store_true",
+        help=(
+            "Reclassification Apply: korrigiert alte Klassifikationen in reply_queue.json "
+            "anhand von reply_reclassify_preview.json. "
+            "Standard: Dry-Run (keine Aenderung). "
+            "Echter Apply nur bei REPLY_RECLASSIFY_CONFIRMED=1. "
+            "Erstellt Backup vor dem Schreiben. "
+            "Kein IMAP, kein Send, kein CRM-Push."
+        ),
+    )
 
     args = p.parse_args()
     if getattr(args, "crm_preview", False):
@@ -328,6 +340,10 @@ def main() -> None:
     if getattr(args, "reply_reclassify_preview", False):
         from modules.reply_reclassify_preview import run_reclassify_preview_cli
         run_reclassify_preview_cli()
+        return
+    if getattr(args, "reply_reclassify_apply", False):
+        from modules.reply_reclassify_apply import run_reclassify_apply_cli
+        run_reclassify_apply_cli()
         return
     if getattr(args, "monthly_report", False):
         from modules.monthly_report import run_monthly_report_cli
