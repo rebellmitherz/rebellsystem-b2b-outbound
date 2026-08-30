@@ -4,11 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WerkPilot — Angebote und Rechnungen für Handwerksbetriebe</title>
-<meta name="description" content="Sprechen Sie das Angebot, WerkPilot schreibt es. Angebote, Aufträge, Rechnungen, E-Rechnung und Mahnwesen für Handwerksbetriebe. 49 EUR im Monat, 14 Tage kostenlos testen. Ihre Daten bleiben auf Ihrem Rechner.">
-<!-- Noch nicht indexieren: die Bezahlung laeuft bis zur Live-Schaltung von
-     Stripe im Testmodus. Ein Besucher ueber Google koennte sonst kaufen wollen,
-     ohne dass eine Zahlung ankommt. Diese Zeile beim Live-Gang entfernen und
-     die Seite in sitemap.xml aufnehmen. -->
+<meta name="description" content="Sprechen Sie das Angebot, WerkPilot schreibt es. Angebote, Aufträge, Rechnungen, E-Rechnung und Mahnwesen für Handwerksbetriebe. 49 EUR im Monat oder 468 EUR im Jahr, 14 Tage kostenlos testen. Ihre Daten bleiben auf Ihrem Rechner.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="canonical" href="https://b2b.rebellsystem.com/werkpilot/">
 <meta property="og:type" content="website">
@@ -282,6 +278,24 @@ h3 { font-size: 21px; text-transform: uppercase; letter-spacing: .035em; }
 .addon { margin-top: 26px; padding-top: 22px; border-top: 1px dashed var(--line); font-size: 14.5px; color: var(--muted); position: relative; }
 .addon b { color: var(--chalk); font-weight: 600; }
 
+/* Umschalter monatlich/jährlich - selbes Bedienmuster wie ein Messschieber:
+   zwei feste Rasten, keine stufenlose Bewegung. */
+.billing-switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); padding: 3px; margin-bottom: 26px; position: relative; z-index: 1; }
+.billing-switch button {
+  font-family: var(--f-body); font-size: 14px; font-weight: 600; padding: 9px 20px; border-radius: 3px;
+  border: none; background: transparent; color: var(--muted); cursor: pointer; transition: color .15s, background .15s;
+}
+.billing-switch button.active { background: var(--signal); color: var(--signal-ink); }
+.billing-switch .save-badge {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--verified); margin-left: 8px; padding: 2px 7px; border-radius: 99px;
+  background: color-mix(in srgb, var(--verified) 14%, transparent); vertical-align: 2px;
+}
+.price-amt .was { font-size: 34px; color: var(--muted-2); text-decoration: line-through; margin-right: 10px; font-weight: 600; }
+.price-yearly-total { font-family: var(--f-mono); font-size: 13px; color: var(--muted); margin-top: 6px; }
+[data-billing="annual"] .only-monthly,
+[data-billing="monthly"] .only-annual { display: none; }
+
 /* ------------------------------------------------------------------ Branchen */
 
 .trades { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 42px; }
@@ -505,18 +519,27 @@ footer a:hover { color: var(--chalk); }
     <div class="massline"><span class="tick"></span><span class="lbl">03 — Preis</span><span class="rule"></span></div>
     <h2>Ein Preis. Monatlich kündbar.</h2>
 
-    <div class="price-box">
+    <div class="price-box" id="price-box" data-billing="monthly">
+      <div class="billing-switch" role="group" aria-label="Abrechnungszeitraum">
+        <button type="button" data-billing-btn="monthly" class="active" aria-pressed="true">Monatlich</button>
+        <button type="button" data-billing-btn="annual" aria-pressed="false">Jährlich <span class="save-badge">2 Monate gratis</span></button>
+      </div>
+
       <div class="price-grid">
         <div>
-          <div class="price-amt"><sup>€</sup>49</div>
+          <div class="price-amt">
+            <span class="only-annual was">49</span><sup>€</sup><span data-price>49</span>
+          </div>
           <div class="price-per">pro Monat · zzgl. USt.</div>
+          <div class="price-yearly-total only-annual">468 € einmal jährlich abgerechnet — statt 588 € bei Monatszahlung</div>
         </div>
         <ul class="price-list">
           <li><span class="check">✓</span><span><b>14 Tage kostenlos</b> — ohne Kreditkarte. Die Testphase endet von allein, es wird nichts abgebucht.</span></li>
           <li><span class="check">✓</span><span>Alle Funktionen aus der Serienausstattung, ohne Aufpreis</span></li>
           <li><span class="check">✓</span><span>Ein Arbeitsplatz · Updates inklusive</span></li>
           <li><span class="check">✓</span><span>60 Minuten Spracheingabe im Monat (rund 200 Aufträge)</span></li>
-          <li><span class="check">✓</span><span>Monatlich kündbar — keine Mindestlaufzeit</span></li>
+          <li class="only-monthly"><span class="check">✓</span><span>Monatlich kündbar — keine Mindestlaufzeit</span></li>
+          <li class="only-annual"><span class="check">✓</span><span>Jährlich kündbar — 10 € Rabatt auf jeden Monat, weil Sie sich festlegen</span></li>
         </ul>
       </div>
       <div class="addon">
@@ -640,6 +663,27 @@ footer a:hover { color: var(--chalk); }
 </footer>
 
 <script>
+/* Umschalter monatlich/jährlich im Preisabschnitt. Rein optisch - der
+   tatsächliche Kauf (und die Preiswahl) passiert im Programm selbst, siehe
+   handwerk_app/web/app.js::licensePanel. */
+(function () {
+  var box = document.getElementById("price-box");
+  if (!box) return;
+  var priceEl = box.querySelector("[data-price]");
+  box.querySelectorAll("[data-billing-btn]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var billing = btn.getAttribute("data-billing-btn");
+      box.setAttribute("data-billing", billing);
+      priceEl.textContent = billing === "annual" ? "39" : "49";
+      box.querySelectorAll("[data-billing-btn]").forEach(function (b) {
+        var active = b === btn;
+        b.classList.toggle("active", active);
+        b.setAttribute("aria-pressed", String(active));
+      });
+    });
+  });
+})();
+
 /* Umwandlungs-Schaubild: der gesprochene Satz wird Feld fuer Feld zerlegt.
    Laeuft einmal beim Sichtbarwerden durch und bleibt dann vollstaendig stehen -
    eine Endlosschleife wuerde beim Lesen der Seite stoeren. */
