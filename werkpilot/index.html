@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WerkPilot — Angebote und Rechnungen für Handwerksbetriebe</title>
+<meta name="description" content="Sprechen Sie das Angebot, WerkPilot schreibt es. Angebote, Aufträge, Rechnungen, E-Rechnung und Mahnwesen für Handwerksbetriebe. 49 EUR im Monat, 14 Tage kostenlos testen. Ihre Daten bleiben auf Ihrem Rechner.">
+<!-- Noch nicht indexieren: die Bezahlung laeuft bis zur Live-Schaltung von
+     Stripe im Testmodus. Ein Besucher ueber Google koennte sonst kaufen wollen,
+     ohne dass eine Zahlung ankommt. Diese Zeile beim Live-Gang entfernen und
+     die Seite in sitemap.xml aufnehmen. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://b2b.rebellsystem.com/werkpilot/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Rebell System">
+<meta property="og:title" content="WerkPilot — Sprechen Sie das Angebot. Fertig.">
+<meta property="og:description" content="Ein Satz von der Baustelle und der Angebotsentwurf steht. Bürosoftware für Handwerksbetriebe, 49 EUR im Monat, 14 Tage kostenlos.">
+<meta property="og:url" content="https://b2b.rebellsystem.com/werkpilot/">
+<meta name="theme-color" content="#070a0c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='3' fill='%23070a0c'/><rect x='5' y='5' width='22' height='22' rx='2' fill='none' stroke='%23ff7a2f' stroke-width='2'/><path d='M11 19a5 5 0 0 1 10 0' fill='none' stroke='%23ff7a2f' stroke-width='2'/></svg>">
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;600&display=swap">
+
+<style>
+/* ============================================================================
+   WerkPilot — Produktseite
+   Gestaltungswelt: technische Zeichnung / Werkstatt-Instrument.
+   Bewusst einfarbig dunkel (kein Hell-Modus): die Anwendung selbst ist dunkel,
+   die Muttermarke Rebell System ebenfalls. Alle Farben sind explizit gesetzt,
+   damit die Seite auf jedem Untergrund haelt.
+   ============================================================================ */
+
+:root {
+  /* Grund: Graphit mit leichtem Cyan-Stich - kein reines Schwarz, damit die
+     Blaupausen-Linien darauf wie Tusche auf Papier sitzen statt zu glimmen. */
+  --ink:        #070a0c;
+  --plate:      #101619;
+  --plate-2:    #151d21;
+  --line:       #1f2c33;
+  --line-soft:  #172126;
+
+  /* Signalfarbe aus der Welt der Baustelle: Warnband, Hi-Vis, Absperrung.
+     Traegt alle Handlungen und Maszahlen. */
+  --signal:     #ff7a2f;
+  --signal-dim: #c25a1f;
+  --signal-ink: #180b03;
+
+  /* Gruen ausschliesslich fuer "enthalten / geprueft" - stellt zugleich die
+     Verbindung zur Muttermarke Rebell System her. */
+  --verified:   #3fcf8e;
+
+  --chalk:      #e9eef1;
+  --muted:      #7c8992;
+  --muted-2:    #56636b;
+
+  --maxw: 1140px;
+  --r: 4px;
+
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--chalk);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Blaupausen-Raster als Grund. Zwei Ebenen: feines Millimeterraster und ein
+   groeberes Zentimeterraster darueber - wie auf echtem Zeichenpapier. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px),
+    linear-gradient(rgba(31,44,51,.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31,44,51,.55) 1px, transparent 1px);
+  background-size: 22px 22px, 22px 22px, 110px 110px, 110px 110px;
+  mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 30%, transparent 78%);
+  opacity: .5;
+}
+
+.wrap { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+/* ---------------------------------------------------------------- Kopfzeile */
+
+header.top {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.top-in { max-width: var(--maxw); margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--chalk); }
+.brand-mark {
+  width: 30px; height: 30px; flex: none; border: 1.5px solid var(--signal); border-radius: 2px;
+  display: grid; place-items: center; position: relative;
+}
+.brand-mark::before {
+  content: ""; width: 12px; height: 12px; border-radius: 50%;
+  border: 1.5px solid var(--signal); border-top-color: transparent; border-right-color: transparent;
+  transform: rotate(-45deg);
+}
+.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 21px; letter-spacing: .04em; text-transform: uppercase; }
+.top nav { margin-left: auto; display: flex; gap: 26px; align-items: center; }
+.top nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .15s; }
+.top nav a:hover, .top nav a:focus-visible { color: var(--chalk); }
+@media (max-width: 800px) { .top nav a:not(.btn) { display: none; } }
+
+/* ------------------------------------------------------------------ Knoepfe */
+
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--f-body); font-size: 15px; font-weight: 600;
+  padding: 12px 22px; border-radius: var(--r); text-decoration: none;
+  border: 1px solid transparent; cursor: pointer; transition: transform .12s, background .15s, border-color .15s;
+}
+.btn-primary { background: var(--signal); color: var(--signal-ink); }
+.btn-primary:hover { background: #ff8c4c; transform: translateY(-1px); }
+.btn-ghost { border-color: var(--line); color: var(--chalk); background: transparent; }
+.btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+.btn-sm { padding: 9px 16px; font-size: 14px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+/* ------------------------------------------------------- Abschnittsmarkierung
+   Massline: eine echte Bemassungslinie mit Endpfeilen, wie in einer technischen
+   Zeichnung. Sie traegt die Abschnittsnummer - die Nummerierung ist hier keine
+   Dekoration, sondern folgt der Reihenfolge, in der ein Betrieb das Programm
+   kennenlernt. */
+
+.section { padding: 96px 0; position: relative; }
+.massline { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.massline .tick { width: 1px; height: 13px; background: var(--signal); flex: none; }
+.massline .rule { height: 1px; background: linear-gradient(90deg, var(--signal), var(--line) 70%, transparent); flex: 1; max-width: 190px; }
+.massline .lbl {
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--signal); white-space: nowrap;
+}
+
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.04; letter-spacing: -.005em; }
+h2 { font-size: clamp(32px, 4.4vw, 50px); text-transform: uppercase; letter-spacing: .01em; }
+h3 { font-size: 21px; text-transform: uppercase; letter-spacing: .035em; }
+.lead { color: var(--muted); font-size: 18px; max-width: 62ch; margin: 18px 0 0; }
+
+/* ---------------------------------------------------------------------- Hero */
+
+.hero { padding: 78px 0 40px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); display: flex; align-items: center; gap: 10px; margin-bottom: 26px;
+}
+.eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--signal); }
+.hero h1 {
+  font-size: clamp(46px, 8.2vw, 96px);
+  text-transform: uppercase;
+  letter-spacing: .002em;
+  max-width: 15ch;
+}
+.hero h1 em { font-style: normal; color: var(--signal); }
+.hero-sub { color: var(--muted); font-size: 19px; max-width: 56ch; margin: 26px 0 0; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 34px; align-items: center; }
+.hero-note { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted-2); margin-top: 16px; }
+
+/* ------------------------------------------------------- Umwandlungs-Schaubild
+   Das Herzstueck: ein gesprochener Satz wird in einen Angebotsentwurf zerlegt.
+   Kein Bildschirmfoto - die Umwandlung selbst IST das Produktversprechen, also
+   wird sie gezeigt statt beschrieben. */
+
+.transform { margin-top: 62px; border: 1px solid var(--line); border-radius: var(--r); background: var(--plate); overflow: hidden; }
+.transform-head {
+  display: flex; align-items: center; gap: 11px; padding: 12px 18px;
+  border-bottom: 1px solid var(--line); background: var(--plate-2);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); flex: none; }
+.dot.live { animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.transform-head span { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+.transform-head .right { margin-left: auto; color: var(--muted-2); }
+
+.spoken { padding: 30px 26px 26px; border-bottom: 1px dashed var(--line); }
+.spoken-lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 13px; }
+.spoken-text { font-size: clamp(18px, 2.5vw, 25px); line-height: 1.55; color: var(--chalk); font-weight: 450; }
+.spoken-text mark {
+  background: transparent; color: inherit; padding: 2px 3px; border-radius: 2px;
+  box-shadow: inset 0 -2px 0 0 var(--line); transition: box-shadow .45s, background .45s, color .45s;
+}
+.spoken-text mark.on {
+  background: color-mix(in srgb, var(--signal) 17%, transparent);
+  box-shadow: inset 0 -2px 0 0 var(--signal);
+  color: #fff;
+}
+
+.extract { padding: 24px 26px 28px; }
+.extract-lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 15px; }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.field { background: var(--plate); padding: 14px 16px; opacity: .22; transform: translateY(5px); transition: opacity .5s, transform .5s; }
+.field.on { opacity: 1; transform: none; }
+.field-k { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 6px; }
+.field-v { font-family: var(--f-mono); font-size: 16px; font-weight: 500; color: var(--signal); font-variant-numeric: tabular-nums; }
+.field-v.text { color: var(--chalk); }
+.extract-foot {
+  margin-top: 17px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  font-family: var(--f-mono); font-size: 12px; color: var(--muted);
+}
+.check { color: var(--verified); }
+
+/* --------------------------------------------------------------- Kennzahlen */
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 1px; background: var(--line); border-block: 1px solid var(--line); margin-top: 74px; }
+.stat { background: var(--ink); padding: 26px 20px; }
+.stat-n { font-family: var(--f-display); font-size: 40px; font-weight: 700; color: var(--chalk); line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-n small { font-size: 19px; color: var(--muted); font-weight: 600; }
+.stat-k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted-2); margin-top: 9px; }
+
+/* ------------------------------------------------------------- Typenschilder */
+
+.plates { display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 16px; margin-top: 46px; }
+.plate {
+  border: 1px solid var(--line); border-radius: var(--r); background: var(--plate);
+  padding: 24px 22px 26px; position: relative; transition: border-color .2s, transform .2s;
+}
+.plate:hover { border-color: var(--signal-dim); transform: translateY(-2px); }
+.plate-no {
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--muted-2);
+  border: 1px solid var(--line); border-radius: 2px; padding: 2px 7px; display: inline-block; margin-bottom: 15px;
+}
+.plate h3 { margin-bottom: 10px; }
+.plate p { color: var(--muted); font-size: 15px; margin: 0; }
+.plate .tag {
+  display: inline-block; margin-top: 15px; font-family: var(--f-mono); font-size: 10.5px;
+  letter-spacing: .12em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px;
+}
+.tag-in { background: color-mix(in srgb, var(--verified) 14%, transparent); color: var(--verified); }
+.tag-plan { background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
+
+/* --------------------------------------------------------------- Datenschutz */
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; align-items: start; margin-top: 44px; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 34px; } }
+.ledger { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.ledger-row { display: flex; gap: 15px; padding: 15px 18px; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-row .ico { font-family: var(--f-mono); font-size: 13px; flex: none; width: 17px; }
+.ledger-row.stay .ico { color: var(--verified); }
+.ledger-row.out .ico { color: var(--signal); }
+.ledger-row b { display: block; font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.ledger-row span { color: var(--muted); font-size: 14px; }
+.ledger-head { background: var(--plate-2); padding: 11px 18px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+
+/* -------------------------------------------------------------------- Preis */
+
+.price-box {
+  border: 1px solid var(--signal-dim); border-radius: var(--r); background: var(--plate);
+  padding: 36px 32px; margin-top: 44px; position: relative; overflow: hidden;
+}
+.price-box::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(700px 220px at 12% 0%, color-mix(in srgb, var(--signal) 11%, transparent), transparent 70%);
+}
+.price-grid { display: grid; grid-template-columns: auto 1fr; gap: 46px; align-items: start; position: relative; }
+@media (max-width: 760px) { .price-grid { grid-template-columns: 1fr; gap: 28px; } }
+.price-amt { font-family: var(--f-display); font-size: 82px; font-weight: 700; line-height: .9; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.price-amt sup { font-size: 30px; vertical-align: super; color: var(--signal); }
+.price-per { font-family: var(--f-mono); font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 11px; }
+.price-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 11px; }
+.price-list li { display: flex; gap: 11px; font-size: 15.5px; align-items: baseline; }
+.price-list .check { font-family: var(--f-mono); flex: none; }
+.addon { margin-top: 26px; padding-top: 22px; border-top: 1px dashed var(--line); font-size: 14.5px; color: var(--muted); position: relative; }
+.addon b { color: var(--chalk); font-weight: 600; }
+
+/* ------------------------------------------------------------------ Branchen */
+
+.trades { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 42px; }
+.trade { background: var(--plate); padding: 22px 18px; }
+.trade-n { font-family: var(--f-display); font-size: 19px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.trade-s { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; margin-top: 8px; }
+.trade.now { background: var(--plate-2); }
+.trade.now .trade-s { color: var(--verified); }
+.trade.soon .trade-n { color: var(--muted); }
+.trade.soon .trade-s { color: var(--muted-2); }
+
+/* --------------------------------------------------------- Gründungsbetriebe */
+
+.founders { border: 1px solid var(--line); border-left: 2px solid var(--signal); border-radius: var(--r); background: var(--plate); padding: 32px 30px; margin-top: 42px; }
+.founders p { color: var(--muted); max-width: 66ch; }
+.founders p:first-of-type { color: var(--chalk); font-size: 17px; }
+
+/* ---------------------------------------------------------------- Download */
+
+.dl { border: 1px solid var(--line); border-radius: var(--r); background: var(--plate); padding: 32px 30px; margin-top: 42px; display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+.dl-meta { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); display: grid; gap: 5px; }
+.dl-meta b { color: var(--chalk); font-weight: 500; }
+
+/* --------------------------------------------------------------------- FAQ */
+
+.faq { margin-top: 42px; border-top: 1px solid var(--line); }
+details { border-bottom: 1px solid var(--line); }
+summary { padding: 19px 2px; cursor: pointer; font-weight: 600; font-size: 16.5px; list-style: none; display: flex; gap: 15px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "+"; font-family: var(--f-mono); color: var(--signal); flex: none; font-size: 17px; }
+details[open] summary::before { content: "\2212"; }
+details p { color: var(--muted); margin: 0 0 20px 30px; max-width: 68ch; font-size: 15.5px; }
+
+/* ------------------------------------------------------------------- Fusszeile */
+
+footer { border-top: 1px solid var(--line); margin-top: 90px; padding: 40px 0 56px; }
+.foot-in { display: flex; gap: 26px; flex-wrap: wrap; align-items: center; }
+footer a { color: var(--muted); text-decoration: none; font-size: 14px; }
+footer a:hover { color: var(--chalk); }
+.foot-note { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted-2); margin-left: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .field { opacity: 1; transform: none; }
+}
+</style>
+
+<div class="sheet" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">WerkPilot</span></a>
+    <nav>
+      <a href="#funktionen">Funktionen</a>
+      <a href="#daten">Ihre Daten</a>
+      <a href="#preis">Preis</a>
+      <a href="#branchen">Branchen</a>
+      <a class="btn btn-primary btn-sm" href="#download">14 Tage testen</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===================================================== Hero -->
+  <section class="wrap hero">
+    <div class="eyebrow">Bürosoftware für Handwerksbetriebe · Windows</div>
+    <h1>Sprechen Sie das Angebot. <em>Fertig.</em></h1>
+    <p class="hero-sub">
+      Ein Satz von der Baustelle — und der Angebotsentwurf steht. Kunden, Aufträge,
+      Rechnungen, E-Rechnung und Mahnwesen sind schon drin. Alles auf Ihrem eigenen Rechner.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#download">Kostenlos testen &rarr;</a>
+      <a class="btn btn-ghost" href="#funktionen">Was drinsteckt</a>
+    </div>
+    <p class="hero-note">14 Tage · keine Kreditkarte · endet von allein</p>
+
+    <!-- Umwandlung: gesprochener Satz -> Angebotsentwurf -->
+    <div class="transform" id="demo">
+      <div class="transform-head">
+        <span class="dot live" aria-hidden="true"></span>
+        <span>Sprachbefehl wird ausgewertet</span>
+        <span class="right">≈ 4 Sekunden</span>
+      </div>
+
+      <div class="spoken">
+        <div class="spoken-lbl">Gesprochen</div>
+        <p class="spoken-text">
+          „Neuer Auftrag <mark data-f="0">Müller</mark> in <mark data-f="1">Saarlouis</mark>.
+          <mark data-f="2">Dachrinne vorne erneuern</mark>, <mark data-f="3">acht Meter</mark>,
+          Material ungefähr <mark data-f="4">300 Euro</mark>,
+          <mark data-f="5">sechs Stunden</mark> Arbeit, <mark data-f="6">nächste Woche</mark>."
+        </p>
+      </div>
+
+      <div class="extract">
+        <div class="extract-lbl">Erkannter Angebotsentwurf</div>
+        <div class="field-grid">
+          <div class="field" data-f="0"><div class="field-k">Kunde</div><div class="field-v text">Müller</div></div>
+          <div class="field" data-f="1"><div class="field-k">Ort</div><div class="field-v text">Saarlouis</div></div>
+          <div class="field" data-f="2"><div class="field-k">Leistung</div><div class="field-v text">Dachrinne erneuern</div></div>
+          <div class="field" data-f="3"><div class="field-k">Menge</div><div class="field-v">8,00 m</div></div>
+          <div class="field" data-f="4"><div class="field-k">Material</div><div class="field-v">300,00 €</div></div>
+          <div class="field" data-f="5"><div class="field-k">Arbeitszeit</div><div class="field-v">6,00 h</div></div>
+          <div class="field" data-f="6"><div class="field-k">Termin</div><div class="field-v text">nächste Woche</div></div>
+          <!-- Achtes Feld schliesst die Rasterzeile und sagt zugleich das
+               Wichtigste: es ist ein Entwurf, gespeichert wird nichts. -->
+          <div class="field" data-f="7"><div class="field-k">Status</div><div class="field-v text" style="color:var(--verified)">Entwurf · ungespeichert</div></div>
+        </div>
+        <div class="extract-foot">
+          <span class="check">✓</span>
+          <span>Nichts erfunden — was Sie nicht sagen, bleibt leer und wird nachgefragt.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-n">4<small> Sek.</small></div><div class="stat-k">bis zum Entwurf</div></div>
+      <div class="stat"><div class="stat-n">0<small> €</small></div><div class="stat-k">14 Tage Testphase</div></div>
+      <div class="stat"><div class="stat-n">100<small> %</small></div><div class="stat-k">Belege auf Ihrem PC</div></div>
+      <div class="stat"><div class="stat-n">EN<small> 16931</small></div><div class="stat-k">E-Rechnung serienmäßig</div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Funktionen -->
+  <section class="wrap section" id="funktionen">
+    <div class="massline"><span class="tick"></span><span class="lbl">01 — Serienausstattung</span><span class="rule"></span></div>
+    <h2>Das Büro, komplett.<br>Nicht in Bausteinen verkauft.</h2>
+    <p class="lead">
+      Kein Grundpaket, das erst mit Aufpreisen brauchbar wird. Was ein Handwerksbetrieb
+      täglich braucht, ist im Preis enthalten — vom ersten Angebot bis zur letzten Mahnung.
+    </p>
+
+    <div class="plates">
+      <div class="plate">
+        <span class="plate-no">A—01</span>
+        <h3>Angebote</h3>
+        <p>Aus dem Katalog, aus einem Leistungspaket oder gesprochen. Mit Gültigkeitsdatum, Ihren Texten und Ihrem Logo.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—02</span>
+        <h3>Aufträge</h3>
+        <p>Angenommenes Angebot wird per Klick zum Auftrag. Teilleistungen, Nachträge und Fertigmeldung inklusive.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—03</span>
+        <h3>Rechnungen</h3>
+        <p>Schluss-, Abschlags- und Teilrechnungen. Verrechnung läuft automatisch, Storno und Gutschrift regelkonform.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—04</span>
+        <h3>E-Rechnung</h3>
+        <p>XRechnung nach EN 16931 auf Knopfdruck — das Format, das Behörden und Großkunden verlangen.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—05</span>
+        <h3>Mahnwesen</h3>
+        <p>Drei Stufen, Verzugszinsen nach § 288 BGB, Mahnpauschale. Das Schreiben ist danach unveränderbar.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—06</span>
+        <h3>Spracheingabe</h3>
+        <p>Auftrag sprechen statt tippen. Der Entwurf wird Ihnen gezeigt — gespeichert wird erst, wenn Sie zustimmen.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—07</span>
+        <h3>Auswertungen</h3>
+        <p>Offene Posten, Umsatz je Monat, Angebotsquote. Buchhaltungs-Export für den Steuerberater.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—08</span>
+        <h3>Sicherung</h3>
+        <p>Auf USB-Stick, beim Schreiben geprüft. Wiederherstellen zeigt vorher, was passiert.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Daten -->
+  <section class="wrap section" id="daten">
+    <div class="massline"><span class="tick"></span><span class="lbl">02 — Wo Ihre Daten liegen</span><span class="rule"></span></div>
+    <h2>Ihre Kunden gehören Ihnen.<br>Auch technisch.</h2>
+
+    <div class="split">
+      <div>
+        <p class="lead" style="margin-top:0">
+          WerkPilot läuft auf Ihrem Rechner, nicht in unserer Cloud. Kunden, Angebote,
+          Rechnungen und das Archiv liegen in einem Ordner auf Ihrer Festplatte.
+          Wir sehen nicht, was Sie schreiben.
+        </p>
+        <p class="lead">
+          Auch nach dem Abo: Beenden Sie irgendwann, bleiben alle Belege lesbar und
+          exportierbar. Sie können nur keine neuen mehr anlegen. Wir sperren Ihnen nichts weg.
+        </p>
+        <p class="lead" style="font-size:15px">
+          Ehrlich gesagt gibt es drei Ausnahmen — und die stehen hier, statt im Kleingedruckten.
+        </p>
+      </div>
+
+      <div class="ledger">
+        <div class="ledger-head">Was den Rechner verlässt — und was nicht</div>
+        <div class="ledger-row stay"><span class="ico">■</span><div><b>Kunden, Belege, Archiv</b><span>Bleiben vollständig auf Ihrem PC. Immer.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Lizenzprüfung, einmal täglich</b><span>Gerätekennung, Lizenznummer, Programmversion. Keine Kundendaten.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Spracheingabe, nur auf Klick</b><span>Die Aufnahme geht zur Auswertung an einen KI-Dienst. Ihre Kundendatenbank bleibt hier — Namen werden erst lokal zugeordnet.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Update-Prüfung</b><span>Nur die Programmversion.</span></div></div>
+        <div class="ledger-row stay"><span class="ico">■</span><div><b>Keine Nutzungsanalyse</b><span>Wir messen nicht, wie Sie arbeiten oder welche Belege Sie schreiben.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Preis -->
+  <section class="wrap section" id="preis">
+    <div class="massline"><span class="tick"></span><span class="lbl">03 — Preis</span><span class="rule"></span></div>
+    <h2>Ein Preis. Monatlich kündbar.</h2>
+
+    <div class="price-box">
+      <div class="price-grid">
+        <div>
+          <div class="price-amt"><sup>€</sup>49</div>
+          <div class="price-per">pro Monat · zzgl. USt.</div>
+        </div>
+        <ul class="price-list">
+          <li><span class="check">✓</span><span><b>14 Tage kostenlos</b> — ohne Kreditkarte. Die Testphase endet von allein, es wird nichts abgebucht.</span></li>
+          <li><span class="check">✓</span><span>Alle Funktionen aus der Serienausstattung, ohne Aufpreis</span></li>
+          <li><span class="check">✓</span><span>Ein Arbeitsplatz · Updates inklusive</span></li>
+          <li><span class="check">✓</span><span>60 Minuten Spracheingabe im Monat (rund 200 Aufträge)</span></li>
+          <li><span class="check">✓</span><span>Monatlich kündbar — keine Mindestlaufzeit</span></li>
+        </ul>
+      </div>
+      <div class="addon">
+        <b>Mehr Spracheingabe nötig?</b> Zusatzpaket für 9 € im Monat: nochmal 60 Minuten.
+        Direkt im Programm buchbar, einzeln kündbar. Die meisten Betriebe brauchen es nicht.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Module -->
+  <section class="wrap section" id="module">
+    <div class="massline"><span class="tick"></span><span class="lbl">04 — In Arbeit</span><span class="rule"></span></div>
+    <h2>Was als Nächstes kommt.</h2>
+    <p class="lead">
+      WerkPilot ist so gebaut, dass Module einzeln dazukommen können — ohne Neuinstallation
+      und ohne dass Sie für etwas zahlen, das Sie nicht brauchen. Ehrlich: Das Folgende
+      ist geplant, nicht fertig.
+    </p>
+
+    <div class="plates">
+      <div class="plate"><span class="plate-no">B—01</span><h3>Termine</h3><p>Baustellenplanung, Monteurzuordnung, Erinnerungen an Nachfassdaten.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—02</span><h3>CRM</h3><p>Gesprächsnotizen, Wiedervorlagen, Historie je Kunde über Jahre.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—03</span><h3>Vertriebs-Pipeline</h3><p>Welche Anfrage steht wo, was ist überfällig, was wird wahrscheinlich Auftrag.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—04</span><h3>E-Mail-Assistent</h3><p>Antwortentwürfe auf Anfragen, im Ton Ihres Betriebs. Abschicken immer per Hand.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—05</span><h3>Automationen</h3><p>Nach 14 Tagen ohne Antwort erinnern, bei Zahlungseingang Auftrag schließen.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—06</span><h3>WhatsApp &amp; Telegram</h3><p>Anfragen dort annehmen, wo Ihre Kunden ohnehin schreiben.</p><span class="tag tag-plan">Geplant</span></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Branchen -->
+  <section class="wrap section" id="branchen">
+    <div class="massline"><span class="tick"></span><span class="lbl">05 — Branchen</span><span class="rule"></span></div>
+    <h2>Heute Handwerk.<br>Der Unterbau kann mehr.</h2>
+    <p class="lead">
+      Angebot, Auftrag, Rechnung, Mahnung — dieser Ablauf ist in fast jedem Gewerk derselbe.
+      Unterschiedlich sind Leistungskatalog, Fachbegriffe und Steuerfälle. Genau die sind in
+      WerkPilot austauschbar. Deshalb entstehen als Nächstes eigene Ausgaben für andere Berufe.
+    </p>
+
+    <div class="trades">
+      <div class="trade now"><div class="trade-n">Dachdecker</div><div class="trade-s">● Verfügbar</div></div>
+      <div class="trade now"><div class="trade-n">Allgemeines Handwerk</div><div class="trade-s">● Verfügbar</div></div>
+      <div class="trade soon"><div class="trade-n">Elektro &amp; SHK</div><div class="trade-s">○ In Vorbereitung</div></div>
+      <div class="trade soon"><div class="trade-n">Garten &amp; Landschaft</div><div class="trade-s">○ In Vorbereitung</div></div>
+      <div class="trade soon"><div class="trade-n">Gastronomie</div><div class="trade-s">○ Geplant</div></div>
+      <div class="trade soon"><div class="trade-n">Architektur &amp; Planung</div><div class="trade-s">○ Geplant</div></div>
+    </div>
+
+    <div class="founders">
+      <h3 style="margin-bottom:14px">Gründungsbetriebe gesucht</h3>
+      <p>
+        WerkPilot ist neu. Wir zeigen hier keine erfundenen Kundenstimmen —
+        die kommen, wenn es echte gibt.
+      </p>
+      <p>
+        Stattdessen suchen wir die ersten zehn Betriebe, die mitgestalten wollen.
+        Sie bekommen die Einrichtung persönlich gemacht, einen direkten Draht statt
+        einer Ticketnummer, und Ihre Wünsche wandern zuerst in die Entwicklung.
+        Ihr Gewerk ist oben nicht dabei? Dann bauen wir es mit Ihnen zusammen auf.
+      </p>
+      <p style="margin-bottom:0">
+        <a class="btn btn-ghost" href="mailto:kontakt@rebellsystem.com?subject=Gr%C3%BCndungsbetrieb%20WerkPilot" style="margin-top:12px">Als Gründungsbetrieb melden</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================================================== Download -->
+  <section class="wrap section" id="download">
+    <div class="massline"><span class="tick"></span><span class="lbl">06 — Loslegen</span><span class="rule"></span></div>
+    <h2>Herunterladen und ausprobieren.</h2>
+    <p class="lead">
+      Kein Konto, keine Kreditkarte, keine Verkaufsberatung vorweg. Installieren,
+      Betriebsdaten eintragen, erstes Angebot schreiben. Wenn es nichts für Sie ist,
+      deinstallieren Sie es — die Testphase läuft von selbst aus.
+    </p>
+
+    <div class="dl">
+      <a class="btn btn-primary" href="https://b2b.rebellsystem.com/werkpilot/WerkPilot-Setup-0.3.0.exe">Für Windows herunterladen</a>
+      <div class="dl-meta">
+        <span>Version <b>0.3.0</b> · Windows 10 / 11 (64-Bit) · <b>25 MB</b></span>
+        <span>Beim ersten Start meldet Windows „unbekannte App" — auf <b>Weitere Informationen</b> und <b>Trotzdem ausführen</b> klicken.</span>
+      </div>
+    </div>
+
+    <div class="faq">
+      <details>
+        <summary>Brauche ich Internet, um zu arbeiten?</summary>
+        <p>Zum Arbeiten nicht. Angebote, Rechnungen und Belege entstehen vollständig auf Ihrem Rechner. Ohne Verbindung läuft WerkPilot mehrere Tage normal weiter; nur die Lizenzprüfung, die Spracheingabe und die Update-Prüfung ruhen so lange.</p>
+      </details>
+      <details>
+        <summary>Was passiert nach den 14 Tagen, wenn ich nichts tue?</summary>
+        <p>Nichts wird abgebucht — wir haben keine Zahlungsdaten von Ihnen. Das Programm wechselt in den Nur-Lesen-Modus: alles Bisherige bleibt sichtbar und exportierbar, neue Belege sind dann nicht mehr möglich. Ihre Daten werden nicht gelöscht.</p>
+      </details>
+      <details>
+        <summary>Ersetzt das meinen Steuerberater?</summary>
+        <p>Nein. WerkPilot erzeugt Belege und einen Buchhaltungs-Export. Pflichttexte, Steuerfälle und Nummernkreise sollten Sie vor dem produktiven Einsatz einmal mit Ihrer Steuerberatung durchgehen — dafür gibt es im Programm eine Musterausgabe zum Freigeben.</p>
+      </details>
+      <details>
+        <summary>Wie sicher ist die Spracherkennung bei Fachbegriffen?</summary>
+        <p>Sie bekommen immer erst einen Entwurf zur Kontrolle, nie einen fertigen Beleg. Was nicht eindeutig war, bleibt leer statt geraten zu werden. Gibt es zwei Kunden mit demselben Namen, fragt WerkPilot nach, statt einen auszuwählen.</p>
+      </details>
+      <details>
+        <summary>Kann ich meine bestehende Preisliste übernehmen?</summary>
+        <p>Ja. Excel- und CSV-Dateien lassen sich importieren — mit Vorschau und eigener Spaltenzuordnung, bevor etwas gespeichert wird. Als Gründungsbetrieb machen wir das für Sie.</p>
+      </details>
+      <details>
+        <summary>Was ist, wenn ich einen neuen Rechner bekomme?</summary>
+        <p>Die Lizenz lässt sich auf ein anderes Gerät umziehen. Ihre Daten nehmen Sie über die eingebaute Sicherung mit — die schreibt alles auf einen USB-Stick und prüft beim Schreiben, ob die Sicherung vollständig ist.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <a href="https://b2b.rebellsystem.com/impressum.html">Impressum</a>
+    <a href="https://b2b.rebellsystem.com/datenschutz.html">Datenschutz</a>
+    <a href="mailto:kontakt@rebellsystem.com">kontakt@rebellsystem.com</a>
+    <span class="foot-note">WerkPilot ist ein Produkt von Rebell System</span>
+  </div>
+</footer>
+
+<script>
+/* Umwandlungs-Schaubild: der gesprochene Satz wird Feld fuer Feld zerlegt.
+   Laeuft einmal beim Sichtbarwerden durch und bleibt dann vollstaendig stehen -
+   eine Endlosschleife wuerde beim Lesen der Seite stoeren. */
+(function () {
+  var demo = document.getElementById("demo");
+  if (!demo) return;
+
+  var marks = demo.querySelectorAll(".spoken-text mark");
+  var fields = demo.querySelectorAll(".field");
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function revealAll() {
+    marks.forEach(function (m) { m.classList.add("on"); });
+    fields.forEach(function (f) { f.classList.add("on"); });
+  }
+
+  function run() {
+    var i = 0;
+    (function step() {
+      if (i >= fields.length) return;
+      var key = fields[i].getAttribute("data-f");
+      var mark = demo.querySelector('.spoken-text mark[data-f="' + key + '"]');
+      if (mark) mark.classList.add("on");
+      fields[i].classList.add("on");
+      i++;
+      setTimeout(step, 380);
+    })();
+  }
+
+  if (reduced) { revealAll(); return; }
+
+  var seen = false;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting && !seen) { seen = true; setTimeout(run, 500); io.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  io.observe(demo);
+})();
+</script>
+
+</body>
+</html>
