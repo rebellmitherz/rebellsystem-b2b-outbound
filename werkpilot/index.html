@@ -13,7 +13,7 @@
 <meta property="og:description" content="Ein Satz von der Baustelle und der Angebotsentwurf steht. Bürosoftware für Handwerksbetriebe, 49 EUR im Monat, 14 Tage kostenlos.">
 <meta property="og:url" content="https://b2b.rebellsystem.com/werkpilot/">
 <meta name="theme-color" content="#070a0c">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='3' fill='%23070a0c'/><rect x='5' y='5' width='22' height='22' rx='2' fill='none' stroke='%23ff7a2f' stroke-width='2'/><path d='M11 19a5 5 0 0 1 10 0' fill='none' stroke='%23ff7a2f' stroke-width='2'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='3' fill='%23070a0c'/><rect x='5' y='5' width='22' height='22' rx='2' fill='none' stroke='%23e8622a' stroke-width='2'/><path d='M11 19a5 5 0 0 1 10 0' fill='none' stroke='%23e8622a' stroke-width='2'/></svg>">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,19 +38,27 @@
   --line:       #1f2c33;
   --line-soft:  #172126;
 
-  /* Signalfarbe aus der Welt der Baustelle: Warnband, Hi-Vis, Absperrung.
-     Traegt alle Handlungen und Maszahlen. */
-  --signal:     #ff7a2f;
-  --signal-dim: #c25a1f;
-  --signal-ink: #180b03;
+  /* Signalfarbe aus der Welt der Baustelle: Warnband, Rost, Ziegel.
+     Traegt alle Handlungen und Maszahlen.
+     Bewusst das dunklere, geroestete Orange statt eines grellen Neonorange:
+     letzteres wirkte auf dem Handy nach Billigwerbung statt nach Werkzeug.
+     Auf dem Grund #070a0c traegt --signal-ink darauf 7,4:1. */
+  --signal:     #e8622a;
+  --signal-dim: #b04a1e;
+  --signal-ink: #1a0a03;
 
   /* Gruen ausschliesslich fuer "enthalten / geprueft" - stellt zugleich die
      Verbindung zur Muttermarke Rebell System her. */
   --verified:   #3fcf8e;
 
   --chalk:      #e9eef1;
-  --muted:      #7c8992;
-  --muted-2:    #56636b;
+  /* Beide Grautöne sind gegen den Grund #070a0c auf Lesbarkeit gerechnet:
+     --muted trägt 7,7:1, --muted-2 trägt 5,5:1 — beide über den 4,5:1, die
+     die WCAG für Fließtext verlangt. Die vorherigen Werte lagen bei 3,2 bzw.
+     2,95 und waren auf einem Handy im Tageslicht praktisch nicht zu lesen.
+     Wer sie abdunkelt, muss neu nachrechnen, nicht nach Gefühl gehen. */
+  --muted:      #98a3ab;
+  --muted-2:    #7c8992;
 
   --maxw: 1140px;
   --r: 4px;
@@ -113,8 +121,13 @@ header.top {
 }
 .brand-name { font-family: var(--f-display); font-weight: 700; font-size: 21px; letter-spacing: .04em; text-transform: uppercase; }
 .top nav { margin-left: auto; display: flex; gap: 26px; align-items: center; }
-.top nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .15s; }
-.top nav a:hover, .top nav a:focus-visible { color: var(--chalk); }
+/* :not(.btn) ist hier kein Feinschliff, sondern notwendig: `.top nav a` ist
+   spezifischer als `.btn-primary` und hat dessen Schriftfarbe überschrieben.
+   Der Knopf oben rechts stand dadurch grau auf orange — Kontrast 1,38:1 statt
+   der nötigen 4,5:1, also faktisch unlesbar. */
+.top nav a:not(.btn) { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .15s; }
+.top nav a:not(.btn):hover, .top nav a:not(.btn):focus-visible { color: var(--chalk); }
+.top nav a.btn { text-decoration: none; }
 @media (max-width: 800px) { .top nav a:not(.btn) { display: none; } }
 
 /* ------------------------------------------------------------------ Knoepfe */
@@ -126,7 +139,9 @@ header.top {
   border: 1px solid transparent; cursor: pointer; transition: transform .12s, background .15s, border-color .15s;
 }
 .btn-primary { background: var(--signal); color: var(--signal-ink); }
-.btn-primary:hover { background: #ff8c4c; transform: translateY(-1px); }
+/* Hover eine Spur heller als --signal, damit die Reaktion spuerbar ist,
+   ohne den Farbton zu wechseln. */
+.btn-primary:hover { background: #f4753d; transform: translateY(-1px); }
 .btn-ghost { border-color: var(--line); color: var(--chalk); background: transparent; }
 .btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
 .btn-sm { padding: 9px 16px; font-size: 14px; }
