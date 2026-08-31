@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rechnungs-Check — welche Pflichtangaben fehlen in Ihrer Rechnung?</title>
+<meta name="description" content="Kostenlos und ohne Anmeldung prüfen, welche Pflichtangaben in Ihrer Handwerksrechnung fehlen. Die Rechnung wird nicht gespeichert. Keine Steuerberatung — geprüft wird nur, ob eine Angabe vorhanden ist.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://b2b.rebellsystem.com/werkpilot/rechnungs-check.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Rebell System">
+<meta property="og:title" content="Rechnungs-Check — fehlt in Ihrer Rechnung eine Pflichtangabe?">
+<meta property="og:description" content="Bild der Rechnung hochladen, in Sekunden sehen, was fehlt. Kostenlos, ohne Anmeldung, nichts wird gespeichert.">
+<meta property="og:url" content="https://b2b.rebellsystem.com/werkpilot/rechnungs-check.html">
+<meta name="theme-color" content="#070a0c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='3' fill='%23070a0c'/><rect x='5' y='5' width='22' height='22' rx='2' fill='none' stroke='%23e8622a' stroke-width='2'/><path d='M11 19a5 5 0 0 1 10 0' fill='none' stroke='%23e8622a' stroke-width='2'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;600&display=swap">
+
+<style>
+/* ============================================================================
+   Rechnungs-Check — kostenloses Werkzeug, gleiche Gestaltungswelt wie die
+   Produktseite (technische Zeichnung). Alle Farben sind gegen den Grund auf
+   Lesbarkeit gerechnet; die Grautoene tragen 7,7:1 bzw. 5,5:1.
+   ============================================================================ */
+
+:root {
+  --ink:        #070a0c;
+  --plate:      #101619;
+  --plate-2:    #151d21;
+  --line:       #1f2c33;
+  --line-soft:  #172126;
+  --signal:     #e8622a;
+  --signal-dim: #b04a1e;
+  --signal-ink: #1a0a03;
+  --verified:   #3fcf8e;
+  --warn:       #f5b53d;
+  --chalk:      #e9eef1;
+  --muted:      #98a3ab;
+  --muted-2:    #7c8992;
+  --maxw: 940px;
+  --r: 4px;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; background: var(--ink); color: var(--chalk);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+
+.sheet {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 22px 22px, 22px 22px;
+  mask-image: radial-gradient(ellipse 120% 70% at 50% 0%, #000 30%, transparent 75%);
+  opacity: .5;
+}
+
+.wrap { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+header.top { border-bottom: 1px solid var(--line); }
+.top-in { max-width: var(--maxw); margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--chalk); }
+.brand-mark { width: 30px; height: 30px; flex: none; border: 1.5px solid var(--signal); border-radius: 2px; display: grid; place-items: center; }
+.brand-mark::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--signal); border-top-color: transparent; border-right-color: transparent; transform: rotate(-45deg); }
+.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 21px; letter-spacing: .04em; text-transform: uppercase; }
+.top-in .zurueck { margin-left: auto; color: var(--muted); text-decoration: none; font-size: 14px; }
+.top-in .zurueck:hover { color: var(--chalk); }
+
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(38px, 6vw, 62px); text-transform: uppercase; margin: 0; line-height: 1.03; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--signal); }
+.eyebrow { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+.eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--signal); }
+.lead { color: var(--muted); font-size: 18px; max-width: 62ch; margin: 20px 0 0; }
+
+section.haupt { padding: 62px 0 40px; }
+
+/* ------------------------------------------------------------- Ablagefeld */
+
+.ablage {
+  margin-top: 34px; border: 1.5px dashed var(--line); border-radius: var(--r);
+  background: var(--plate); padding: 46px 28px; text-align: center;
+  transition: border-color .18s, background .18s; cursor: pointer;
+}
+.ablage:hover, .ablage.hover { border-color: var(--signal); background: var(--plate-2); }
+.ablage:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.ablage-titel { font-family: var(--f-display); font-size: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.ablage-sub { color: var(--muted); font-size: 14.5px; margin-top: 9px; }
+.ablage input { display: none; }
+
+.btn { display: inline-flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: var(--r); text-decoration: none; border: 1px solid transparent; cursor: pointer; font-family: var(--f-body); }
+.btn-primary { background: var(--signal); color: var(--signal-ink); }
+.btn-primary:hover { background: #f4753d; }
+.btn-ghost { border-color: var(--line); color: var(--chalk); background: transparent; }
+.btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+.hinweis-datenschutz { font-family: var(--f-mono); font-size: 12px; color: var(--muted-2); margin-top: 16px; text-align: center; }
+
+/* ------------------------------------------------------------------ Status */
+
+.status { margin-top: 30px; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--plate); display: none; }
+.status.an { display: block; }
+.status-zeile { display: flex; align-items: center; gap: 13px; font-size: 15px; }
+.spinner { width: 17px; height: 17px; border: 2px solid var(--line); border-top-color: var(--signal); border-radius: 50%; animation: dreh .8s linear infinite; flex: none; }
+@keyframes dreh { to { transform: rotate(360deg); } }
+.status.fehler { border-color: var(--signal-dim); }
+
+/* ---------------------------------------------------------------- Ergebnis */
+
+.ergebnis { display: none; margin-top: 38px; }
+.ergebnis.an { display: block; }
+
+.bilanz { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.bilanz-feld { background: var(--plate); padding: 22px 18px; }
+.bilanz-zahl { font-family: var(--f-display); font-size: 42px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.bilanz-zahl.fehlt { color: var(--signal); }
+.bilanz-zahl.unklar { color: var(--warn); }
+.bilanz-zahl.ok { color: var(--verified); }
+.bilanz-k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); margin-top: 9px; }
+
+.gruppe-titel { font-family: var(--f-display); font-size: 21px; font-weight: 700; text-transform: uppercase; letter-spacing: .035em; margin: 34px 0 4px; }
+.gruppe-sub { color: var(--muted); font-size: 14.5px; margin: 0 0 16px; }
+
+.punkte { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.punkt { display: flex; gap: 15px; padding: 16px 18px; border-bottom: 1px solid var(--line); align-items: flex-start; background: var(--plate); }
+.punkt:last-child { border-bottom: 0; }
+.punkt-zeichen { font-family: var(--f-mono); font-size: 15px; flex: none; width: 19px; text-align: center; line-height: 1.5; }
+.punkt.fehlt .punkt-zeichen { color: var(--signal); }
+.punkt.unklar .punkt-zeichen { color: var(--warn); }
+.punkt.vorhanden .punkt-zeichen { color: var(--verified); }
+.punkt-inhalt { flex: 1; min-width: 0; }
+.punkt-titel { font-weight: 600; font-size: 15.5px; }
+.punkt-fund { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; color: var(--muted-2); margin-top: 3px; }
+.punkt-hinweis { color: var(--muted); font-size: 14px; margin-top: 7px; }
+.punkt-beleg { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted-2); margin-top: 6px; overflow-wrap: anywhere; }
+.punkt.vorhanden .punkt-hinweis { display: none; }
+
+.rechtlich {
+  margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-left: 2px solid var(--warn);
+  border-radius: var(--r); background: var(--plate); color: var(--muted); font-size: 14px;
+}
+
+.abschluss {
+  margin-top: 40px; padding: 30px 28px; border: 1px solid var(--signal-dim); border-radius: var(--r);
+  background: var(--plate); position: relative; overflow: hidden;
+}
+.abschluss::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(600px 200px at 10% 0%, color-mix(in srgb, var(--signal) 10%, transparent), transparent 70%); }
+.abschluss > * { position: relative; }
+.abschluss h3 { font-family: var(--f-display); font-size: 25px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 12px; }
+.abschluss p { color: var(--muted); margin: 0 0 18px; max-width: 60ch; }
+
+footer { border-top: 1px solid var(--line); margin-top: 70px; padding: 34px 0 50px; }
+.foot-in { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+footer a { color: var(--muted); text-decoration: none; font-size: 14px; }
+footer a:hover { color: var(--chalk); }
+.foot-note { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted-2); margin-left: auto; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+
+<body>
+
+<div class="sheet" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="https://b2b.rebellsystem.com/werkpilot/"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">WerkPilot</span></a>
+    <a class="zurueck" href="https://b2b.rebellsystem.com/werkpilot/">&larr; Zurück zu WerkPilot</a>
+  </div>
+</header>
+
+<main>
+  <section class="wrap haupt">
+    <div class="eyebrow">Kostenlos · ohne Anmeldung</div>
+    <h1>Fehlt auf Ihrer Rechnung<br>eine <em>Pflichtangabe?</em></h1>
+    <p class="lead">
+      Laden Sie eine Rechnung hoch. Wir sagen Ihnen, welche der gesetzlichen
+      Pflichtangaben nach § 14 UStG darauf zu erkennen sind — und welche nicht.
+      Das Leistungsdatum fehlt erfahrungsgemäß am häufigsten.
+    </p>
+
+    <div class="ablage" id="ablage" role="button" tabindex="0" aria-describedby="ablage-sub">
+      <div class="ablage-titel">Rechnung hierher ziehen</div>
+      <div class="ablage-sub" id="ablage-sub">oder klicken zum Auswählen · PDF, JPG oder PNG · maximal 6 MB</div>
+      <input type="file" id="datei" accept="application/pdf,image/png,image/jpeg" aria-label="Rechnung auswählen">
+    </div>
+    <p class="hinweis-datenschutz">
+      Die Rechnung wird nur für die Prüfung ausgewertet und <strong>nicht gespeichert</strong>.
+    </p>
+
+    <div class="status" id="status" role="status" aria-live="polite">
+      <div class="status-zeile"><span class="spinner" id="spinner"></span><span id="status-text">Rechnung wird gelesen …</span></div>
+    </div>
+
+    <div class="ergebnis" id="ergebnis"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <a href="https://b2b.rebellsystem.com/impressum.html">Impressum</a>
+    <a href="https://b2b.rebellsystem.com/datenschutz.html">Datenschutz</a>
+    <a href="mailto:kontakt@rebellsystem.com">kontakt@rebellsystem.com</a>
+    <span class="foot-note">WerkPilot ist ein Produkt von Rebell System</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   Rechnungs-Check.
+
+   PDFs werden HIER IM BROWSER zu einem Bild gerendert und nur dieses Bild
+   verschickt. Das hat zwei Gruende: der Server bleibt frei von einem
+   PDF-Parser, und bei einem mehrseitigen Dokument verlaesst nur die erste
+   Seite den Rechner - auf Folgeseiten stehen oft Anlagen, die niemanden
+   etwas angehen.
+   --------------------------------------------------------------------------- */
+
+const ENDPUNKT = "https://handwerkapp-license.werkpilot-lizenz.workers.dev/v1/public/invoice-check";
+const MAX_BYTES = 6 * 1024 * 1024;
+
+const ablage = document.getElementById("ablage");
+const dateiFeld = document.getElementById("datei");
+const status = document.getElementById("status");
+const statusText = document.getElementById("status-text");
+const spinner = document.getElementById("spinner");
+const ergebnis = document.getElementById("ergebnis");
+
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+function zeigeStatus(text, istFehler) {
+  status.classList.add("an");
+  status.classList.toggle("fehler", !!istFehler);
+  spinner.style.display = istFehler ? "none" : "";
+  statusText.textContent = text;
+}
+function versteckeStatus() { status.classList.remove("an"); }
+
+ablage.addEventListener("click", () => dateiFeld.click());
+ablage.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dateiFeld.click(); }
+});
+["dragenter", "dragover"].forEach((ev) =>
+  ablage.addEventListener(ev, (e) => { e.preventDefault(); ablage.classList.add("hover"); })
+);
+["dragleave", "drop"].forEach((ev) =>
+  ablage.addEventListener(ev, (e) => { e.preventDefault(); ablage.classList.remove("hover"); })
+);
+ablage.addEventListener("drop", (e) => {
+  const datei = e.dataTransfer?.files?.[0];
+  if (datei) pruefe(datei);
+});
+dateiFeld.addEventListener("change", () => {
+  if (dateiFeld.files?.[0]) pruefe(dateiFeld.files[0]);
+});
+
+/* PDF -> PNG. Die Skalierung ist ein Kompromiss: gross genug, dass Kleingedrucktes
+   wie die Steuernummer lesbar bleibt, klein genug fuer die 6-MB-Grenze. */
+async function pdfZuBild(datei) {
+  const puffer = await datei.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: puffer }).promise;
+  const seite = await pdf.getPage(1);
+  const skala = Math.min(2, 1600 / seite.getViewport({ scale: 1 }).width);
+  const viewport = seite.getViewport({ scale: skala });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await seite.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  return new Promise((fertig) => canvas.toBlob(fertig, "image/png"));
+}
+
+async function pruefe(datei) {
+  ergebnis.classList.remove("an");
+  ergebnis.innerHTML = "";
+
+  if (datei.size > MAX_BYTES) {
+    zeigeStatus("Die Datei ist größer als 6 MB. Bitte ein kleineres Foto verwenden.", true);
+    return;
+  }
+
+  let bild = datei;
+  try {
+    if (datei.type === "application/pdf") {
+      zeigeStatus("PDF wird gelesen …");
+      if (!window.pdfjsLib) throw new Error("pdf.js nicht geladen");
+      bild = await pdfZuBild(datei);
+    } else if (!datei.type.startsWith("image/")) {
+      zeigeStatus("Bitte eine PDF-Datei oder ein Foto (JPG/PNG) auswählen.", true);
+      return;
+    }
+  } catch (fehler) {
+    zeigeStatus("Die PDF-Datei konnte nicht gelesen werden. Bitte ein Foto der Rechnung versuchen.", true);
+    return;
+  }
+
+  zeigeStatus("Rechnung wird geprüft … das dauert einige Sekunden.");
+  const form = new FormData();
+  form.append("bild", bild, "rechnung.png");
+
+  let antwort;
+  try {
+    antwort = await fetch(ENDPUNKT, { method: "POST", body: form });
+  } catch (fehler) {
+    zeigeStatus("Keine Verbindung möglich. Bitte Internetverbindung prüfen und erneut versuchen.", true);
+    return;
+  }
+
+  let daten;
+  try { daten = await antwort.json(); } catch { daten = {}; }
+
+  if (!antwort.ok) {
+    zeigeStatus(daten.message || "Die Prüfung ist fehlgeschlagen. Bitte später erneut versuchen.", true);
+    return;
+  }
+  if (daten.ist_rechnung === false) {
+    zeigeStatus(daten.message || "Auf dem Bild war keine Rechnung zu erkennen.", true);
+    return;
+  }
+
+  versteckeStatus();
+  zeichneErgebnis(daten);
+  ergebnis.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const ZEICHEN = { fehlt: "✕", unklar: "?", vorhanden: "✓" };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function gruppeHtml(punkte, gruppe, titel, unterzeile) {
+  const teil = punkte.filter((p) => p.gruppe === gruppe);
+  if (!teil.length) return "";
+  const zeilen = teil.map((p) => `
+    <div class="punkt ${esc(p.status)}">
+      <span class="punkt-zeichen" aria-hidden="true">${ZEICHEN[p.status] || "?"}</span>
+      <div class="punkt-inhalt">
+        <div class="punkt-titel">${esc(p.titel)}</div>
+        <div class="punkt-fund">${esc(p.fundstelle)}${p.status === "unklar" ? " · nicht eindeutig erkennbar" : ""}</div>
+        <div class="punkt-hinweis">${esc(p.hinweis)}</div>
+        ${p.beleg ? `<div class="punkt-beleg">Gefunden: „${esc(p.beleg)}"</div>` : ""}
+      </div>
+    </div>`).join("");
+  return `<h2 class="gruppe-titel">${esc(titel)}</h2><p class="gruppe-sub">${esc(unterzeile)}</p><div class="punkte">${zeilen}</div>`;
+}
+
+function zeichneErgebnis(daten) {
+  const p = daten.punkte || [];
+  const z = daten.zusammenfassung || {};
+  const vorhanden = p.filter((x) => x.gruppe === "pflicht" && x.status === "vorhanden").length;
+
+  ergebnis.innerHTML = `
+    <div class="bilanz">
+      <div class="bilanz-feld"><div class="bilanz-zahl fehlt">${z.pflicht_fehlend ?? 0}</div><div class="bilanz-k">Pflichtangaben fehlen</div></div>
+      <div class="bilanz-feld"><div class="bilanz-zahl unklar">${z.pflicht_unklar ?? 0}</div><div class="bilanz-k">nicht eindeutig</div></div>
+      <div class="bilanz-feld"><div class="bilanz-zahl ok">${vorhanden}</div><div class="bilanz-k">von ${z.pflicht_gesamt ?? 0} gefunden</div></div>
+    </div>
+
+    ${gruppeHtml(p, "pflicht", "Pflichtangaben nach § 14 UStG", "Fehlt eine davon, kann das Finanzamt den Vorsteuerabzug Ihres Kunden beanstanden.")}
+    ${gruppeHtml(p, "kunde", "Wichtig für Ihre Kunden", "Keine Pflicht — aber Ihr Kunde hat einen konkreten Nachteil, wenn es fehlt.")}
+    ${gruppeHtml(p, "praxis", "Damit Sie schneller Geld sehen", "Kleinigkeiten, die Rückfragen und Wartezeit sparen.")}
+
+    <div class="rechtlich">${esc(daten.rechtlicher_hinweis || "")}</div>
+
+    <div class="abschluss">
+      <h3>Diese Punkte müssen Sie nie wieder prüfen</h3>
+      <p>
+        WerkPilot lässt eine Rechnung gar nicht erst festschreiben, solange eine Pflichtangabe fehlt —
+        Leistungsdatum, Steuernummer, fortlaufende Nummer. Der Lohnanteil nach § 35a wird automatisch
+        getrennt ausgewiesen, damit Ihr Privatkunde ihn absetzen kann.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a class="btn btn-primary" href="https://b2b.rebellsystem.com/werkpilot/#download">14 Tage kostenlos testen</a>
+        <a class="btn btn-ghost" href="https://b2b.rebellsystem.com/werkpilot/">Was WerkPilot sonst kann</a>
+      </div>
+    </div>`;
+  ergebnis.classList.add("an");
+}
+</script>
+
+</body>
+</html>
