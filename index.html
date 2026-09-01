@@ -1,533 +1,763 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anfrage-Retter · Keine Anfrage bleibt liegen</title>
-<meta name="description" content="Warme Kundenanfragen sind Geld, das bei Ihnen anklopft. Wir sorgen dafür, dass neue Anfragen schnell beantwortet, sauber eingeordnet und in Rückrufe oder Termine überführt werden — auch abends und am Wochenende.">
-<link rel="canonical" href="https://b2b.rebellsystem.com/">
-<!-- Open Graph -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WerkPilot — Angebote und Rechnungen für Handwerksbetriebe</title>
+<meta name="description" content="Sprechen Sie das Angebot, WerkPilot schreibt es. Angebote, Aufträge, Rechnungen, E-Rechnung und Mahnwesen für Handwerksbetriebe. 49 EUR im Monat oder 468 EUR im Jahr, 14 Tage kostenlos testen. Ihre Daten bleiben auf Ihrem Rechner.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://b2b.rebellsystem.com/werkpilot/">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Anfrage-Retter">
-<meta property="og:title" content="Anfrage-Retter · Keine Anfrage bleibt liegen">
-<meta property="og:description" content="Warme Kundenanfragen sind Geld, das bei Ihnen anklopft. Schnelle Antworten, saubere Rückrufe — auch abends.">
-<meta property="og:url" content="https://b2b.rebellsystem.com/">
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Anfrage-Retter · Keine Anfrage bleibt liegen">
-<meta name="twitter:description" content="Warme Kundenanfragen sind Geld, das bei Ihnen anklopft. Schnelle Antworten, Rückrufe, Termine.">
-<!-- Schema.org JSON-LD -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "name": "Anfrage-Retter",
-  "provider": {
-    "@type": "ProfessionalService",
-    "name": "Rebellsystem",
-    "email": "emilio@rebellsystem.com",
-    "telephone": "+4915128141644",
-    "areaServed": "DE",
-    "url": "https://b2b.rebellsystem.com"
-  },
-  "description": "Automatisches Antwort- und Terminsystem für Handwerksbetriebe. Neue Kundenanfragen werden sofort beantwortet und in Rückrufe oder Termine überführt.",
-  "serviceType": "Anfragen-Management",
-  "offers": {
-    "@type": "Offer",
-    "name": "Anfrage-Retter-System",
-    "price": "249.00",
-    "priceCurrency": "EUR",
-    "description": "Professionelle Sofortantwort, Chef-Info, Tagesreport, Terminlogik. Ab 249 €/Monat."
-  },
-  "termsOfService": "https://b2b.rebellsystem.com/impressum.html"
-}
-</script>
-
-<style>
-  @font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/inter-400.woff2') format('woff2')}
-  @font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/inter-500.woff2') format('woff2')}
-  @font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/inter-600.woff2') format('woff2')}
-  @font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/inter-700.woff2') format('woff2')}
-</style>
-<style>
-  :root{
-    --bg:#0a0d10; --bg2:#080b0e; --surface:#12171d; --surface2:#161c23;
-    --border:#232b34; --text:#eaeef1; --muted:#9aa3ac; --muted2:#6b747e;
-    --accent:#3fcf8e; --accent2:#2ea6ff; --accent-hover:#34b87d; --accent-ink:#06120b;
-    --warn:#ffb454; --radius:14px; --maxw:1120px;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  a{color:inherit;text-decoration:none}
-  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
-  .accent{color:var(--accent)}
-  .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
-
-  /* Futuristic background layers */
-  body:before{content:"";position:fixed;inset:0;z-index:-2;
-    background:
-      radial-gradient(680px 480px at 78% -8%,rgba(46,166,255,.10),transparent 60%),
-      radial-gradient(760px 560px at 12% 4%,rgba(63,207,142,.12),transparent 58%);
-    pointer-events:none}
-  body:after{content:"";position:fixed;inset:0;z-index:-1;opacity:.35;pointer-events:none;
-    background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
-    background-size:56px 56px;mask-image:radial-gradient(circle at 50% 0%,#000,transparent 78%)}
-
-  /* Buttons */
-  .btn{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:16px;padding:15px 26px;border-radius:12px;transition:.18s;cursor:pointer;border:1px solid transparent;text-align:center}
-  .btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 0 rgba(63,207,142,.5)}
-  .btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 8px 30px -8px rgba(63,207,142,.55)}
-  .btn-ghost{border-color:var(--border);color:var(--text)}
-  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
-  .btn-sm{padding:11px 20px;font-size:15px}
-
-  /* Nav */
-  header{position:sticky;top:0;z-index:50;background:rgba(10,13,16,.78);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
-  .nav{display:flex;align-items:center;justify-content:space-between;height:70px}
-  .logo{font-weight:700;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
-  .logo .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:inline-block;position:relative;box-shadow:0 0 18px -2px rgba(63,207,142,.6)}
-  .logo .mark:after{content:"";position:absolute;inset:6px 6px auto 6px;height:3px;border-radius:2px;background:var(--accent-ink);box-shadow:0 6px 0 var(--accent-ink)}
-  .logo span{color:var(--accent)}
-  .nav-links{display:flex;align-items:center;gap:30px}
-  .nav-links a.txt{color:var(--muted);font-size:15px;font-weight:500;transition:.15s}
-  .nav-links a.txt:hover{color:var(--text)}
-
-  /* Hero */
-  .hero{padding:76px 0 66px;position:relative}
-  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center}
-  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(63,207,142,.09);border:1px solid rgba(63,207,142,.25);padding:7px 15px;border-radius:999px;margin-bottom:24px}
-  .eyebrow .live{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(63,207,142,.7);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,207,142,.6)}70%{box-shadow:0 0 0 9px rgba(63,207,142,0)}100%{box-shadow:0 0 0 0 rgba(63,207,142,0)}}
-  h1{font-size:clamp(33px,4.9vw,54px);line-height:1.06;font-weight:700;letter-spacing:-.028em;margin:0 0 22px}
-  h1 .hl{background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{font-size:clamp(16px,2.1vw,19px);color:var(--muted);max-width:560px;margin:0 0 32px}
-  .cta-row{display:flex;gap:14px;flex-wrap:wrap}
-  .trust{margin-top:24px;font-size:14px;color:var(--muted2);display:flex;gap:18px;flex-wrap:wrap}
-  .trust b{color:var(--text);font-weight:600}
-
-  /* Hero device mockup */
-  .device{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:18px;padding:18px;position:relative;box-shadow:0 40px 90px -40px rgba(0,0,0,.8)}
-  .device:before{content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;background:linear-gradient(140deg,rgba(63,207,142,.5),transparent 40%,rgba(46,166,255,.4));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-  .dev-bar{display:flex;align-items:center;gap:7px;padding:2px 4px 14px}
-  .dev-bar i{width:11px;height:11px;border-radius:50%;background:#2b333c;display:inline-block}
-  .dev-bar i:first-child{background:#ff5f57}.dev-bar i:nth-child(2){background:#febc2e}.dev-bar i:nth-child(3){background:#28c840}
-  .dev-bar span{margin-left:auto;font-size:12px;color:var(--muted2)}
-  .msg{border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--bg2)}
-  .msg .top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted2);margin-bottom:7px}
-  .msg .top b{color:var(--text);font-weight:600}
-  .msg p{font-size:14.5px;color:var(--muted)}
-  .msg.in{border-left:3px solid var(--warn)}
-  .msg.out{border-left:3px solid var(--accent);background:rgba(63,207,142,.05)}
-  .msg .tag{font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
-  .tag.warn{color:var(--warn);background:rgba(255,180,84,.12)}
-  .tag.ok{color:var(--accent);background:rgba(63,207,142,.12)}
-  .timer{display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;color:var(--muted);margin-top:4px}
-  .timer .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
-
-  /* Sections */
-  section{padding:76px 0;position:relative}
-  .sec-head{text-align:center;max-width:660px;margin:0 auto 50px}
-  h2{font-size:clamp(26px,3.5vw,37px);font-weight:700;letter-spacing:-.02em;line-height:1.14;margin-bottom:16px}
-  .sec-head p{color:var(--muted);font-size:17px}
-  .kicker{font-size:13px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
-
-  .band{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:18px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;transition:.18s}
-  .card:hover{border-color:rgba(63,207,142,.4);transform:translateY(-2px)}
-  .card .ic{width:44px;height:44px;border-radius:11px;background:rgba(63,207,142,.10);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px}
-  .card h3{font-size:18px;font-weight:600;margin-bottom:9px}
-  .card p{color:var(--muted);font-size:15px}
-
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;counter-reset:s}
-  .step{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;position:relative}
-  .step .n{counter-increment:s;font-size:14px;font-weight:700;color:var(--accent-ink);background:var(--accent);width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
-  .step .n:before{content:counter(s)}
-  .step h3{font-size:17px;font-weight:600;margin-bottom:8px}
-  .step p{color:var(--muted);font-size:14.5px}
-
-  /* Pricing */
-  .prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:stretch}
-  .price{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px;display:flex;flex-direction:column}
-  .price.feat{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 30px 70px -40px rgba(63,207,142,.5);position:relative}
-  .price.feat .badge{position:absolute;top:-12px;left:30px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;letter-spacing:.02em}
-  .price .plan{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
-  .price .amt{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
-  .price .amt small{font-size:15px;color:var(--muted);font-weight:500}
-  .price .desc{color:var(--muted);font-size:15px;margin-bottom:18px}
-  .price ul{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:22px;flex:1}
-  .price li{font-size:14.5px;color:var(--text);display:flex;gap:10px;align-items:flex-start}
-  .price li:before{content:"✓";color:var(--accent);font-weight:700;flex-shrink:0}
-  .price .btn{width:100%;justify-content:center;margin-top:auto}
-
-  /* Two-column fit/nofit */
-  .split{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  .col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px}
-  .col.good{border-color:rgba(63,207,142,.35)}
-  .col.bad{border-color:rgba(255,120,120,.25)}
-  .col h3{font-size:18px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:10px}
-  .col ul{list-style:none;display:flex;flex-direction:column;gap:11px}
-  .col li{font-size:15px;color:var(--muted);display:flex;gap:10px;align-items:flex-start}
-  .col.good li:before{content:"✓";color:var(--accent);font-weight:700}
-  .col.bad li:before{content:"✕";color:#ff7878;font-weight:700}
-
-  /* Reactivation highlight */
-  .react{background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:18px;padding:40px;position:relative;overflow:hidden}
-  .react:before{content:"";position:absolute;top:-40%;right:-10%;width:420px;height:420px;background:radial-gradient(circle,rgba(46,166,255,.14),transparent 62%)}
-  .react .inner{position:relative;display:grid;grid-template-columns:1.2fr .8fr;gap:34px;align-items:center}
-  .react h2{margin-bottom:14px}
-  .react p{color:var(--muted);font-size:16px;margin-bottom:12px}
-  .react .pill{display:inline-block;font-size:13px;font-weight:600;color:var(--accent2);background:rgba(46,166,255,.1);border:1px solid rgba(46,166,255,.3);padding:6px 14px;border-radius:999px;margin-bottom:18px}
-
-  /* FAQ */
-  .faq{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-  details{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px 22px;transition:.15s}
-  details[open]{border-color:var(--accent)}
-  summary{cursor:pointer;list-style:none;font-weight:600;font-size:16.5px;padding:18px 0;display:flex;justify-content:space-between;align-items:center;gap:16px}
-  summary::-webkit-details-marker{display:none}
-  summary .chev{color:var(--accent);transition:.2s;font-size:20px;flex-shrink:0}
-  details[open] summary .chev{transform:rotate(180deg)}
-  details p{color:var(--muted);font-size:15.5px;padding:0 0 20px}
-
-  /* Final CTA */
-  .final{text-align:center;background:linear-gradient(180deg,var(--bg2),var(--bg));border-top:1px solid var(--border)}
-  .final h2{margin-bottom:18px}
-  .final p{color:var(--muted);font-size:18px;max-width:580px;margin:0 auto 34px}
-
-  /* Footer */
-  footer{border-top:1px solid var(--border);padding:46px 0;background:var(--bg2)}
-  .foot{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px}
-  .foot .brand{font-weight:700;font-size:18px;display:flex;align-items:center;gap:9px}
-  .foot .brand span{color:var(--accent)}
-  .foot .meta{color:var(--muted2);font-size:14px;line-height:1.9}
-  .foot .meta a:hover{color:var(--accent)}
-  .foot-links{display:flex;gap:22px;font-size:14px;color:var(--muted);flex-wrap:wrap}
-  .foot-links a:hover{color:var(--accent)}
-
-  @media(max-width:860px){
-    .hero-grid{grid-template-columns:1fr;gap:40px}
-    .react .inner{grid-template-columns:1fr;gap:24px}
-    .split{grid-template-columns:1fr}
-  }
-  @media(max-width:640px){
-    section{padding:56px 0}.hero{padding:52px 0 44px}
-    .nav-links .txt{display:none}.cta-row .btn{width:100%;justify-content:center}
-    .foot{flex-direction:column;text-align:left}
-  }
-</style>
+<meta property="og:site_name" content="Rebell System">
+<meta property="og:title" content="WerkPilot — Sprechen Sie das Angebot. Fertig.">
+<meta property="og:description" content="Ein Satz von der Baustelle und der Angebotsentwurf steht. Bürosoftware für Handwerksbetriebe, 49 EUR im Monat, 14 Tage kostenlos.">
+<meta property="og:url" content="https://b2b.rebellsystem.com/werkpilot/">
+<meta name="theme-color" content="#070a0c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='3' fill='%23070a0c'/><rect x='5' y='5' width='22' height='22' rx='2' fill='none' stroke='%23e8622a' stroke-width='2'/><path d='M11 19a5 5 0 0 1 10 0' fill='none' stroke='%23e8622a' stroke-width='2'/></svg>">
 </head>
 <body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;600&display=swap">
 
-<header>
-  <div class="wrap nav">
-    <div class="logo"><span class="mark"></span>Anfrage-<span>Retter</span></div>
-    <div class="nav-links">
-      <a class="txt" href="#problem">Problem</a>
-      <a class="txt" href="#ablauf">Ablauf</a>
-      <a class="txt" href="#preise">Preise</a>
-      <a class="txt" href="#faq">FAQ</a>
-      <a class="btn btn-primary btn-sm" href="https://calendly.com/rebellsystem/rebellsystem">Speedcheck anfragen</a>
-    </div>
+<style>
+/* ============================================================================
+   WerkPilot — Produktseite
+   Gestaltungswelt: technische Zeichnung / Werkstatt-Instrument.
+   Bewusst einfarbig dunkel (kein Hell-Modus): die Anwendung selbst ist dunkel,
+   die Muttermarke Rebell System ebenfalls. Alle Farben sind explizit gesetzt,
+   damit die Seite auf jedem Untergrund haelt.
+   ============================================================================ */
+
+:root {
+  /* Grund: Graphit mit leichtem Cyan-Stich - kein reines Schwarz, damit die
+     Blaupausen-Linien darauf wie Tusche auf Papier sitzen statt zu glimmen. */
+  --ink:        #070a0c;
+  --plate:      #101619;
+  --plate-2:    #151d21;
+  --line:       #1f2c33;
+  --line-soft:  #172126;
+
+  /* Signalfarbe aus der Welt der Baustelle: Warnband, Rost, Ziegel.
+     Traegt alle Handlungen und Maszahlen.
+     Bewusst das dunklere, geroestete Orange statt eines grellen Neonorange:
+     letzteres wirkte auf dem Handy nach Billigwerbung statt nach Werkzeug.
+     Auf dem Grund #070a0c traegt --signal-ink darauf 7,4:1. */
+  --signal:     #e8622a;
+  --signal-dim: #b04a1e;
+  --signal-ink: #1a0a03;
+
+  /* Gruen ausschliesslich fuer "enthalten / geprueft" - stellt zugleich die
+     Verbindung zur Muttermarke Rebell System her. */
+  --verified:   #3fcf8e;
+
+  --chalk:      #e9eef1;
+  /* Beide Grautöne sind gegen den Grund #070a0c auf Lesbarkeit gerechnet:
+     --muted trägt 7,7:1, --muted-2 trägt 5,5:1 — beide über den 4,5:1, die
+     die WCAG für Fließtext verlangt. Die vorherigen Werte lagen bei 3,2 bzw.
+     2,95 und waren auf einem Handy im Tageslicht praktisch nicht zu lesen.
+     Wer sie abdunkelt, muss neu nachrechnen, nicht nach Gefühl gehen. */
+  --muted:      #98a3ab;
+  --muted-2:    #7c8992;
+
+  --maxw: 1140px;
+  --r: 4px;
+
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--chalk);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Blaupausen-Raster als Grund. Zwei Ebenen: feines Millimeterraster und ein
+   groeberes Zentimeterraster darueber - wie auf echtem Zeichenpapier. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px),
+    linear-gradient(rgba(31,44,51,.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31,44,51,.55) 1px, transparent 1px);
+  background-size: 22px 22px, 22px 22px, 110px 110px, 110px 110px;
+  mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 30%, transparent 78%);
+  opacity: .5;
+}
+
+.wrap { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+/* ---------------------------------------------------------------- Kopfzeile */
+
+header.top {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.top-in { max-width: var(--maxw); margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--chalk); }
+.brand-mark {
+  width: 30px; height: 30px; flex: none; border: 1.5px solid var(--signal); border-radius: 2px;
+  display: grid; place-items: center; position: relative;
+}
+.brand-mark::before {
+  content: ""; width: 12px; height: 12px; border-radius: 50%;
+  border: 1.5px solid var(--signal); border-top-color: transparent; border-right-color: transparent;
+  transform: rotate(-45deg);
+}
+.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 21px; letter-spacing: .04em; text-transform: uppercase; }
+.top nav { margin-left: auto; display: flex; gap: 26px; align-items: center; }
+/* :not(.btn) ist hier kein Feinschliff, sondern notwendig: `.top nav a` ist
+   spezifischer als `.btn-primary` und hat dessen Schriftfarbe überschrieben.
+   Der Knopf oben rechts stand dadurch grau auf orange — Kontrast 1,38:1 statt
+   der nötigen 4,5:1, also faktisch unlesbar. */
+.top nav a:not(.btn) { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .15s; }
+.top nav a:not(.btn):hover, .top nav a:not(.btn):focus-visible { color: var(--chalk); }
+.top nav a.btn { text-decoration: none; }
+@media (max-width: 800px) { .top nav a:not(.btn) { display: none; } }
+
+/* ------------------------------------------------------------------ Knoepfe */
+
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--f-body); font-size: 15px; font-weight: 600;
+  padding: 12px 22px; border-radius: var(--r); text-decoration: none;
+  border: 1px solid transparent; cursor: pointer; transition: transform .12s, background .15s, border-color .15s;
+}
+.btn-primary { background: var(--signal); color: var(--signal-ink); }
+/* Hover eine Spur heller als --signal, damit die Reaktion spuerbar ist,
+   ohne den Farbton zu wechseln. */
+.btn-primary:hover { background: #f4753d; transform: translateY(-1px); }
+.btn-ghost { border-color: var(--line); color: var(--chalk); background: transparent; }
+.btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+.btn-sm { padding: 9px 16px; font-size: 14px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+/* ------------------------------------------------------- Abschnittsmarkierung
+   Massline: eine echte Bemassungslinie mit Endpfeilen, wie in einer technischen
+   Zeichnung. Sie traegt die Abschnittsnummer - die Nummerierung ist hier keine
+   Dekoration, sondern folgt der Reihenfolge, in der ein Betrieb das Programm
+   kennenlernt. */
+
+.section { padding: 96px 0; position: relative; }
+.massline { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.massline .tick { width: 1px; height: 13px; background: var(--signal); flex: none; }
+.massline .rule { height: 1px; background: linear-gradient(90deg, var(--signal), var(--line) 70%, transparent); flex: 1; max-width: 190px; }
+.massline .lbl {
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--signal); white-space: nowrap;
+}
+
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.04; letter-spacing: -.005em; }
+h2 { font-size: clamp(32px, 4.4vw, 50px); text-transform: uppercase; letter-spacing: .01em; }
+h3 { font-size: 21px; text-transform: uppercase; letter-spacing: .035em; }
+.lead { color: var(--muted); font-size: 18px; max-width: 62ch; margin: 18px 0 0; }
+
+/* ---------------------------------------------------------------------- Hero */
+
+.hero { padding: 78px 0 40px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); display: flex; align-items: center; gap: 10px; margin-bottom: 26px;
+}
+.eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--signal); }
+.hero h1 {
+  font-size: clamp(46px, 8.2vw, 96px);
+  text-transform: uppercase;
+  letter-spacing: .002em;
+  max-width: 15ch;
+}
+.hero h1 em { font-style: normal; color: var(--signal); }
+.hero-sub { color: var(--muted); font-size: 19px; max-width: 56ch; margin: 26px 0 0; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 34px; align-items: center; }
+.hero-note { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted-2); margin-top: 16px; }
+
+/* ------------------------------------------------------- Umwandlungs-Schaubild
+   Das Herzstueck: ein gesprochener Satz wird in einen Angebotsentwurf zerlegt.
+   Kein Bildschirmfoto - die Umwandlung selbst IST das Produktversprechen, also
+   wird sie gezeigt statt beschrieben. */
+
+.transform { margin-top: 62px; border: 1px solid var(--line); border-radius: var(--r); background: var(--plate); overflow: hidden; }
+.transform-head {
+  display: flex; align-items: center; gap: 11px; padding: 12px 18px;
+  border-bottom: 1px solid var(--line); background: var(--plate-2);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); flex: none; }
+.dot.live { animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.transform-head span { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+.transform-head .right { margin-left: auto; color: var(--muted-2); }
+
+.spoken { padding: 30px 26px 26px; border-bottom: 1px dashed var(--line); }
+.spoken-lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 13px; }
+.spoken-text { font-size: clamp(18px, 2.5vw, 25px); line-height: 1.55; color: var(--chalk); font-weight: 450; }
+.spoken-text mark {
+  background: transparent; color: inherit; padding: 2px 3px; border-radius: 2px;
+  box-shadow: inset 0 -2px 0 0 var(--line); transition: box-shadow .45s, background .45s, color .45s;
+}
+.spoken-text mark.on {
+  background: color-mix(in srgb, var(--signal) 17%, transparent);
+  box-shadow: inset 0 -2px 0 0 var(--signal);
+  color: #fff;
+}
+
+.extract { padding: 24px 26px 28px; }
+.extract-lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 15px; }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.field { background: var(--plate); padding: 14px 16px; opacity: .22; transform: translateY(5px); transition: opacity .5s, transform .5s; }
+.field.on { opacity: 1; transform: none; }
+.field-k { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 6px; }
+.field-v { font-family: var(--f-mono); font-size: 16px; font-weight: 500; color: var(--signal); font-variant-numeric: tabular-nums; }
+.field-v.text { color: var(--chalk); }
+.extract-foot {
+  margin-top: 17px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  font-family: var(--f-mono); font-size: 12px; color: var(--muted);
+}
+.check { color: var(--verified); }
+
+/* --------------------------------------------------------------- Kennzahlen */
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 1px; background: var(--line); border-block: 1px solid var(--line); margin-top: 74px; }
+.stat { background: var(--ink); padding: 26px 20px; }
+.stat-n { font-family: var(--f-display); font-size: 40px; font-weight: 700; color: var(--chalk); line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-n small { font-size: 19px; color: var(--muted); font-weight: 600; }
+.stat-k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted-2); margin-top: 9px; }
+
+/* ------------------------------------------------------------- Typenschilder */
+
+.plates { display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 16px; margin-top: 46px; }
+.plate {
+  border: 1px solid var(--line); border-radius: var(--r); background: var(--plate);
+  padding: 24px 22px 26px; position: relative; transition: border-color .2s, transform .2s;
+}
+.plate:hover { border-color: var(--signal-dim); transform: translateY(-2px); }
+.plate-no {
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--muted-2);
+  border: 1px solid var(--line); border-radius: 2px; padding: 2px 7px; display: inline-block; margin-bottom: 15px;
+}
+.plate h3 { margin-bottom: 10px; }
+.plate p { color: var(--muted); font-size: 15px; margin: 0; }
+.plate .tag {
+  display: inline-block; margin-top: 15px; font-family: var(--f-mono); font-size: 10.5px;
+  letter-spacing: .12em; text-transform: uppercase; padding: 3px 9px; border-radius: 2px;
+}
+.tag-in { background: color-mix(in srgb, var(--verified) 14%, transparent); color: var(--verified); }
+.tag-plan { background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
+
+/* --------------------------------------------------------------- Datenschutz */
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; align-items: start; margin-top: 44px; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 34px; } }
+.ledger { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.ledger-row { display: flex; gap: 15px; padding: 15px 18px; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-row .ico { font-family: var(--f-mono); font-size: 13px; flex: none; width: 17px; }
+.ledger-row.stay .ico { color: var(--verified); }
+.ledger-row.out .ico { color: var(--signal); }
+.ledger-row b { display: block; font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.ledger-row span { color: var(--muted); font-size: 14px; }
+.ledger-head { background: var(--plate-2); padding: 11px 18px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+
+/* -------------------------------------------------------------------- Preis */
+
+.price-box {
+  border: 1px solid var(--signal-dim); border-radius: var(--r); background: var(--plate);
+  padding: 36px 32px; margin-top: 44px; position: relative; overflow: hidden;
+}
+.price-box::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(700px 220px at 12% 0%, color-mix(in srgb, var(--signal) 11%, transparent), transparent 70%);
+}
+.price-grid { display: grid; grid-template-columns: auto 1fr; gap: 46px; align-items: start; position: relative; }
+@media (max-width: 760px) { .price-grid { grid-template-columns: 1fr; gap: 28px; } }
+.price-amt { font-family: var(--f-display); font-size: 82px; font-weight: 700; line-height: .9; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.price-amt sup { font-size: 30px; vertical-align: super; color: var(--signal); }
+.price-per { font-family: var(--f-mono); font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 11px; }
+.price-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 11px; }
+.price-list li { display: flex; gap: 11px; font-size: 15.5px; align-items: baseline; }
+.price-list .check { font-family: var(--f-mono); flex: none; }
+.addon { margin-top: 26px; padding-top: 22px; border-top: 1px dashed var(--line); font-size: 14.5px; color: var(--muted); position: relative; }
+.addon b { color: var(--chalk); font-weight: 600; }
+
+/* Umschalter monatlich/jährlich - selbes Bedienmuster wie ein Messschieber:
+   zwei feste Rasten, keine stufenlose Bewegung. */
+.billing-switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); padding: 3px; margin-bottom: 26px; position: relative; z-index: 1; }
+.billing-switch button {
+  font-family: var(--f-body); font-size: 14px; font-weight: 600; padding: 9px 20px; border-radius: 3px;
+  border: none; background: transparent; color: var(--muted); cursor: pointer; transition: color .15s, background .15s;
+}
+.billing-switch button.active { background: var(--signal); color: var(--signal-ink); }
+.billing-switch .save-badge {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--verified); margin-left: 8px; padding: 2px 7px; border-radius: 99px;
+  background: color-mix(in srgb, var(--verified) 14%, transparent); vertical-align: 2px;
+}
+.price-amt .was { font-size: 34px; color: var(--muted-2); text-decoration: line-through; margin-right: 10px; font-weight: 600; }
+.price-yearly-total { font-family: var(--f-mono); font-size: 13px; color: var(--muted); margin-top: 6px; }
+[data-billing="annual"] .only-monthly,
+[data-billing="monthly"] .only-annual { display: none; }
+
+/* ------------------------------------------------------------------ Branchen */
+
+.trades { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 42px; }
+.trade { background: var(--plate); padding: 22px 18px; }
+.trade-n { font-family: var(--f-display); font-size: 19px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.trade-s { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; margin-top: 8px; }
+.trade.now { background: var(--plate-2); }
+.trade.now .trade-s { color: var(--verified); }
+.trade.soon .trade-n { color: var(--muted); }
+.trade.soon .trade-s { color: var(--muted-2); }
+
+/* --------------------------------------------------------- Gründungsbetriebe */
+
+.founders { border: 1px solid var(--line); border-left: 2px solid var(--signal); border-radius: var(--r); background: var(--plate); padding: 32px 30px; margin-top: 42px; }
+.founders p { color: var(--muted); max-width: 66ch; }
+.founders p:first-of-type { color: var(--chalk); font-size: 17px; }
+
+/* ---------------------------------------------------------------- Download */
+
+.dl { border: 1px solid var(--line); border-radius: var(--r); background: var(--plate); padding: 32px 30px; margin-top: 42px; display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+.dl-meta { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); display: grid; gap: 5px; }
+.dl-meta b { color: var(--chalk); font-weight: 500; }
+
+/* --------------------------------------------------------------------- FAQ */
+
+.faq { margin-top: 42px; border-top: 1px solid var(--line); }
+details { border-bottom: 1px solid var(--line); }
+summary { padding: 19px 2px; cursor: pointer; font-weight: 600; font-size: 16.5px; list-style: none; display: flex; gap: 15px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "+"; font-family: var(--f-mono); color: var(--signal); flex: none; font-size: 17px; }
+details[open] summary::before { content: "\2212"; }
+details p { color: var(--muted); margin: 0 0 20px 30px; max-width: 68ch; font-size: 15.5px; }
+
+/* ------------------------------------------------------------------- Fusszeile */
+
+footer { border-top: 1px solid var(--line); margin-top: 90px; padding: 40px 0 56px; }
+.foot-in { display: flex; gap: 26px; flex-wrap: wrap; align-items: center; }
+footer a { color: var(--muted); text-decoration: none; font-size: 14px; }
+footer a:hover { color: var(--chalk); }
+.foot-note { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted-2); margin-left: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .field { opacity: 1; transform: none; }
+}
+</style>
+
+<div class="sheet" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">WerkPilot</span></a>
+    <nav>
+      <a href="#funktionen">Funktionen</a>
+      <a href="#daten">Ihre Daten</a>
+      <a href="#preis">Preis</a>
+      <a href="#branchen">Branchen</a>
+      <a class="btn btn-primary btn-sm" href="#download">14 Tage testen</a>
+    </nav>
   </div>
 </header>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <span class="eyebrow"><span class="live"></span> Keine Anfrage bleibt liegen</span>
-      <h1>Ihre nächste Anfrage ist <span class="hl">schon Geld</span> — das bei Ihnen anklopft.</h1>
-      <p class="sub">Warme Anfragen kommen abends, am Wochenende, mitten im Stress. Wer zuerst sauber antwortet, bekommt den Auftrag. Wir sorgen dafür, dass bei Ihnen keine Anfrage mehr liegen bleibt — schnell beantwortet, sauber eingeordnet, direkt in Rückruf oder Termin überführt.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="https://calendly.com/rebellsystem/rebellsystem">Kostenlosen Anfrage-Speedcheck anfragen →</a>
-        <a class="btn btn-ghost" href="#preise">Pilotgespräch vereinbaren</a>
-      </div>
-      <div class="trust">
-        <span>✓ Kein Umbau Ihrer Systeme</span>
-        <span>✓ Sie geben Antworten frei</span>
-        <span>✓ Start in Tagen, nicht Monaten</span>
-      </div>
-    </div>
+<main id="top">
 
-    <!-- Device mockup: Anfrage rein -> Antwort raus -->
-    <div class="device">
-      <div class="dev-bar"><i></i><i></i><i></i><span class="mono">posteingang</span></div>
-      <div class="msg in">
-        <div class="top"><b>Neue Anfrage · Fam. Berger</b><span class="tag warn">Fr 19:42</span></div>
-        <p>„Bei uns tropft es nach dem Sturm durchs Dach. Können Sie kurzfristig vorbeischauen? Was kostet das ungefähr?“</p>
-      </div>
-      <div class="msg out">
-        <div class="top"><b>Antwort an Kunde</b><span class="tag ok">+3 Min · automatisch</span></div>
-        <p>„Guten Abend Herr Berger, danke für Ihre Nachricht — das schauen wir uns an. Passt Ihnen ein kurzer Rückruf morgen zwischen 8 und 9 Uhr? Dann klären wir den Termin vor Ort.“</p>
-      </div>
-      <div class="msg out" style="border-left-color:var(--accent2)">
-        <div class="top"><b>Kurz-Info an den Chef</b><span class="tag ok" style="color:var(--accent2);background:rgba(46,166,255,.12)">Dachschaden · dringend</span></div>
-        <p class="mono" style="font-size:13px">Sturmschaden · Region passt · Rückruf zugesagt → morgen 8–9 Uhr.</p>
-      </div>
-      <div class="timer"><span class="dot"></span> Antwortzeit statt „bis Montag“: <b class="accent" style="margin-left:4px">unter 5 Minuten</b></div>
+  <!-- ===================================================== Hero -->
+  <section class="wrap hero">
+    <div class="eyebrow">Bürosoftware für Handwerksbetriebe · Windows</div>
+    <h1>Sprechen Sie das Angebot. <em>Fertig.</em></h1>
+    <p class="hero-sub">
+      Ein Satz von der Baustelle — und der Angebotsentwurf steht. Kunden, Aufträge,
+      Rechnungen, E-Rechnung und Mahnwesen sind schon drin. Alles auf Ihrem eigenen Rechner.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#download">Kostenlos testen &rarr;</a>
+      <a class="btn btn-ghost" href="#funktionen">Was drinsteckt</a>
     </div>
-  </div>
-</section>
+    <p class="hero-note">14 Tage · keine Kreditkarte · endet von allein</p>
 
-<!-- PROBLEM -->
-<div class="band">
-<section id="problem">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">Das Problem</div>
-      <h2>Nicht die schlechte Arbeit kostet Aufträge. Die späte Antwort.</h2>
-      <p>Der Interessent fragt heute bei drei Betrieben an. Wer zuerst sauber reagiert, hat den Vorsprung — meistens noch bevor Ihr Angebot überhaupt geschrieben ist.</p>
-    </div>
-    <div class="cards">
-      <div class="card">
-        <div class="ic">🌙</div>
-        <h3>Anfragen kommen zur Unzeit</h3>
-        <p>Freitagabend, Sonntag, im Urlaub. Genau dann, wenn im Betrieb niemand ans Postfach schaut.</p>
+    <!-- Umwandlung: gesprochener Satz -> Angebotsentwurf -->
+    <div class="transform" id="demo">
+      <div class="transform-head">
+        <span class="dot live" aria-hidden="true"></span>
+        <span>Sprachbefehl wird ausgewertet</span>
+        <span class="right">≈ 4 Sekunden</span>
       </div>
-      <div class="card">
-        <div class="ic">🏗️</div>
-        <h3>Chef ist auf der Baustelle</h3>
-        <p>Das Büro ist voll, das Handy klingelt. Die Anfrage rutscht nach unten — und wird vergessen.</p>
-      </div>
-      <div class="card">
-        <div class="ic">⏱️</div>
-        <h3>Antwort erst Montag oder Dienstag</h3>
-        <p>Bis dahin hat der Kunde beim Wettbewerber längst einen Termin. Der Auftrag ist weg, ohne dass Sie es merken.</p>
-      </div>
-      <div class="card">
-        <div class="ic">📄</div>
-        <h3>Alte Angebote versanden</h3>
-        <p>Angebote raus, nie nachgefasst. Interessenten, bei denen nie klar wurde, ob noch etwas geht.</p>
-      </div>
-    </div>
-  </div>
-</section>
-</div>
 
-<!-- LÖSUNG -->
-<section id="loesung">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">Die Lösung</div>
-      <h2>Ein einfaches System, das keine Anfrage mehr durchrutschen lässt.</h2>
-      <p>Kein neues Programm, das Sie bedienen müssen. Es läuft neben Ihrem Postfach — Sie merken nur, dass nichts mehr liegen bleibt.</p>
-    </div>
-    <div class="cards">
-      <div class="card"><div class="ic">⚡</div><h3>Schnelle, professionelle Rückmeldung</h3><p>Jede neue Anfrage bekommt zügig eine saubere Antwort mit Rückfrage oder Terminvorschlag — im Ton Ihres Betriebs.</p></div>
-      <div class="card"><div class="ic">🔔</div><h3>Kurz-Info an Chef &amp; Büro</h3><p>Sie bekommen sofort eine knappe Zusammenfassung: Wer, was, wie dringend, welcher nächste Schritt.</p></div>
-      <div class="card"><div class="ic">📅</div><h3>Rückruf oder Termin vorbereitet</h3><p>Aus der Anfrage wird ein konkreter nächster Schritt — statt einer Mail, die im Postfach verstaubt.</p></div>
-      <div class="card"><div class="ic">📊</div><h3>Tagesreport</h3><p>Einmal am Tag ein kurzer Überblick: Wie viele Anfragen kamen rein, was wurde beantwortet, was wartet noch.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ANGEPASST / KEINE TECHNIKSHOW -->
-<div class="band">
-<section>
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">So arbeiten wir</div>
-      <h2>Für Ihren Betrieb eingerichtet — nicht von der Stange.</h2>
-      <p>Wir bauen es um Ihre Leistungen, Ihr Einzugsgebiet und Ihren Ton herum. Sie bekommen genau das, was Sie brauchen — keinen Technik-Wust, keine App, die keiner bedient.</p>
-    </div>
-    <div class="cards">
-      <div class="card"><div class="ic">🧩</div><h3>Auf Ihren Betrieb zugeschnitten</h3><p>Ihre Leistungen, Ihr Gebiet, Ihre Regeln. Das System spricht so, wie Sie mit Ihren Kunden sprechen.</p></div>
-      <div class="card"><div class="ic">✅</div><h3>Sie behalten die Kontrolle</h3><p>In der Startphase geht keine Antwort raus, die Sie nicht gesehen und freigegeben haben.</p></div>
-      <div class="card"><div class="ic">🔌</div><h3>Kein Umbau nötig</h3><p>Es dockt an Ihr bestehendes Postfach / Kontaktformular an. Ihre Abläufe bleiben, wie sie sind.</p></div>
-    </div>
-  </div>
-</section>
-</div>
-
-<!-- ABLAUF -->
-<section id="ablauf">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">In 3 Schritten</div>
-      <h2>Von der Anfrage zum Termin — ohne Aufwand für Sie.</h2>
-    </div>
-    <div class="steps">
-      <div class="step"><div class="n"></div><h3>Anfragekanäle prüfen</h3><p>Wir schauen gemeinsam, wo Ihre Anfragen reinkommen und wie schnell heute reagiert wird. Das ist der kostenlose Speedcheck.</p></div>
-      <div class="step"><div class="n"></div><h3>Antwortlogik einrichten</h3><p>Wir richten die schnelle Rückmeldung, die Chef-Info und den Tagesreport ein — abgestimmt auf Ihren Betrieb.</p></div>
-      <div class="step"><div class="n"></div><h3>Anfragen in Termine bringen</h3><p>Neue Anfragen werden schnell beantwortet und sauber weitergegeben. Sie führen nur noch das Gespräch.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- PREISE -->
-<div class="band">
-<section id="preise">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">Einstieg</div>
-      <h2>Klein anfangen. Ohne Risiko testen.</h2>
-      <p>Zwei Wege in den Betrieb — je nachdem, ob Sie zuerst neue Anfragen absichern oder alte Chancen zurückholen wollen.</p>
-    </div>
-    <div class="prices">
-      <div class="price">
-        <div class="plan">Speedcheck</div>
-        <div class="amt">Kostenlos</div>
-        <div class="desc">Der ehrliche Einstieg — ohne Verpflichtung.</div>
-        <ul>
-          <li>Wir prüfen, wo bei Ihnen Anfragen liegen bleiben</li>
-          <li>Sie sehen schwarz auf weiß, ob Geld verloren geht</li>
-          <li>Wenn alles passt, sagen wir Ihnen das auch</li>
-        </ul>
-        <a class="btn btn-ghost" href="https://calendly.com/rebellsystem/rebellsystem">Speedcheck anfragen</a>
+      <div class="spoken">
+        <div class="spoken-lbl">Gesprochen</div>
+        <p class="spoken-text">
+          „Neuer Auftrag <mark data-f="0">Müller</mark> in <mark data-f="1">Saarlouis</mark>.
+          <mark data-f="2">Dachrinne vorne erneuern</mark>, <mark data-f="3">acht Meter</mark>,
+          Material ungefähr <mark data-f="4">300 Euro</mark>,
+          <mark data-f="5">sechs Stunden</mark> Arbeit, <mark data-f="6">nächste Woche</mark>."
+        </p>
       </div>
-      <div class="price feat">
-        <div class="badge">Empfohlen</div>
-        <div class="plan">Anfrage-Retter-System</div>
-        <div class="amt">ab 490 € <small>Einrichtung</small></div>
-        <div class="desc">danach ab 249 € / Monat · monatlich kündbar im Pilot</div>
-        <ul>
-          <li>Schnelle, professionelle Antwort auf neue Anfragen</li>
-          <li>Kurz-Info an Chef &amp; Büro mit nächstem Schritt</li>
-          <li>Tagesreport über alle Anfragen</li>
-          <li>Einfache Termin- und Rückruflogik</li>
-          <li>Auf Ihren Betrieb eingerichtet, Antworten mit Freigabe</li>
-        </ul>
-        <a class="btn btn-primary" href="https://calendly.com/rebellsystem/rebellsystem">Pilotgespräch vereinbaren →</a>
-      </div>
-      <div class="price">
-        <div class="plan">Reaktivierungs-Pilot</div>
-        <div class="amt">pro Termin</div>
-        <div class="desc">49–99 € je qualifiziertem Termin im ersten Monat.</div>
-        <ul>
-          <li>Sie geben uns 20–50 alte Anfragen / offene Angebote</li>
-          <li>Wir fassen professionell nach und sortieren</li>
-          <li>Sie zahlen nur, wenn ein echter Termin dabei rauskommt</li>
-          <li>Risikofreier Einstieg ohne laufende Kosten</li>
-        </ul>
-        <a class="btn btn-ghost" href="https://calendly.com/rebellsystem/rebellsystem">Reaktivierung starten</a>
-      </div>
-    </div>
-  </div>
-</section>
-</div>
 
-<!-- REAKTIVIERUNG -->
-<section>
-  <div class="wrap">
-    <div class="react">
-      <div class="inner">
-        <div>
-          <span class="pill">Türöffner · ohne Risiko</span>
-          <h2>Alte Anfragen und offene Angebote zurückholen.</h2>
-          <p>In fast jedem Betrieb liegen Angebote, bei denen nie sauber nachgefasst wurde. Kontakte, bei denen nie klar wurde, ob daraus etwas wird. Das ist kein kaltes Geschäft — das sind Leute, die schon mal Interesse hatten.</p>
-          <p>Wir gehen die Liste durch und klären pro Vorgang sauber: erledigt, noch offen, verschoben — oder bereit für einen Rückruf. Sie zahlen nur für qualifizierte Termine.</p>
+      <div class="extract">
+        <div class="extract-lbl">Erkannter Angebotsentwurf</div>
+        <div class="field-grid">
+          <div class="field" data-f="0"><div class="field-k">Kunde</div><div class="field-v text">Müller</div></div>
+          <div class="field" data-f="1"><div class="field-k">Ort</div><div class="field-v text">Saarlouis</div></div>
+          <div class="field" data-f="2"><div class="field-k">Leistung</div><div class="field-v text">Dachrinne erneuern</div></div>
+          <div class="field" data-f="3"><div class="field-k">Menge</div><div class="field-v">8,00 m</div></div>
+          <div class="field" data-f="4"><div class="field-k">Material</div><div class="field-v">300,00 €</div></div>
+          <div class="field" data-f="5"><div class="field-k">Arbeitszeit</div><div class="field-v">6,00 h</div></div>
+          <div class="field" data-f="6"><div class="field-k">Termin</div><div class="field-v text">nächste Woche</div></div>
+          <!-- Achtes Feld schliesst die Rasterzeile und sagt zugleich das
+               Wichtigste: es ist ein Entwurf, gespeichert wird nichts. -->
+          <div class="field" data-f="7"><div class="field-k">Status</div><div class="field-v text" style="color:var(--verified)">Entwurf · ungespeichert</div></div>
         </div>
-        <div>
-          <div class="msg out" style="margin:0">
-            <div class="top"><b>Nachfass-Ergebnis</b><span class="tag ok">qualifiziert</span></div>
-            <p class="mono" style="font-size:13px">Angebot Bad-Sanierung · 14.800 €<br>Status: war „vergessen“ → Kunde noch interessiert<br>→ Beratungstermin Di 10:00 vereinbart</p>
-          </div>
+        <div class="extract-foot">
+          <span class="check">✓</span>
+          <span>Nichts erfunden — was Sie nicht sagen, bleibt leer und wird nachgefragt.</span>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- FÜR WEN -->
-<div class="band">
-<section id="fuer-wen">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">Für wen</div>
-      <h2>Passt — oder passt ehrlich nicht.</h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">4<small> Sek.</small></div><div class="stat-k">bis zum Entwurf</div></div>
+      <div class="stat"><div class="stat-n">0<small> €</small></div><div class="stat-k">14 Tage Testphase</div></div>
+      <div class="stat"><div class="stat-n">100<small> %</small></div><div class="stat-k">Belege auf Ihrem PC</div></div>
+      <div class="stat"><div class="stat-n">EN<small> 16931</small></div><div class="stat-k">E-Rechnung serienmäßig</div></div>
     </div>
+  </section>
+
+  <!-- ===================================================== Funktionen -->
+  <section class="wrap section" id="funktionen">
+    <div class="massline"><span class="tick"></span><span class="lbl">01 — Serienausstattung</span><span class="rule"></span></div>
+    <h2>Das Büro, komplett.<br>Nicht in Bausteinen verkauft.</h2>
+    <p class="lead">
+      Kein Grundpaket, das erst mit Aufpreisen brauchbar wird. Was ein Handwerksbetrieb
+      täglich braucht, ist im Preis enthalten — vom ersten Angebot bis zur letzten Mahnung.
+      Auch das, was anderswo erst die nächsthöhere Preisstufe freischaltet.
+    </p>
+
+    <div class="plates">
+      <div class="plate">
+        <span class="plate-no">A—01</span>
+        <h3>Angebote</h3>
+        <p>Aus dem Katalog, aus einem Leistungspaket oder gesprochen. Mit Gültigkeitsdatum, Ihren Texten und Ihrem Logo.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—02</span>
+        <h3>Aufträge</h3>
+        <p>Angenommenes Angebot wird per Klick zum Auftrag. Teilleistungen, Nachträge und Fertigmeldung inklusive.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—03</span>
+        <h3>Rechnungen</h3>
+        <p>Schluss-, Abschlags- und Teilrechnungen. Verrechnung läuft automatisch, Storno und Gutschrift regelkonform.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—04</span>
+        <h3>E-Rechnung</h3>
+        <p>XRechnung nach EN 16931 auf Knopfdruck — das Format, das Behörden und Großkunden verlangen.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—05</span>
+        <h3>Mahnwesen</h3>
+        <p>Drei Stufen, Verzugszinsen nach § 288 BGB, Mahnpauschale. Das Schreiben ist danach unveränderbar.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—06</span>
+        <h3>Spracheingabe</h3>
+        <p>Auftrag sprechen statt tippen. Der Entwurf wird Ihnen gezeigt — gespeichert wird erst, wenn Sie zustimmen.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—07</span>
+        <h3>Auswertungen</h3>
+        <p>Offene Posten, Umsatz je Monat, Angebotsquote. Buchhaltungs-Export für den Steuerberater.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—08</span>
+        <h3>Sicherung</h3>
+        <p>Auf USB-Stick, beim Schreiben geprüft. Wiederherstellen zeigt vorher, was passiert.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—09</span>
+        <h3>DATANORM</h3>
+        <p>Der Artikelkatalog Ihres Großhändlers, eingelesen statt abgetippt. Preisaktualisierungen überschreiben nur, was von dort kam — Ihre eigenen Positionen bleiben.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—10</span>
+        <h3>Aufmaß</h3>
+        <p>Mengen mit Rechenweg: 3 × 1,20 × 1,45, abzüglich der Öffnungen. Der Kunde kann nachrechnen, statt Ihnen glauben zu müssen.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+      <div class="plate">
+        <span class="plate-no">A—11</span>
+        <h3>Zeiterfassung</h3>
+        <p>Stunden auf den Auftrag buchen — abends nachgetragen, nicht per Stoppuhr. Danach steht der echte Aufwand neben Ihrer Kalkulation.</p>
+        <span class="tag tag-in">Enthalten</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Daten -->
+  <section class="wrap section" id="daten">
+    <div class="massline"><span class="tick"></span><span class="lbl">02 — Wo Ihre Daten liegen</span><span class="rule"></span></div>
+    <h2>Ihre Kunden gehören Ihnen.<br>Auch technisch.</h2>
+
     <div class="split">
-      <div class="col good">
-        <h3>✓ Geeignet für Sie, wenn …</h3>
-        <ul>
-          <li>ein Auftrag bei Ihnen mehrere Tausend Euro wert sein kann</li>
-          <li>Anfragen über Kontaktformular oder E-Mail reinkommen</li>
-          <li>abends und am Wochenende niemand sofort reagiert</li>
-          <li>alte Angebote oder offene Anfragen liegen geblieben sind</li>
-          <li>Sie mehr Termine und Rückrufe wollen, ohne mehr Personal</li>
+      <div>
+        <p class="lead" style="margin-top:0">
+          WerkPilot läuft auf Ihrem Rechner, nicht in unserer Cloud. Kunden, Angebote,
+          Rechnungen und das Archiv liegen in einem Ordner auf Ihrer Festplatte.
+          Wir sehen nicht, was Sie schreiben.
+        </p>
+        <p class="lead">
+          Auch nach dem Abo: Beenden Sie irgendwann, bleiben alle Belege lesbar und
+          exportierbar. Sie können nur keine neuen mehr anlegen. Wir sperren Ihnen nichts weg.
+        </p>
+        <p class="lead" style="font-size:15px">
+          Ehrlich gesagt gibt es drei Ausnahmen — und die stehen hier, statt im Kleingedruckten.
+        </p>
+      </div>
+
+      <div class="ledger">
+        <div class="ledger-head">Was den Rechner verlässt — und was nicht</div>
+        <div class="ledger-row stay"><span class="ico">■</span><div><b>Kunden, Belege, Archiv</b><span>Bleiben vollständig auf Ihrem PC. Immer.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Lizenzprüfung, einmal täglich</b><span>Gerätekennung, Lizenznummer, Programmversion. Keine Kundendaten.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Spracheingabe, nur auf Klick</b><span>Die Aufnahme geht zur Auswertung an einen KI-Dienst. Ihre Kundendatenbank bleibt hier — Namen werden erst lokal zugeordnet.</span></div></div>
+        <div class="ledger-row out"><span class="ico">→</span><div><b>Update-Prüfung</b><span>Nur die Programmversion.</span></div></div>
+        <div class="ledger-row stay"><span class="ico">■</span><div><b>Keine Nutzungsanalyse</b><span>Wir messen nicht, wie Sie arbeiten oder welche Belege Sie schreiben.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Preis -->
+  <section class="wrap section" id="preis">
+    <div class="massline"><span class="tick"></span><span class="lbl">03 — Preis</span><span class="rule"></span></div>
+    <h2>Ein Preis. Monatlich kündbar.</h2>
+
+    <div class="price-box" id="price-box" data-billing="monthly">
+      <div class="billing-switch" role="group" aria-label="Abrechnungszeitraum">
+        <button type="button" data-billing-btn="monthly" class="active" aria-pressed="true">Monatlich</button>
+        <button type="button" data-billing-btn="annual" aria-pressed="false">Jährlich <span class="save-badge">2 Monate gratis</span></button>
+      </div>
+
+      <div class="price-grid">
+        <div>
+          <div class="price-amt">
+            <span class="only-annual was">49</span><sup>€</sup><span data-price>49</span>
+          </div>
+          <div class="price-per">pro Monat · zzgl. USt.</div>
+          <div class="price-yearly-total only-annual">468 € einmal jährlich abgerechnet — statt 588 € bei Monatszahlung</div>
+        </div>
+        <ul class="price-list">
+          <li><span class="check">✓</span><span><b>14 Tage kostenlos</b> — ohne Kreditkarte. Die Testphase endet von allein, es wird nichts abgebucht.</span></li>
+          <li><span class="check">✓</span><span>Alle Funktionen aus der Serienausstattung, ohne Aufpreis</span></li>
+          <li><span class="check">✓</span><span>Ein Arbeitsplatz · Updates inklusive</span></li>
+          <li><span class="check">✓</span><span>60 Minuten Spracheingabe im Monat (rund 200 Aufträge)</span></li>
+          <li class="only-monthly"><span class="check">✓</span><span>Monatlich kündbar — keine Mindestlaufzeit</span></li>
+          <li class="only-annual"><span class="check">✓</span><span>Jährlich kündbar — 10 € Rabatt auf jeden Monat, weil Sie sich festlegen</span></li>
         </ul>
       </div>
-      <div class="col bad">
-        <h3>✕ Eher nicht geeignet, wenn …</h3>
-        <ul>
-          <li>Sie kaum Anfragen bekommen</li>
-          <li>es nur um Kleinstaufträge geht</li>
-          <li>Sie gar keine Rückrufe oder Termine wollen</li>
-          <li>bei Ihnen wirklich nichts liegen bleibt (dann sagen wir es Ihnen)</li>
-        </ul>
+      <div class="addon">
+        <b>Mehr Spracheingabe nötig?</b> Zusatzpaket für 9 € im Monat: nochmal 60 Minuten.
+        Direkt im Programm buchbar, einzeln kündbar. Die meisten Betriebe brauchen es nicht.
       </div>
     </div>
-  </div>
-</section>
-</div>
+  </section>
 
-<!-- ZIELGRUPPEN -->
-<section style="padding-top:56px">
-  <div class="wrap">
-    <div class="sec-head" style="margin-bottom:34px">
-      <div class="kicker">Typische Betriebe</div>
-      <h2>Gemacht für Betriebe mit hochwertigen Aufträgen.</h2>
-    </div>
-    <div class="cards">
-      <div class="card"><h3>🛁 Badsanierer</h3><p>Hohe Auftragswerte, lange Anfragewege — jede verlorene Anfrage tut weh.</p></div>
-      <div class="card"><h3>🏠 Dachdecker</h3><p>Sturmschäden kommen ungeplant. Wer zuerst zurückruft, bekommt den Auftrag.</p></div>
-      <div class="card"><h3>🪟 Fenster- &amp; Türenbauer</h3><p>Kunden holen mehrere Angebote ein. Geschwindigkeit entscheidet.</p></div>
-      <div class="card"><h3>🍳 Küchenstudios</h3><p>Beratungsintensiv und hochpreisig — der erste Termin gewinnt.</p></div>
-      <div class="card"><h3>☀️ PV- &amp; Solarbetriebe</h3><p>Viele parallele Anfragen. Schnelle Reaktion schlägt die Konkurrenz.</p></div>
-      <div class="card"><h3>🧱 Bauunternehmen &amp; Dienstleister</h3><p>Hochwertige Projekte, bei denen kein warmer Kontakt verloren gehen darf.</p></div>
-    </div>
-  </div>
-</section>
+  <!-- ===================================================== Module -->
+  <section class="wrap section" id="module">
+    <div class="massline"><span class="tick"></span><span class="lbl">04 — In Arbeit</span><span class="rule"></span></div>
+    <h2>Was als Nächstes kommt.</h2>
+    <p class="lead">
+      WerkPilot ist so gebaut, dass Module einzeln dazukommen können — ohne Neuinstallation
+      und ohne dass Sie für etwas zahlen, das Sie nicht brauchen. Ehrlich: Das Folgende
+      ist geplant, nicht fertig.
+    </p>
 
-<!-- FAQ -->
-<div class="band">
-<section id="faq">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="kicker">FAQ</div>
-      <h2>Die häufigsten Fragen.</h2>
+    <div class="plates">
+      <div class="plate"><span class="plate-no">B—01</span><h3>Termine</h3><p>Baustellenplanung, Monteurzuordnung, Erinnerungen an Nachfassdaten.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—02</span><h3>CRM</h3><p>Gesprächsnotizen, Wiedervorlagen, Historie je Kunde über Jahre.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—03</span><h3>Vertriebs-Pipeline</h3><p>Welche Anfrage steht wo, was ist überfällig, was wird wahrscheinlich Auftrag.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—04</span><h3>E-Mail-Assistent</h3><p>Antwortentwürfe auf Anfragen, im Ton Ihres Betriebs. Abschicken immer per Hand.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—05</span><h3>Automationen</h3><p>Nach 14 Tagen ohne Antwort erinnern, bei Zahlungseingang Auftrag schließen.</p><span class="tag tag-plan">Geplant</span></div>
+      <div class="plate"><span class="plate-no">B—06</span><h3>WhatsApp &amp; Telegram</h3><p>Anfragen dort annehmen, wo Ihre Kunden ohnehin schreiben.</p><span class="tag tag-plan">Geplant</span></div>
     </div>
+  </section>
+
+  <!-- ===================================================== Branchen -->
+  <section class="wrap section" id="branchen">
+    <div class="massline"><span class="tick"></span><span class="lbl">05 — Branchen</span><span class="rule"></span></div>
+    <h2>Heute Handwerk.<br>Der Unterbau kann mehr.</h2>
+    <p class="lead">
+      Angebot, Auftrag, Rechnung, Mahnung — dieser Ablauf ist in fast jedem Gewerk derselbe.
+      Unterschiedlich sind Leistungskatalog, Fachbegriffe und Steuerfälle. Genau die sind in
+      WerkPilot austauschbar. Deshalb entstehen als Nächstes eigene Ausgaben für andere Berufe.
+    </p>
+
+    <div class="trades">
+      <div class="trade now"><div class="trade-n">Dachdecker</div><div class="trade-s">● Verfügbar</div></div>
+      <div class="trade now"><div class="trade-n">Allgemeines Handwerk</div><div class="trade-s">● Verfügbar</div></div>
+      <div class="trade soon"><div class="trade-n">Elektro &amp; SHK</div><div class="trade-s">○ In Vorbereitung</div></div>
+      <div class="trade soon"><div class="trade-n">Garten &amp; Landschaft</div><div class="trade-s">○ In Vorbereitung</div></div>
+      <div class="trade soon"><div class="trade-n">Gastronomie</div><div class="trade-s">○ Geplant</div></div>
+      <div class="trade soon"><div class="trade-n">Architektur &amp; Planung</div><div class="trade-s">○ Geplant</div></div>
+    </div>
+
+    <div class="founders">
+      <h3 style="margin-bottom:14px">Gründungsbetriebe gesucht</h3>
+      <p>
+        WerkPilot ist neu. Wir zeigen hier keine erfundenen Kundenstimmen —
+        die kommen, wenn es echte gibt.
+      </p>
+      <p>
+        Stattdessen suchen wir die ersten zehn Betriebe, die mitgestalten wollen.
+        Sie bekommen die Einrichtung persönlich gemacht, einen direkten Draht statt
+        einer Ticketnummer, und Ihre Wünsche wandern zuerst in die Entwicklung.
+        Ihr Gewerk ist oben nicht dabei? Dann bauen wir es mit Ihnen zusammen auf.
+      </p>
+      <p style="margin-bottom:0">
+        <a class="btn btn-ghost" href="mailto:kontakt@rebellsystem.com?subject=Gr%C3%BCndungsbetrieb%20WerkPilot" style="margin-top:12px">Als Gründungsbetrieb melden</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================================================== Download -->
+  <section class="wrap section" id="download">
+    <div class="massline"><span class="tick"></span><span class="lbl">06 — Loslegen</span><span class="rule"></span></div>
+    <h2>Herunterladen und ausprobieren.</h2>
+    <p class="lead">
+      Kein Konto, keine Kreditkarte, keine Verkaufsberatung vorweg. Installieren,
+      Betriebsdaten eintragen, erstes Angebot schreiben. Wenn es nichts für Sie ist,
+      deinstallieren Sie es — die Testphase läuft von selbst aus.
+    </p>
+
+    <div class="dl">
+      <a class="btn btn-primary" href="https://github.com/rebellmitherz/rebellsystem-b2b-outbound/releases/download/v0.4.0/WerkPilot-Setup-0.4.0.exe">Für Windows herunterladen</a>
+      <div class="dl-meta">
+        <span>Version <b>0.4.0</b> · Windows 10 / 11 (64-Bit) · <b>26 MB</b></span>
+        <span>Beim ersten Start meldet Windows „unbekannte App" — auf <b>Weitere Informationen</b> und <b>Trotzdem ausführen</b> klicken.</span>
+      </div>
+    </div>
+
     <div class="faq">
-      <details open><summary>Muss ich dafür mein ganzes System ändern? <span class="chev">⌄</span></summary><p>Nein. Das System dockt an das an, was Sie schon haben — Ihr Postfach oder Ihr Kontaktformular. Ihre Abläufe bleiben, wie sie sind. Sie müssen kein neues Programm lernen.</p></details>
-      <details><summary>Brauchen Sie Zugriff auf meine E-Mails? <span class="chev">⌄</span></summary><p>Nur auf den Kanal, über den die Anfragen reinkommen, und nur so weit, wie es fürs Beantworten nötig ist. Was genau, klären wir vorher transparent. Alles Weitere bleibt bei Ihnen.</p></details>
-      <details><summary>Geht das auch mit WhatsApp? <span class="chev">⌄</span></summary><p>Wir starten bewusst mit E-Mail und Kontaktformular, weil das schnell und sauber läuft. WhatsApp und Telefon lassen sich später als Zusatzmodul ergänzen, wenn die Basis steht.</p></details>
-      <details><summary>Was ist mit Anrufen? <span class="chev">⌄</span></summary><p>Reine Telefonannahme ist am Anfang nicht dabei. Es geht zuerst um schriftliche Anfragen, die liegen bleiben. Verpasste Anrufe können später als Zusatzmodul dazukommen.</p></details>
-      <details><summary>Antwortet da eine KI direkt meinem Kunden? <span class="chev">⌄</span></summary><p>Die Rückmeldung wird automatisch vorbereitet — aber in der Startphase geht nichts raus, das Sie nicht gesehen und freigegeben haben. Erst wenn Sie zufrieden sind, entscheiden Sie, was automatisch laufen darf.</p></details>
-      <details><summary>Kann ich Antworten vorher freigeben? <span class="chev">⌄</span></summary><p>Ja, das ist ausdrücklich so gedacht. Sie behalten die Kontrolle über den Ton und den Inhalt. Nichts geht ungefragt an Ihre Kunden.</p></details>
-      <details><summary>Was kostet das? <span class="chev">⌄</span></summary><p>Zwei Wege: entweder klein über den Reaktivierungs-Piloten, bei dem Sie nur pro qualifiziertem Termin zahlen. Oder als Anfrage-Retter-System ab 490 € Einrichtung und 249 € im Monat. Was für Sie passt, klären wir im Speedcheck.</p></details>
-      <details><summary>Wie schnell kann man starten? <span class="chev">⌄</span></summary><p>Nach dem Speedcheck und der Freigabe geht es in wenigen Tagen los — nicht in Monaten. Wir fangen bewusst klein an, damit Sie schnell ein Ergebnis sehen.</p></details>
+      <details>
+        <summary>Brauche ich Internet, um zu arbeiten?</summary>
+        <p>Zum Arbeiten nicht. Angebote, Rechnungen und Belege entstehen vollständig auf Ihrem Rechner. Ohne Verbindung läuft WerkPilot mehrere Tage normal weiter; nur die Lizenzprüfung, die Spracheingabe und die Update-Prüfung ruhen so lange.</p>
+      </details>
+      <details>
+        <summary>Was passiert nach den 14 Tagen, wenn ich nichts tue?</summary>
+        <p>Nichts wird abgebucht — wir haben keine Zahlungsdaten von Ihnen. Das Programm wechselt in den Nur-Lesen-Modus: alles Bisherige bleibt sichtbar und exportierbar, neue Belege sind dann nicht mehr möglich. Ihre Daten werden nicht gelöscht.</p>
+      </details>
+      <details>
+        <summary>Ersetzt das meinen Steuerberater?</summary>
+        <p>Nein. WerkPilot erzeugt Belege und einen Buchhaltungs-Export. Pflichttexte, Steuerfälle und Nummernkreise sollten Sie vor dem produktiven Einsatz einmal mit Ihrer Steuerberatung durchgehen — dafür gibt es im Programm eine Musterausgabe zum Freigeben.</p>
+      </details>
+      <details>
+        <summary>Wie sicher ist die Spracherkennung bei Fachbegriffen?</summary>
+        <p>Sie bekommen immer erst einen Entwurf zur Kontrolle, nie einen fertigen Beleg. Was nicht eindeutig war, bleibt leer statt geraten zu werden. Gibt es zwei Kunden mit demselben Namen, fragt WerkPilot nach, statt einen auszuwählen.</p>
+      </details>
+      <details>
+        <summary>Kann ich meine bestehende Preisliste übernehmen?</summary>
+        <p>Ja. Excel- und CSV-Dateien lassen sich importieren — mit Vorschau und eigener Spaltenzuordnung, bevor etwas gespeichert wird. Als Gründungsbetrieb machen wir das für Sie.</p>
+      </details>
+      <details>
+        <summary>Was ist, wenn ich einen neuen Rechner bekomme?</summary>
+        <p>Die Lizenz lässt sich auf ein anderes Gerät umziehen. Ihre Daten nehmen Sie über die eingebaute Sicherung mit — die schreibt alles auf einen USB-Stick und prüft beim Schreiben, ob die Sicherung vollständig ist.</p>
+      </details>
     </div>
-  </div>
-</section>
-</div>
-
-<!-- FINAL CTA -->
-<section class="final">
-  <div class="wrap">
-    <h2>Lassen Sie uns prüfen, ob bei Ihnen Anfragen liegen bleiben.</h2>
-    <p>15–20 Minuten, ehrlich und ohne Verkaufsdruck. Wenn bei Ihnen nichts verloren geht, sagen wir es Ihnen direkt.</p>
-    <a class="btn btn-primary" href="https://calendly.com/rebellsystem/rebellsystem">Speedcheck anfragen →</a>
-  </div>
-</section>
+  </section>
+</main>
 
 <footer>
-  <div class="wrap foot">
-    <div>
-      <div class="brand"><span class="logo"><span class="mark" style="width:22px;height:22px"></span></span>Anfrage-<span>Retter</span></div>
-      <div class="meta">Keine Anfrage bleibt liegen.</div>
-    </div>
-    <div class="meta">
-      <a href="mailto:emilio@rebellsystem.com">emilio@rebellsystem.com</a><br>
-      <a href="tel:+4915128141644">0151 28141644</a>
-    </div>
-    <div class="foot-links">
-      <a href="impressum.html">Impressum</a>
-      <a href="datenschutz.html">Datenschutz</a>
-      <a href="https://calendly.com/rebellsystem/rebellsystem">Termin buchen</a>
-    </div>
+  <div class="wrap foot-in">
+    <a href="https://b2b.rebellsystem.com/impressum.html">Impressum</a>
+    <a href="https://b2b.rebellsystem.com/datenschutz.html">Datenschutz</a>
+    <a href="mailto:kontakt@rebellsystem.com">kontakt@rebellsystem.com</a>
+    <span class="foot-note">WerkPilot ist ein Produkt von Rebell System</span>
   </div>
 </footer>
+
+<script>
+/* Umschalter monatlich/jährlich im Preisabschnitt. Rein optisch - der
+   tatsächliche Kauf (und die Preiswahl) passiert im Programm selbst, siehe
+   handwerk_app/web/app.js::licensePanel. */
+(function () {
+  var box = document.getElementById("price-box");
+  if (!box) return;
+  var priceEl = box.querySelector("[data-price]");
+  box.querySelectorAll("[data-billing-btn]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var billing = btn.getAttribute("data-billing-btn");
+      box.setAttribute("data-billing", billing);
+      priceEl.textContent = billing === "annual" ? "39" : "49";
+      box.querySelectorAll("[data-billing-btn]").forEach(function (b) {
+        var active = b === btn;
+        b.classList.toggle("active", active);
+        b.setAttribute("aria-pressed", String(active));
+      });
+    });
+  });
+})();
+
+/* Umwandlungs-Schaubild: der gesprochene Satz wird Feld fuer Feld zerlegt.
+   Laeuft einmal beim Sichtbarwerden durch und bleibt dann vollstaendig stehen -
+   eine Endlosschleife wuerde beim Lesen der Seite stoeren. */
+(function () {
+  var demo = document.getElementById("demo");
+  if (!demo) return;
+
+  var marks = demo.querySelectorAll(".spoken-text mark");
+  var fields = demo.querySelectorAll(".field");
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function revealAll() {
+    marks.forEach(function (m) { m.classList.add("on"); });
+    fields.forEach(function (f) { f.classList.add("on"); });
+  }
+
+  function run() {
+    var i = 0;
+    (function step() {
+      if (i >= fields.length) return;
+      var key = fields[i].getAttribute("data-f");
+      var mark = demo.querySelector('.spoken-text mark[data-f="' + key + '"]');
+      if (mark) mark.classList.add("on");
+      fields[i].classList.add("on");
+      i++;
+      setTimeout(step, 380);
+    })();
+  }
+
+  if (reduced) { revealAll(); return; }
+
+  var seen = false;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting && !seen) { seen = true; setTimeout(run, 500); io.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  io.observe(demo);
+})();
+</script>
 
 </body>
 </html>
